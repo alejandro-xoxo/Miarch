@@ -116,5 +116,5 @@ echo "   Ahora puedes ejecutar la instalación completa con:"
 echo "   bash install.sh"
 echo ""
 echo "   O en una sola línea:"
-echo "   git clone https://github.com/Alejandro0328/Miarch.git ~/Miarch && cd ~/Miarch && bash packages.sh && bash install.sh"
+echo "   git clone https://github.com/alejandro-xoxo/Miarch.git ~/Miarch && cd ~/Miarch && bash packages.sh && bash install.sh"
 
