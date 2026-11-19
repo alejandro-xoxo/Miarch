@@ -53,6 +53,9 @@ def escribir_kde(base, acentos, fg):
         cp["General"].update(general)
         if "KDE" not in cp: cp["KDE"] = {}
         cp["KDE"].update({"widgetStyle": "Fusion", "contrast": "4"})
+        # Dolphin (KDE) ignora el tema de qt6ct y toma el esquema de aquí
+        if "UiSettings" not in cp: cp["UiSettings"] = {}
+        cp["UiSettings"]["ColorScheme"] = "Miarch"
         if "Icons" not in cp: cp["Icons"] = {}
         cp["Icons"]["Theme"] = "breeze-dark"
         tmp = ruta + ".tmp"
@@ -93,13 +96,13 @@ def escribir_qt6ct(base, acentos, fg):
     visit   = mate(acentos[2], 0.30, 0.60)
     # Orden de QPalette::ColorRole (Qt 6): WindowText, Button, Light, Midlight, Dark, Mid, Text, BrightText,
     # ButtonText, Base, Window, Shadow, Highlight, HighlightedText, Link, LinkVisited, AlternateBase, NoRole,
-    # ToolTipBase, ToolTipText, PlaceholderText, Accent
+    # ToolTipBase, ToolTipText, PlaceholderText (21 entradas, como los esquemas de qt6ct)
     def paleta(texto, deshab=False):
         t = tenue if deshab else texto
         return ["#ff" + c[1:] for c in [
             t, boton, mezcla(boton, "#ffffff", 0.16), mezcla(boton, "#ffffff", 0.08), mezcla(bg, "#000000", 0.50),
             mezcla(boton, "#000000", 0.25), t, "#ffffff", t, bg, bg, "#000000", acento, bg, acento, visit,
-            bg_alt, bg, bg_alt, texto, tenue, acento]]
+            bg_alt, bg, bg_alt, texto, tenue]]
     colores = ("[ColorScheme]\n"
                "active_colors=" + ", ".join(paleta(fg)) + "\n"
                "disabled_colors=" + ", ".join(paleta(fg, True)) + "\n"
