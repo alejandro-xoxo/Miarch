@@ -1,6 +1,6 @@
 # 🧰 Miarch · Arch Linux + Hyprland
 
-**La idea de este repositorio: dejar un Arch Linux mínimo convertido en este escritorio con tres comandos, sin configurar nada a mano.**
+**La idea de este repositorio: dejar un Arch Linux mínimo convertido en este escritorio con un solo comando, sin configurar nada a mano.**
 
 Un escritorio personal sobre **Hyprland**, con un entorno propio hecho en **Quickshell**: reloj y anillos de datos sobre el fondo, barra, lanzador de apps, paneles de Wi‑Fi y Bluetooth, ajustes del equipo, pantalla de bloqueo y pantalla de inicio de sesión. Los colores son mate y salen del wallpaper.
 
@@ -8,45 +8,35 @@ Un escritorio personal sobre **Hyprland**, con un entorno propio hecho en **Quic
 
 ---
 
-## 🚀 Instalación desde un Arch mínimo
+## 🚀 Instalación (un solo comando)
 
-Parte de un Arch recién instalado (perfil mínimo): solo necesitas **un usuario normal con `sudo`** y **conexión a internet**.
-
-### 0. Conéctate a internet (solo si aún no lo estás)
-
-En un Arch mínimo el Wi‑Fi se maneja con `iwd`. Entra a `iwctl` y conéctate a tu red (te pedirá la contraseña):
+Desde un Arch mínimo, con **un usuario normal con `sudo`** y **internet**, copia y pega:
 
 ```bash
-iwctl
-  station wlan0 scan
-  station wlan0 get-networks
-  station wlan0 connect "NOMBRE_DE_TU_RED"
-  exit
-ping -c 1 archlinux.org
+sudo pacman -S --needed --noconfirm git && git clone https://github.com/alejandro-xoxo/Miarch ~/Miarch && ~/Miarch/setup.sh
 ```
 
-Si usas cable, ya debería haber conexión. Cuando termines de instalar, el Wi‑Fi se maneja con un panel de clics; no hay que volver a usar comandos.
-
-### 1. Descarga el repositorio
+Pide tu contraseña de `sudo` una sola vez. Tarda unos 30 minutos (compila Quickshell). Al terminar:
 
 ```bash
-sudo pacman -S --needed --noconfirm git base-devel
-git clone https://github.com/alejandro-xoxo/Miarch.git ~/Miarch
-cd ~/Miarch
+sudo reboot
 ```
 
-### 2. Instala los paquetes y las configuraciones
+Inicia sesión en la terminal (tty1) y el escritorio arranca solo.
+
+<details>
+<summary>¿Sin internet? Conéctate al Wi‑Fi primero</summary>
 
 ```bash
-./packages.sh     # paquetes (pacman y AUR), servicios y Oh My Zsh
-./install.sh      # copia las configuraciones y los scripts a tu $HOME
+iwctl station wlan0 connect "NOMBRE_DE_TU_RED"
 ```
 
-Los dos se pueden ejecutar varias veces sin problema. `install.sh` guarda copias de seguridad (`*.bak-FECHA`) de lo que reemplaza.
+Te pide la contraseña. Si tu tarjeta no se llama `wlan0`, mira su nombre con `iwctl station list`. Con cable ya debería haber conexión. Cuando termines de instalar, el Wi‑Fi se maneja con un panel de clics y no hace falta volver a usar comandos.
+</details>
 
-### 3. Reinicia
+`setup.sh` se puede ejecutar varias veces sin problema, y guarda copias de seguridad (`*.bak-FECHA`) de lo que reemplaza. Si prefieres hacerlo por pasos: `./packages.sh` (paquetes, servicios y Oh My Zsh) y luego `./install.sh` (configuraciones y scripts).
 
-Al iniciar sesión en la terminal (tty1), Hyprland arranca solo y aparece el escritorio. **Opcional:** para tener también una pantalla de inicio de sesión gráfica, ejecuta `./scripts/miarch-greeter-install` (más abajo).
+**Opcional, pantalla de inicio de sesión gráfica** (con el mismo estilo que el bloqueo): `./scripts/miarch-greeter-install`
 
 > La primera vez, inicia sesión en las herramientas que usan cuenta: `claude`, `codex`, `agy` y `gh auth login`.
 
@@ -114,6 +104,7 @@ En la barra, un clic en el Wi‑Fi o el Bluetooth abre un panel para ver las red
 
 | Ruta | Qué es |
 |---|---|
+| `setup.sh` | Instalación completa en un paso (llama a `packages.sh` e `install.sh`) |
 | `packages.sh` | Instala paquetes (pacman y AUR) y activa los servicios |
 | `install.sh` | Copia configuraciones y scripts a tu `$HOME` (con copia de seguridad) |
 | `config/hypr/` | Hyprland (config en Lua; los ajustes del panel son variables al inicio) |
