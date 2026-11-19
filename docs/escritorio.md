@@ -24,6 +24,9 @@ kitty con los colores del wallpaper (`color16` acento, `color17` neutro), la mis
 ## Neovim (`config/nvim/init.lua`)
 Configuración con Lazy.nvim; `install.sh` sincroniza los plugins.
 
+## Chrome (`config/chrome/chrome-flags.conf`)
+Flags para Wayland y aceleración de video (VA-API).
+
 ## Pantalla de inicio de sesión (`config/greeter/`)
 `greetd` + una pantalla Quickshell con el mismo estilo del bloqueo. Opcional: `./scripts/miarch-greeter-install`.
 

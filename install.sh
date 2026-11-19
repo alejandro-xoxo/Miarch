@@ -61,6 +61,7 @@ copy_config "$CONFIG_DIR/kitty"             "$HOME/.config/kitty"
 copy_config "$CONFIG_DIR/nvim"              "$HOME/.config/nvim"
 copy_config "$CONFIG_DIR/quickshell/miarch" "$HOME/.config/quickshell/miarch"
 copy_config "$DOTFILES_DIR/home/.zshrc"     "$HOME/.zshrc"
+install -Dm644 "$CONFIG_DIR/chrome/chrome-flags.conf" "$HOME/.config/chrome-flags.conf"
 
 # =========================
 # WALLPAPERS
