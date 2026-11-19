@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# Miarch · aplica un ajuste. Lo usa el panel de Ajustes; también sirve desde terminal.
+#   Hyprland:   anim | blur | escala | teclado | scrollnat | tap | sens | cursor | movimiento
+#   Shell:      barra | texto | contraste | gif
+#   Sistema:    perfil | brillo | uso (contador de apps del lanzador)
+set -u
+HYPR="$HOME/.config/hypr/hyprland.lua"
+REPO="$HOME/Miarch/config/hypr/hyprland.lua"
+AJ="$HOME/.config/miarch/ajustes.json"
+
+valido() { case " $2 " in *" $1 "*) return 0 ;; *) echo "Valor inválido '$1'. Opciones: $2"; exit 1 ;; esac; }
+poner_lua() {   # $1 = variable  $2 = valor
+    for f in "$HYPR" "$REPO"; do
+        [ -f "$f" ] && sed -i "s/^local $1 *= *\"[^\"]*\"/local $1 = \"$2\"/" "$f"
+    done
+    hyprctl reload >/dev/null
+}
+poner_json() {  # $1 = clave  $2 = valor (se guarda como texto)
+    mkdir -p "$(dirname "$AJ")"
+    python3 -I - "$AJ" "$1" "$2" <<'PY'
+import json, os, sys
+ruta, clave, valor = sys.argv[1:4]
+try:
+    with open(ruta) as f: d = json.load(f)
+except (OSError, ValueError): d = {}
+d[clave] = valor
+with open(ruta + ".tmp", "w") as f: json.dump(d, f)
+os.replace(ruta + ".tmp", ruta)
+PY
+}
+
+v="${2:-}"
+case "${1:-}" in
+    anim)       valido "$v" "slide zoom suave elastico original"; poner_lua ANIM "$v" ;;
+    blur)       valido "$v" "ninguno suave medio fuerte extremo"; poner_lua BLUR "$v" ;;
+    escala)     valido "$v" "auto 1 1.25 1.5 2";                  poner_lua ESCALA "$v" ;;
+    teclado)    valido "$v" "latam us es";                         poner_lua KB "$v" ;;
+    scrollnat)  valido "$v" "on off";                              poner_lua NATURAL "$v" ;;
+    tap)        valido "$v" "on off";                              poner_lua TAP "$v" ;;
+    sens)       valido "$v" "-0.5 -0.25 0 0.25 0.5";               poner_lua SENS "$v" ;;
+    cursor)     valido "$v" "24 32 40 48"
+                poner_lua CURSOR "$v"
+                hyprctl setcursor "${XCURSOR_THEME:-default}" "$v" >/dev/null 2>&1 || true ;;
+    movimiento) valido "$v" "on off"
+                poner_lua MOVIMIENTO "$v"
+                [ "$v" = "off" ] && poner_json barra ninguna ;;
+    barra)      valido "$v" "ninguna fundido deslizar rebote"; poner_json barra "$v" ;;
+    texto)      valido "$v" "1 1.15 1.3 1.5";                  poner_json texto "$v" ;;
+    contraste)  valido "$v" "on off";                          poner_json contraste "$v" ;;
+    gif)        valido "$v" "on off"                           # fondos animados: on | off (off = imagen fija)
+                poner_json gif "$v"
+                [ -s "$HOME/.cache/miarch-wallpaper" ] && "$HOME/.local/bin/wallpaper.sh" "$(cat "$HOME/.cache/miarch-wallpaper")" >/dev/null 2>&1 ;;
+    uso)        # cuenta una apertura de app (la usa el lanzador para ordenar por uso)
+                [ -n "$v" ] || exit 1
+                mkdir -p "$(dirname "$AJ")"
+                python3 -I - "$(dirname "$AJ")/uso.json" "$v" <<'PY'
+import json, os, sys
+ruta, app = sys.argv[1:3]
+try:
+    with open(ruta) as f: d = json.load(f)
+except (OSError, ValueError): d = {}
+d[app] = int(d.get(app, 0)) + 1
+with open(ruta + ".tmp", "w") as f: json.dump(d, f)
+os.replace(ruta + ".tmp", ruta)
+PY
+                ;;
+    perfil)     valido "$v" "power-saver balanced performance"
+                busctl --system set-property net.hadess.PowerProfiles /net/hadess/PowerProfiles \
+                       net.hadess.PowerProfiles ActiveProfile s "$v" ;;
+    brillo)     case "$v" in ''|*[!0-9]*) echo "brillo: número de 1 a 100"; exit 1 ;; esac
+                [ "$v" -lt 1 ] && v=1; [ "$v" -gt 100 ] && v=100
+                brightnessctl -q set "${v}%" ;;
+    *) echo "uso: miarch-set <ajuste> <valor>"; exit 1 ;;
+esac
