@@ -34,6 +34,8 @@ iwctl station wlan0 connect "NOMBRE_DE_TU_RED"
 Te pide la contraseña. Si tu tarjeta no se llama `wlan0`, mira su nombre con `iwctl station list`. Con cable ya debería haber conexión. Cuando termines de instalar, el Wi‑Fi se maneja con un panel de clics y no hace falta volver a usar comandos.
 </details>
 
+Si descargaste el ZIP de GitHub en vez de usar `git clone`, los permisos de ejecución se pierden: usa `bash setup.sh`.
+
 Más detalle (por pasos, pantalla de inicio de sesión gráfica, seguridad): [docs/instalacion.md](docs/instalacion.md).
 
 > La primera vez, inicia sesión en `claude`, `codex`, `agy` y `gh auth login`.
