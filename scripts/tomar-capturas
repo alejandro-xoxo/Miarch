@@ -33,6 +33,7 @@ qs_restart() { qs kill -c miarch >/dev/null 2>&1; sleep 1; (env "$@" setsid qs -
 WS_DEMO=5
 esperar_calma() {   # los anillos de CPU salen en la captura: espera (máx. 90 s) a que el equipo esté tranquilo
     local t0 t1 i0 i1 uso
+    [ "${SIN_ESPERA:-0}" = 1 ] && return 0   # SIN_ESPERA=1: los anillos muestran el consumo real del momento
     for _ in $(seq 1 30); do
         read -r _ u n sy id io irq sirq st _ < /proc/stat; t0=$((u+n+sy+id+io+irq+sirq+st)); i0=$((id+io))
         sleep 3
