@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Miarch · copia las configuraciones y scripts del repo a tu $HOME. Se puede ejecutar varias veces.
 set -euo pipefail
+set -E
+trap 'echo "❌ El script se detuvo en la línea $LINENO: $BASH_COMMAND" >&2' ERR   # dice dónde falló, nunca se detiene en silencio
 
 if [ "$EUID" -eq 0 ]; then
     echo "❌ No ejecutes este script como root."
