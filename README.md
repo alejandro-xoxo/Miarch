@@ -58,6 +58,10 @@ La terminal (kitty) y Dolphin comparten la misma paleta, tipografía y acento qu
 |---|---|
 | ![Terminal](docs/screenshots/terminal.jpg) | ![Dolphin](docs/screenshots/dolphin.jpg) |
 
+**fastfetch se adapta al tamaño de cada terminal**: logo grande en una ventana amplia, logo pequeño en una mediana, solo los datos en una angosta y nada en una diminuta (`ff` lo vuelve a mostrar).
+
+![Adaptación al tamaño](docs/screenshots/terminal-adaptacion.jpg)
+
 ### Lanzador de apps (`Super + Espacio`)
 Búsqueda instantánea, entiende abreviaturas (`gcr` → Google Chrome) y ordena primero lo que más usas.
 
