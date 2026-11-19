@@ -53,6 +53,9 @@ def escribir_kde(base, acentos, fg):
         cp["General"].update(general)
         if "KDE" not in cp: cp["KDE"] = {}
         cp["KDE"].update({"widgetStyle": "Fusion", "contrast": "4"})
+        # Dolphin (KDE) ignora el tema de qt6ct y toma el esquema de aquí
+        if "UiSettings" not in cp: cp["UiSettings"] = {}
+        cp["UiSettings"]["ColorScheme"] = "Miarch"
         if "Icons" not in cp: cp["Icons"] = {}
         cp["Icons"]["Theme"] = "breeze-dark"
         tmp = ruta + ".tmp"
@@ -93,13 +96,13 @@ def escribir_qt6ct(base, acentos, fg):
     visit   = mate(acentos[2], 0.30, 0.60)
     # Orden de QPalette::ColorRole (Qt 6): WindowText, Button, Light, Midlight, Dark, Mid, Text, BrightText,
     # ButtonText, Base, Window, Shadow, Highlight, HighlightedText, Link, LinkVisited, AlternateBase, NoRole,
-    # ToolTipBase, ToolTipText, PlaceholderText, Accent
+    # ToolTipBase, ToolTipText, PlaceholderText (21 entradas, como los esquemas de qt6ct)
     def paleta(texto, deshab=False):
         t = tenue if deshab else texto
         return ["#ff" + c[1:] for c in [
             t, boton, mezcla(boton, "#ffffff", 0.16), mezcla(boton, "#ffffff", 0.08), mezcla(bg, "#000000", 0.50),
             mezcla(boton, "#000000", 0.25), t, "#ffffff", t, bg, bg, "#000000", acento, bg, acento, visit,
-            bg_alt, bg, bg_alt, texto, tenue, acento]]
+            bg_alt, bg, bg_alt, texto, tenue]]
     colores = ("[ColorScheme]\n"
                "active_colors=" + ", ".join(paleta(fg)) + "\n"
                "disabled_colors=" + ", ".join(paleta(fg, True)) + "\n"
@@ -109,12 +112,16 @@ def escribir_qt6ct(base, acentos, fg):
     esquema = d + "/colors/miarch.conf"
     with open(esquema + ".tmp", "w", encoding="utf-8") as f: f.write(colores)
     os.replace(esquema + ".tmp", esquema)
+    # hoja de estilo: los paneles laterales (Lugares de Dolphin…) con ancho suficiente para no cortar los nombres
+    os.makedirs(d + "/qss", exist_ok=True)
+    qss = d + "/qss/miarch.qss"
+    with open(qss, "w", encoding="utf-8") as f: f.write("QDockWidget { min-width: 190px; }\n")
     fuente = '"JetBrainsMono Nerd Font,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"'
     conf = ("[Appearance]\ncolor_scheme_path=" + esquema + "\ncustom_palette=true\nicon_theme=breeze-dark\n"
             "standard_dialogs=default\nstyle=Fusion\n\n[Fonts]\nfixed=" + fuente + "\ngeneral=" + fuente + "\n\n"
             "[Interface]\nactivate_item_on_single_click=1\nbuttonbox_layout=0\ncursor_flash_time=1000\n"
             "dialog_buttons_have_icons=1\ndouble_click_interval=400\ngui_effects=@Invalid()\nkeyboard_scheme=2\n"
-            "menus_have_icons=true\nshow_shortcuts_in_context_menus=true\nstylesheets=@Invalid()\n"
+            "menus_have_icons=true\nshow_shortcuts_in_context_menus=true\nstylesheets=" + qss + "\n"
             "toolbutton_style=4\nunderline_shortcut=1\nwheel_scroll_lines=3\n")
     with open(d + "/qt6ct.conf.tmp", "w", encoding="utf-8") as f: f.write(conf)
     os.replace(d + "/qt6ct.conf.tmp", d + "/qt6ct.conf")

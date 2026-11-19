@@ -1764,6 +1764,112 @@ ShellRoot {
                 }
                 Rectangle { anchors.fill: parent; color: root.fondo; opacity: 0.58 }
 
+                // Música (solo si hay un reproductor): tarjeta grande a la derecha del reloj
+                Item {
+                    id: musicaBloqueo
+                    readonly property var p: root.jugador
+                    readonly property real avance: (p && p.length > 0) ? Math.min(1, p.position / p.length) : 0
+                    readonly property real lado: Math.min(candado.height * 0.30, candado.width * 0.2)
+                    x: candado.width * 0.46
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.verticalCenterOffset: -candado.height * 0.09 + (1 - candado.entrada) * 60
+                    width: lado + candado.height * 0.04 + Math.min(candado.width * 0.24, 460)
+                    height: lado
+                    opacity: p ? Math.min(1, candado.entrada) : 0
+                    visible: opacity > 0
+                    Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
+
+                    Timer {
+                        running: musicaBloqueo.visible && musicaBloqueo.p !== null && musicaBloqueo.p.isPlaying
+                        interval: 1000; repeat: true
+                        onTriggered: musicaBloqueo.p.positionChanged()
+                    }
+
+                    Rectangle {
+                        id: portadaBloqueo
+                        width: musicaBloqueo.lado; height: width
+                        color: Qt.alpha(root.arena, 0.08)
+                        border.width: 1; border.color: Qt.alpha(root.arena, 0.15)
+                        Image {
+                            id: imgPortadaBloqueo
+                            anchors.fill: parent
+                            source: musicaBloqueo.p ? root.portadaGrande(musicaBloqueo.p.trackArtUrl) : ""
+                            fillMode: Image.PreserveAspectCrop
+                            asynchronous: true; cache: true
+                            sourceSize.width: 640; sourceSize.height: 640
+                            smooth: true; mipmap: true
+                            visible: status === Image.Ready
+                        }
+                        Text {
+                            anchors.centerIn: parent
+                            visible: imgPortadaBloqueo.status !== Image.Ready
+                            text: "\uf001"
+                            color: Qt.alpha(root.arena, 0.4)
+                            font { family: root.fuente; pixelSize: candado.height * 0.06 }
+                        }
+                    }
+                    Column {
+                        x: portadaBloqueo.width + candado.height * 0.04
+                        width: parent.width - x
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: candado.height * 0.012
+                        Text {
+                            width: parent.width; elide: Text.ElideRight
+                            text: musicaBloqueo.p ? (musicaBloqueo.p.trackTitle || "Sin título") : ""
+                            color: root.arena
+                            opacity: (musicaBloqueo.p && musicaBloqueo.p.isPlaying) ? 1 : 0.6
+                            Behavior on opacity { NumberAnimation { duration: 250 } }
+                            font { family: root.fuente; pixelSize: candado.height * 0.034; weight: Font.Medium }
+                        }
+                        Text {
+                            width: parent.width; elide: Text.ElideRight
+                            text: musicaBloqueo.p ? (musicaBloqueo.p.trackArtist || "").toUpperCase() : ""
+                            color: root.terracota
+                            font { family: root.fuente; pixelSize: candado.height * 0.016; weight: Font.Medium; letterSpacing: 4 }
+                        }
+                        Item {   // barra de progreso (clic para saltar)
+                            width: parent.width; height: candado.height * 0.02
+                            Rectangle {
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: parent.width; height: 3; radius: 1.5; color: Qt.alpha(root.arena, 0.22)
+                                Rectangle { width: parent.width * musicaBloqueo.avance; height: parent.height; radius: 1.5; color: root.terracota }
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                enabled: musicaBloqueo.p !== null && musicaBloqueo.p.canSeek
+                                cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                onClicked: mouse => { musicaBloqueo.p.position = (mouse.x / width) * musicaBloqueo.p.length; musicaBloqueo.p.positionChanged() }
+                            }
+                        }
+                        Row {
+                            spacing: candado.height * 0.03
+                            Repeater {
+                                model: [ { g: "\uf048", a: "previous" }, { g: "play", a: "toggle" }, { g: "\uf051", a: "next" } ]
+                                Text {
+                                    required property var modelData
+                                    text: modelData.g === "play" ? ((musicaBloqueo.p && musicaBloqueo.p.isPlaying) ? "\uf04c" : "\uf04b") : modelData.g
+                                    color: modelData.a === "toggle" ? root.terracota : Qt.alpha(root.arena, 0.8)
+                                    font { family: root.fuente; pixelSize: candado.height * 0.026 }
+                                    MouseArea {
+                                        anchors.fill: parent; anchors.margins: -8; cursorShape: Qt.PointingHandCursor
+                                        onClicked: { if (!musicaBloqueo.p) return
+                                            if (modelData.a === "toggle") musicaBloqueo.p.togglePlaying()
+                                            else if (modelData.a === "next") musicaBloqueo.p.next()
+                                            else musicaBloqueo.p.previous() }
+                                    }
+                                }
+                            }
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                leftPadding: candado.height * 0.01
+                                text: musicaBloqueo.p ? (root.fmtTiempo(musicaBloqueo.p.position) + " / " + root.fmtTiempo(musicaBloqueo.p.length)) : ""
+                                color: Qt.alpha(root.arena, 0.5)
+                                font { family: root.fuente; pixelSize: candado.height * 0.016; weight: Font.Light }
+                            }
+                        }
+                    }
+                }
+
                 Column {
                     x: parent.width * 0.05
                     anchors.verticalCenter: parent.verticalCenter
@@ -1789,14 +1895,6 @@ ShellRoot {
                         Anillo { etiqueta: "CPU"; valor: root.cpu;     color: root.pizarra;    tam: candado.height * 0.13 }
                         Anillo { etiqueta: "RAM"; valor: root.ram;     color: root.salvia;     tam: candado.height * 0.13 }
                         Anillo { etiqueta: root.cargando ? "CARGA" : "BAT"; valor: root.bateria; color: root.terracota; tam: candado.height * 0.13 }
-                    }
-                    Text {   // canción actual (solo si hay un reproductor)
-                        visible: root.jugador !== null && (root.jugador.trackTitle || "") !== ""
-                        text: root.jugador ? ("\uf001   " + (root.jugador.trackTitle || "") + (root.jugador.trackArtist ? "  ·  " + root.jugador.trackArtist : "")) : ""
-                        width: Math.min(candado.width * 0.4, 560); elide: Text.ElideRight
-                        topPadding: candado.height * 0.025; leftPadding: 6
-                        color: Qt.alpha(root.arena, 0.6)
-                        font { family: root.fuente; pixelSize: 14 * root.esc; weight: Font.Light }
                     }
                     Item { width: 1; height: candado.height * 0.07 }
 

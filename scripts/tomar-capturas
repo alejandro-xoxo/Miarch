@@ -3,6 +3,9 @@
 # Úsalo DENTRO de Hyprland con el escritorio miarch en marcha. Tarda ~2 minutos y al terminar
 # deja todo como estaba (fondo, escritorio y escritorio de trabajo).
 #
+# Música: si defines PLAYER_FALSO="comando de un reproductor MPRIS de prueba", se usa para que salga la tarjeta
+# de música sin enseñar lo que escuchas. Sin eso, las capturas salen sin música (o con lo que suene).
+#
 # Modo demo: oculta el nombre de tu red en la barra. NO captura los paneles de Wi-Fi, Bluetooth
 # ni la página Sistema, porque muestran redes, dispositivos y datos del equipo.
 set -u
@@ -27,7 +30,32 @@ ORIG_WALL="$(cat "$HOME/.cache/miarch-wallpaper" 2>/dev/null || true)"
 mkdir -p "$OUT"
 
 qs_restart() { qs kill -c miarch >/dev/null 2>&1; sleep 1; (env "$@" setsid qs -c miarch >/dev/null 2>&1 &); sleep 5; }
-shot() { grim -o "$M" "$TMP/$1.png" && echo "  📸 $1"; }
+WS_DEMO=5
+esperar_calma() {   # los anillos de CPU salen en la captura: espera (máx. 90 s) a que el equipo esté tranquilo
+    local t0 t1 i0 i1 uso
+    [ "${SIN_ESPERA:-0}" = 1 ] && return 0   # SIN_ESPERA=1: los anillos muestran el consumo real del momento
+    for _ in $(seq 1 30); do
+        read -r _ u n sy id io irq sirq st _ < /proc/stat; t0=$((u+n+sy+id+io+irq+sirq+st)); i0=$((id+io))
+        sleep 3
+        read -r _ u n sy id io irq sirq st _ < /proc/stat; t1=$((u+n+sy+id+io+irq+sirq+st)); i1=$((id+io))
+        uso=$(( 100 * ( (t1-t0) - (i1-i0) ) / (t1-t0) ))
+        [ "$uso" -le 18 ] && return 0
+    done
+    echo "  ⚠️  el equipo no se calmó (CPU ${uso}%): cierra lo que consuma y repite si quieres anillos bajos"
+}
+ir_demo() {   # vuelve al escritorio de demo y espera a estar de verdad ahí
+    for _ in 1 2 3 4; do
+        hyprctl dispatch "hl.dsp.focus({ workspace = $WS_DEMO })" >/dev/null 2>&1; sleep 0.7
+        [ "$(hyprctl activeworkspace -j | python3 -c "import json,sys;print(json.load(sys.stdin)['id'])")" = "$WS_DEMO" ] && return 0
+    done
+    echo "❌ No puedo volver al escritorio $WS_DEMO."; exit 1
+}
+shot() {   # nunca fotografía otro escritorio: si cambiaste de escritorio durante la toma, aborta
+    local ws; ws="$(hyprctl activeworkspace -j | python3 -c "import json,sys;print(json.load(sys.stdin)['id'])")"
+    [ "$ws" = "$WS_DEMO" ] || { echo "❌ Estás en el escritorio $ws, no en el $WS_DEMO: aborto para no fotografiar tu trabajo. No cambies de escritorio mientras se toman."; exit 1; }
+    [ "${2:-}" = rapido ] || esperar_calma
+    grim -o "$M" "$TMP/$1.png" && echo "  📸 $1"
+}
 setfondo() {   # aplica un fondo y comprueba que de verdad quedó puesto
     for i in 1 2 3; do
         "$HOME/.local/bin/wallpaper.sh" "$1" >/dev/null 2>&1; sleep 5.5
@@ -36,7 +64,15 @@ setfondo() {   # aplica un fondo y comprueba que de verdad quedó puesto
     done
     echo "  ⚠️  no se pudo aplicar $(basename "$1")"
 }
+PLAYER_PID=""
+player_on()  { [ -n "${PLAYER_FALSO:-}" ] || return 0; player_off; (setsid $PLAYER_FALSO >/dev/null 2>&1 & echo $! >"$TMP/player.pid"); sleep 2.5; PLAYER_PID="$(cat "$TMP/player.pid" 2>/dev/null)"; }
+player_off() { [ -n "$PLAYER_PID" ] && kill "$PLAYER_PID" 2>/dev/null; PLAYER_PID=""; }
+matar_clase() {   # cierra las ventanas de una clase (por PID, nunca por nombre)
+    for p in $(hyprctl clients -j | python3 -c "import json,sys;print(' '.join(str(c['pid']) for c in json.load(sys.stdin) if c['class']=='$1'))"); do kill "$p" 2>/dev/null; done
+    sleep 1
+}
 restaurar() {
+    player_off
     qs -p "$REPO/config/greeter" kill >/dev/null 2>&1
     [ -n "$ORIG_WALL" ] && [ -f "$ORIG_WALL" ] && { "$HOME/.local/bin/wallpaper.sh" "$ORIG_WALL" >/dev/null 2>&1; sleep 3; }
     qs_restart A=1
@@ -48,10 +84,20 @@ trap restaurar EXIT
 
 echo "Monitor: $M · escritorio de trabajo: $ORIG_WS"
 qs_restart MIARCH_DEMO=1
-hyprctl dispatch "hl.dsp.focus({ workspace = 5 })" >/dev/null 2>&1; sleep 1.5   # escritorio vacío
+hyprctl dispatch "hl.dsp.focus({ workspace = $WS_DEMO })" >/dev/null 2>&1; sleep 1.5
+[ "$(hyprctl workspaces -j | python3 -c "import json,sys;print(sum(w['windows'] for w in json.load(sys.stdin) if w['id']==$WS_DEMO))")" = "0" ] \
+    || { echo "❌ El escritorio $WS_DEMO tiene ventanas abiertas: ciérralas o cambia WS_DEMO."; exit 1; }
 
 setfondo "$FONDO_OSCURO"
+player_on
 shot escritorio-oscuro
+
+# Terminal (con fastfetch) y gestor de archivos sobre el mismo fondo
+# MIARCH_DEMO=1 oculta tu usuario y el nombre del equipo en el prompt y en fastfetch
+ir_demo; (MIARCH_DEMO=1 setsid kitty --class miarch-captura >/dev/null 2>&1 &); sleep 5; shot terminal; matar_clase miarch-captura
+# Adaptación: tres terminales a la vez; fastfetch se ajusta al tamaño de cada una (logo grande, pequeño o ninguno)
+ir_demo; for i in 1 2 3; do (MIARCH_DEMO=1 setsid kitty --class miarch-captura >/dev/null 2>&1 &); sleep 3; done; sleep 2; shot terminal-adaptacion; matar_clase miarch-captura
+ir_demo; (QT_QPA_PLATFORMTHEME=qt6ct setsid dolphin --new-window "$REPO" >/dev/null 2>&1 &); sleep 6; shot dolphin; matar_clase org.kde.dolphin
 qs -c miarch ipc call launcher open; sleep 2.5; shot lanzador; qs -c miarch ipc call launcher close; sleep 1
 for pg in apariencia accesibilidad energia; do
     qs -c miarch ipc call settings page "$pg"; sleep 3; shot "ajustes-$pg"
@@ -63,8 +109,9 @@ shot escritorio-claro
 
 # Bloqueo (modo de prueba: se desbloquea solo a los 9 s) e inicio de sesión (modo de prueba)
 setfondo "$FONDO_OSCURO"
+player_on
 qs_restart MIARCH_DEMO=1 MIARCH_LOCK_TEST=1
-qs -c miarch ipc call lock lock; sleep 3.5; shot bloqueo; sleep 7
+esperar_calma; qs -c miarch ipc call lock lock; sleep 3.5; shot bloqueo rapido; sleep 7
 cp "$FONDO_OSCURO" "$TMP/wallpaper"; cp "$HOME/.cache/miarch/colors.json" "$TMP/colors.json"
 (MIARCH_GREETER_TEST=1 MIARCH_GREETER_DATA="$TMP" setsid qs -p "$REPO/config/greeter" >/dev/null 2>&1 &); sleep 4.5
 shot inicio-de-sesion
