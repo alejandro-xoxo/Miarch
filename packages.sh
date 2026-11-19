@@ -139,15 +139,27 @@ fi
 
 # Nota de seguridad: --noconfirm instala sin que veas el PKGBUILD de cada paquete.
 # Si prefieres revisarlos, quita --noconfirm (yay te los mostrará uno por uno).
-echo "📥 Instalando paquetes de AUR..."
-yay -S --noconfirm --needed \
-    quickshell-git \
-    google-chrome \
-    visual-studio-code-bin \
-    claude-code \
-    claude-desktop \
-    antigravity-cli \
+echo "📥 Instalando paquetes de AUR (uno por uno: si uno falla, los demás siguen)..."
+AUR_PAQUETES=(
+    quickshell-git
+    google-chrome
+    visual-studio-code-bin
+    claude-code
+    claude-desktop
+    antigravity-cli
     hermes-webui-desktop-bin     # ventana de escritorio de Hermes WebUI (necesita un servidor hermes-webui local o remoto)
+)
+AUR_FALLIDOS=()
+for paquete in "${AUR_PAQUETES[@]}"; do
+    echo "   → $paquete"
+    yay -S --noconfirm --needed "$paquete" || AUR_FALLIDOS+=("$paquete")
+done
+if [ "${#AUR_FALLIDOS[@]}" -gt 0 ]; then
+    echo ""
+    echo "⚠️  No se pudieron instalar estos paquetes de AUR: ${AUR_FALLIDOS[*]}"
+    echo "   Reintenta uno con:  yay -S ${AUR_FALLIDOS[0]}   (te mostrará el error completo)"
+    echo ""
+fi
 
 # =========================
 # JAVA 21 POR DEFECTO
@@ -156,7 +168,11 @@ echo "☕ Dejando Java 21 como versión por defecto..."
 sudo archlinux-java set java-21-openjdk || echo "⚠️  No se pudo fijar Java 21 (revisa: archlinux-java status)"
 
 echo ""
-echo "✅ ¡Paquetes instalados!"
+if [ "${#AUR_FALLIDOS[@]}" -gt 0 ]; then
+    echo "⚠️  Paquetes instalados, salvo los de AUR que fallaron (arriba)."
+else
+    echo "✅ ¡Paquetes instalados!"
+fi
 echo "   Siguiente paso:  ./install.sh"
 echo ""
 echo "   La primera vez, inicia sesión en cada herramienta:"
