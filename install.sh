@@ -1,144 +1,108 @@
 #!/usr/bin/env bash
+# Miarch · copia las configuraciones y scripts del repo a tu $HOME. Se puede ejecutar varias veces.
 set -euo pipefail
 
-echo "🚀 Iniciando instalación de dotfiles Miarch..."
+if [ "$EUID" -eq 0 ]; then
+    echo "❌ No ejecutes este script como root."
+    exit 1
+fi
 
-# =========================
-# DETECTAR UBICACIÓN DEL REPO
-# =========================
+echo "🚀 Instalando dotfiles de Miarch..."
+
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIR="$DOTFILES_DIR/config"
-
-echo "📍 Dotfiles encontrados en: $DOTFILES_DIR"
+STAMP="$(date +%Y%m%d-%H%M%S)"
+echo "📍 Repositorio: $DOTFILES_DIR"
 
 # =========================
 # FUNCIONES AUXILIARES
 # =========================
 backup() {
-    if [ -e "$1" ] && [ ! -L "$1" ]; then
-        echo "📦 Creando backup: $1 → $1.bak"
-        mv "$1" "$1.bak"
+    if [ -e "$1" ] || [ -L "$1" ]; then
+        echo "📦 Copia de seguridad: $1 → $1.bak-$STAMP"
+        mv "$1" "$1.bak-$STAMP"
     fi
 }
 
 copy_config() {
-    local src="$1"
-    local dest="$2"
-
-    if [ -d "$src" ]; then
+    local src="$1" dest="$2"
+    if [ -e "$src" ]; then
         backup "$dest"
-        echo "📋 Copiando configuración: $src → $dest"
+        echo "📋 $src → $dest"
         mkdir -p "$(dirname "$dest")"
         cp -r "$src" "$dest"
     else
-        echo "⚠️  Advertencia: $src no existe, saltando..."
+        echo "⚠️  $src no existe, se omite"
     fi
 }
 
 # =========================
-# PREPARACIÓN DEL SISTEMA
+# CARPETAS DEL USUARIO
 # =========================
-echo "📁 Preparando directorios del usuario..."
-xdg-user-dirs-update          # Crea Pictures, Documents, etc. de forma estándar
-mkdir -p "$HOME/.config"
-mkdir -p "$HOME/.local/bin"
-mkdir -p "$HOME/Pictures/Wallpapers"   # Subcarpeta específica para tus wallpapers
+command -v xdg-user-dirs-update &>/dev/null && xdg-user-dirs-update
+PICTURES_DIR="$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")"
+WALL_DIR="$PICTURES_DIR/Wallpapers"
+mkdir -p "$HOME/.config" "$HOME/.local/bin" "$WALL_DIR"
 
 # =========================
-# COPIAR CONFIGURACIONES
+# SCRIPTS (van a ~/.local/bin)
+# =========================
+echo "⚙️  Instalando scripts..."
+for f in wallpaper.sh miarch-colors miarch-set miarch-wifi miarch-info miarch-fetch; do
+    [ -f "$DOTFILES_DIR/scripts/$f" ] && install -Dm755 "$DOTFILES_DIR/scripts/$f" "$HOME/.local/bin/$f"
+done
+
+# =========================
+# CONFIGURACIONES
 # =========================
 echo "🔧 Aplicando configuraciones..."
-
-copy_config "$CONFIG_DIR/hypr"  "$HOME/.config/hypr"
-copy_config "$CONFIG_DIR/kitty" "$HOME/.config/kitty"
-copy_config "$CONFIG_DIR/nvim"  "$HOME/.config/nvim"
-
-# swww (opcional)
-if [ -d "$CONFIG_DIR/swww" ]; then
-    copy_config "$CONFIG_DIR/swww" "$HOME/.config/swww"
-fi
+copy_config "$CONFIG_DIR/hypr"              "$HOME/.config/hypr"
+copy_config "$CONFIG_DIR/kitty"             "$HOME/.config/kitty"
+copy_config "$CONFIG_DIR/nvim"              "$HOME/.config/nvim"
+copy_config "$CONFIG_DIR/quickshell/miarch" "$HOME/.config/quickshell/miarch"
+copy_config "$DOTFILES_DIR/home/.zshrc"     "$HOME/.zshrc"
+install -Dm644 "$CONFIG_DIR/chrome/chrome-flags.conf" "$HOME/.config/chrome-flags.conf"
 
 # =========================
-# COPIAR ZSH
-# =========================
-if [ -f "$DOTFILES_DIR/home/.zshrc" ]; then
-    backup "$HOME/.zshrc"
-    echo "🔗 Copiando ~/.zshrc"
-    cp "$DOTFILES_DIR/home/.zshrc" "$HOME/.zshrc"
-fi
-
-# =========================
-# NEOVIM - Instalar plugins con Lazy.nvim
-# =========================
-echo "💤 Instalando plugins de Neovim..."
-if [ -d "$HOME/.config/nvim" ]; then
-    # Instalar Lazy.nvim si no existe
-    if [ ! -d "$HOME/.local/share/nvim/lazy/lazy.nvim" ]; then
-        echo "📥 Clonando Lazy.nvim..."
-        git clone --filter=blob:none https://github.com/folke/lazy.nvim.git \
-            --branch=stable "$HOME/.local/share/nvim/lazy/lazy.nvim"
-    fi
-
-    # Instalar plugins en modo headless
-    echo "🔄 Sincronizando plugins de Neovim..."
-    nvim --headless "+Lazy! sync" +qa || echo "⚠️  Neovim terminó con errores (posiblemente normal en primer arranque)"
-else
-    echo "⚠️  Carpeta de nvim no encontrada, saltando instalación de plugins"
-fi
-
-# =========================
-# COPIAR WALLPAPERS
+# WALLPAPERS
 # =========================
 if [ -d "$DOTFILES_DIR/wallpapers" ]; then
-    echo "🖼️  Copiando wallpapers a ~/Pictures/Wallpapers/"
-    cp -r "$DOTFILES_DIR/wallpapers/"* "$HOME/Pictures/Wallpapers/" 2>/dev/null || true
+    echo "🖼️  Copiando wallpapers a $WALL_DIR"
+    cp -rn "$DOTFILES_DIR/wallpapers/." "$WALL_DIR/"
 fi
 
 # =========================
-# COPIAR SCRIPT DE WALLPAPER
+# NEOVIM (Lazy.nvim instala los plugins solo)
 # =========================
-if [ -f "$DOTFILES_DIR/scripts/wallpaper.sh" ]; then
-    echo "⚙️  Instalando script de wallpaper en ~/.local/bin/"
-    cp "$DOTFILES_DIR/scripts/wallpaper.sh" "$HOME/.local/bin/wallpaper.sh"
-    chmod +x "$HOME/.local/bin/wallpaper.sh"
+if command -v nvim &>/dev/null; then
+    echo "💤 Sincronizando plugins de Neovim..."
+    nvim --headless "+Lazy! sync" +qa &>/dev/null || echo "⚠️  Neovim terminó con avisos (normal en el primer arranque)"
 fi
 
 # =========================
-# PERMISOS DE SCRIPTS
+# INICIO AUTOMÁTICO DE HYPRLAND EN tty1
+# (si luego instalas la pantalla de inicio de sesión gráfica, esto deja de hacer falta)
 # =========================
-if [ -d "$DOTFILES_DIR/scripts" ]; then
-    chmod +x "$DOTFILES_DIR/scripts/"* 2>/dev/null || true
-fi
+if ! grep -q "Miarch - Inicio automático" "$HOME/.zprofile" 2>/dev/null; then
+    echo "⚙️  Inicio automático de Hyprland en tty1..."
+    cat >> "$HOME/.zprofile" << 'EOF'
 
-# =========================
-# APLICAR WALLPAPER
-# =========================
-echo "🖼️  Aplicando wallpaper inicial..."
-if [ -f "$HOME/.local/bin/wallpaper.sh" ]; then
-    "$HOME/.local/bin/wallpaper.sh" || echo "⚠️  Error al aplicar wallpaper"
-else
-    echo "⚠️  wallpaper.sh no encontrado"
-fi
-
-# =========================
-# AUTOSTART HYPRLAND
-# =========================
-echo "⚙️  Configurando inicio automático de Hyprland al login en tty1..."
-cat > "$HOME/.zprofile" << 'EOF'
 # Miarch - Inicio automático de Hyprland (solo en tty1)
-if [[ "$(tty)" == "/dev/tty1" ]]; then
-    exec Hyprland
+if [[ -z "$WAYLAND_DISPLAY" && "$(tty)" == "/dev/tty1" ]]; then
+    exec start-hyprland
 fi
 EOF
+fi
 
 # =========================
-# LIMPIEZA FINAL
+# WALLPAPER Y COLORES (solo si ya estás dentro de Hyprland)
 # =========================
-echo "🧹 Limpiando archivos de instalación..."
-rm -rf "$DOTFILES_DIR"
+"$HOME/.local/bin/wallpaper.sh" || true
+# kitty toma sus colores de un archivo que genera miarch-colors a partir del wallpaper
+[ -s "$HOME/.cache/miarch-wallpaper" ] && "$HOME/.local/bin/miarch-colors" "$(cat "$HOME/.cache/miarch-wallpaper")" >/dev/null || true
 
-echo "✅ ¡Instalación completada con éxito!"
-echo "   Ahora al hacer reboot e iniciar sesión,"
-echo "   Hyprland se abrirá automáticamente."
 echo ""
-echo "   Reinicia con: reboot"
+echo "✅ ¡Listo!"
+echo "   Dentro de Hyprland recarga con: hyprctl reload   (y reinicia el escritorio: qs kill -c miarch; qs -c miarch &)"
+echo "   Si no, reinicia e inicia sesión en tty1."
+echo "   Opcional, pantalla de inicio de sesión gráfica:  ./scripts/miarch-greeter-install"
