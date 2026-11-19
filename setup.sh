@@ -2,6 +2,8 @@
 # Miarch · instalación completa desde un Arch mínimo: paquetes + configuraciones.
 # Uso:  ./setup.sh      (usuario normal con sudo; pide la contraseña una sola vez)
 set -euo pipefail
+set -E
+trap 'echo "❌ El script se detuvo en la línea $LINENO: $BASH_COMMAND" >&2' ERR   # dice dónde falló, nunca se detiene en silencio
 
 if [ "$EUID" -eq 0 ]; then
     echo "❌ Ejecútalo con tu usuario normal, no como root (pedirá sudo)."

@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 # Miarch · instala los paquetes (pacman + AUR) y activa los servicios. Se puede ejecutar varias veces.
 set -euo pipefail
+set -E
+trap 'echo "❌ El script se detuvo en la línea $LINENO: $BASH_COMMAND" >&2' ERR   # dice dónde falló, nunca se detiene en silencio
 
 if [ "$EUID" -eq 0 ]; then
     echo "❌ No ejecutes este script como root. Usa tu usuario normal (se pedirá sudo)."
     exit 1
 fi
+
+USER="${USER:-$(id -un)}"; export USER   # en una terminal mínima puede venir vacío y con set -u el script se detendría
 
 echo "🚀 Instalando paquetes de Miarch..."
 
@@ -89,7 +93,7 @@ configurar_docker_ollama() {
 
     # Estar en el grupo docker equivale a tener acceso de administrador (root) sobre el equipo.
     # Se añade tu usuario para usar docker sin sudo; si prefieres no hacerlo, quita estas líneas.
-    if ! id -nG "$USER" | tr ' ' '\n' | grep -qx docker; then
+    if [[ " $(id -nG "$USER") " != *" docker "* ]]; then   # sin tuberías: con pipefail, grep -q puede dar falsos errores
         sudo usermod -aG docker "$USER"
         echo "ℹ️  Entraste al grupo docker: cierra sesión y vuelve a entrar para usarlo sin sudo."
     fi
