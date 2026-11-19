@@ -24,10 +24,13 @@ else
     COLOR=(--color-keys blue --color-title blue --color-separator default --logo-color-1 blue)
 fi
 
+# MIARCH_DEMO=1 (capturas): oculta usuario@equipo
+TIT="Title:Separator:"; [ -n "${MIARCH_DEMO:-}" ] && TIT=""
+
 if   (( cols >= 96 && filas >= 26 )); then
-    exec fastfetch "${COLOR[@]}" --structure Title:Separator:OS:Host:Kernel:Uptime:Packages:Shell:WM:Terminal:CPU:Memory:Disk:Battery
+    exec fastfetch "${COLOR[@]}" --structure "${TIT}OS:Host:Kernel:Uptime:Packages:Shell:WM:Terminal:CPU:Memory:Disk:Battery"
 elif (( cols >= 64 && filas >= 14 )); then
-    exec fastfetch "${COLOR[@]}" --logo arch_small --structure Title:Separator:OS:Kernel:Uptime:Packages:Shell:WM:Memory:Battery
+    exec fastfetch "${COLOR[@]}" --logo arch_small --structure "${TIT}OS:Kernel:Uptime:Packages:Shell:WM:Memory:Battery"
 elif (( cols >= 40 && filas >= 10 )); then
-    exec fastfetch "${COLOR[@]}" --logo none --structure Title:Separator:OS:Kernel:Uptime:Memory
+    exec fastfetch "${COLOR[@]}" --logo none --structure "${TIT}OS:Kernel:Uptime:Memory"
 fi

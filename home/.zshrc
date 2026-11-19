@@ -43,7 +43,8 @@ function parse_git_branch {
     fi
 }
 
-PROMPT='%F{${_pa}}󰣇 %f %F{${_pn}}%n%f $(dir_icon) %F{${_pn}}%~%f %F{${_pt}}$(parse_git_branch)%f %(?.%B%F{${_pa}}.%F{red})%f%b '
+_pu='%n'; [[ -n "${MIARCH_DEMO:-}" ]] && _pu='usuario'   # MIARCH_DEMO=1 (capturas): oculta tu usuario
+PROMPT='%F{${_pa}}󰣇 %f %F{${_pn}}${_pu}%f $(dir_icon) %F{${_pn}}%~%f %F{${_pt}}$(parse_git_branch)%f %(?.%B%F{${_pa}}.%F{red})%f%b '
 
 # --- [4] ALIAS ÚTILES ---
 alias l="eza -lh --icons=auto --group-directories-first"
