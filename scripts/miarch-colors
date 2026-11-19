@@ -1,0 +1,222 @@
+#!/usr/bin/env python3
+"""Miarch · extrae una paleta MATE del wallpaper y la guarda en ~/.cache/miarch/colors.json
+Uso: miarch-colors /ruta/imagen.png"""
+import sys, json, colorsys, os, shutil, subprocess, time
+from PIL import Image
+
+def mate(h, s, v):
+    r, g, b = colorsys.hsv_to_rgb(h % 1.0, s, v)
+    return "#%02x%02x%02x" % (round(r * 255), round(g * 255), round(b * 255))
+
+def escribir_kde(base, acentos, fg):
+    """Escribe los colores en ~/.config/kdeglobals (se aplican al abrir Dolphin y a las ventanas ya abiertas)
+    y guarda una copia como esquema 'Miarch' en ~/.local/share/color-schemes."""
+    import configparser
+    def rgb(hexa):
+        return "%d,%d,%d" % (int(hexa[1:3], 16), int(hexa[3:5], 16), int(hexa[5:7], 16))
+    bg      = mate(base, 0.30, 0.09)
+    bg_alt  = mate(base, 0.28, 0.13)
+    boton   = mate(base, 0.25, 0.17)
+    boton_a = mate(base, 0.22, 0.21)
+    acento  = mate(acentos[0], 0.42, 0.74)
+    acento_o = mate(acentos[0], 0.45, 0.50)
+    tenue   = mate(base, 0.08, 0.52)
+    rojo    = mate(0.99, 0.34 * 0.75, 0.68)
+    amar    = mate(0.11, 0.38 * 0.75, 0.76)
+    verde   = mate(0.36, 0.30 * 0.75, 0.64)
+    visit   = mate(acentos[2], 0.30, 0.60)
+    def grupo(fondo, alterno, texto=fg):
+        return {"BackgroundAlternate": rgb(alterno), "BackgroundNormal": rgb(fondo), "DecorationFocus": rgb(acento),
+                "DecorationHover": rgb(acento), "ForegroundActive": rgb(acento), "ForegroundInactive": rgb(tenue),
+                "ForegroundLink": rgb(acento), "ForegroundNegative": rgb(rojo), "ForegroundNeutral": rgb(amar),
+                "ForegroundNormal": rgb(texto), "ForegroundPositive": rgb(verde), "ForegroundVisited": rgb(visit)}
+    seleccion = grupo(acento, acento_o, bg); seleccion["ForegroundInactive"] = rgb(bg); seleccion["ForegroundLink"] = rgb(bg)
+    seleccion["ForegroundVisited"] = rgb(bg); seleccion["ForegroundActive"] = rgb(bg)
+    grupos = {
+        "Colors:Window": grupo(bg, bg_alt), "Colors:View": grupo(bg, bg_alt), "Colors:Button": grupo(boton, boton_a),
+        "Colors:Selection": seleccion, "Colors:Tooltip": grupo(bg_alt, boton), "Colors:Complementary": grupo(bg, bg_alt),
+        "Colors:Header": grupo(bg, bg_alt),
+    }
+    fuente = "JetBrainsMono Nerd Font"
+    tam = lambda n: "%s,%d,-1,5,400,0,0,0,0,0,0,0,0,0,0,1" % (fuente, n)
+    general = {"ColorScheme": "Miarch", "Name": "Miarch", "font": tam(10), "fixed": tam(10), "menuFont": tam(10),
+               "smallestReadableFont": tam(9), "toolBarFont": tam(10)}
+
+    def fusionar(ruta):
+        cp = configparser.ConfigParser(interpolation=None, strict=False, delimiters=("=",), comment_prefixes=("#", ";"))
+        cp.optionxform = str
+        if os.path.exists(ruta):
+            cp.read(ruta, encoding="utf-8")
+        for nombre, datos in grupos.items():
+            cp[nombre] = datos
+        if "General" not in cp: cp["General"] = {}
+        cp["General"].update(general)
+        if "KDE" not in cp: cp["KDE"] = {}
+        cp["KDE"].update({"widgetStyle": "Fusion", "contrast": "4"})
+        if "Icons" not in cp: cp["Icons"] = {}
+        cp["Icons"]["Theme"] = "breeze-dark"
+        tmp = ruta + ".tmp"
+        os.makedirs(os.path.dirname(ruta), exist_ok=True)
+        with open(tmp, "w", encoding="utf-8") as f:
+            cp.write(f, space_around_delimiters=False)
+        os.replace(tmp, ruta)
+    fusionar(os.path.expanduser("~/.config/kdeglobals"))
+
+    # copia como esquema con nombre (solo los colores)
+    cp = configparser.ConfigParser(interpolation=None, strict=False, delimiters=("=",))
+    cp.optionxform = str
+    for nombre, datos in grupos.items(): cp[nombre] = datos
+    cp["General"] = {"ColorScheme": "Miarch", "Name": "Miarch"}
+    esq = os.path.expanduser("~/.local/share/color-schemes/Miarch.colors")
+    os.makedirs(os.path.dirname(esq), exist_ok=True)
+    with open(esq + ".tmp", "w", encoding="utf-8") as f: cp.write(f, space_around_delimiters=False)
+    os.replace(esq + ".tmp", esq)
+
+    # avisa a las apps de KDE que ya estén abiertas para que relean los colores
+    if shutil.which("kwriteconfig6"):
+        subprocess.run(["kwriteconfig6", "--file", "kdeglobals", "--group", "General", "--key", "MiarchActualizado", str(int(time.time()))],
+                       capture_output=True, timeout=5)
+
+def escribir_qt6ct(base, acentos, fg):
+    """Tema para las apps de Qt (Dolphin y demás) a través de qt6ct: paleta propia, tipografía e íconos.
+    Hyprland define QT_QPA_PLATFORMTHEME=qt6ct. Si qt6ct no está instalado, las apps lo ignoran."""
+    def a_rgb(h): return tuple(int(h[i:i+2], 16) for i in (1, 3, 5))
+    def a_hex(t): return "#%02x%02x%02x" % tuple(max(0, min(255, round(v))) for v in t)
+    def mezcla(h1, h2, t):
+        x, y = a_rgb(h1), a_rgb(h2)
+        return a_hex(tuple(x[i] + (y[i] - x[i]) * t for i in range(3)))
+    bg      = mate(base, 0.30, 0.09)
+    bg_alt  = mate(base, 0.28, 0.13)
+    boton   = mate(base, 0.25, 0.17)
+    acento  = mate(acentos[0], 0.42, 0.74)
+    tenue   = mate(base, 0.08, 0.52)
+    visit   = mate(acentos[2], 0.30, 0.60)
+    # Orden de QPalette::ColorRole (Qt 6): WindowText, Button, Light, Midlight, Dark, Mid, Text, BrightText,
+    # ButtonText, Base, Window, Shadow, Highlight, HighlightedText, Link, LinkVisited, AlternateBase, NoRole,
+    # ToolTipBase, ToolTipText, PlaceholderText, Accent
+    def paleta(texto, deshab=False):
+        t = tenue if deshab else texto
+        return ["#ff" + c[1:] for c in [
+            t, boton, mezcla(boton, "#ffffff", 0.16), mezcla(boton, "#ffffff", 0.08), mezcla(bg, "#000000", 0.50),
+            mezcla(boton, "#000000", 0.25), t, "#ffffff", t, bg, bg, "#000000", acento, bg, acento, visit,
+            bg_alt, bg, bg_alt, texto, tenue, acento]]
+    colores = ("[ColorScheme]\n"
+               "active_colors=" + ", ".join(paleta(fg)) + "\n"
+               "disabled_colors=" + ", ".join(paleta(fg, True)) + "\n"
+               "inactive_colors=" + ", ".join(paleta(fg)) + "\n")
+    d = os.path.expanduser("~/.config/qt6ct")
+    os.makedirs(d + "/colors", exist_ok=True)
+    esquema = d + "/colors/miarch.conf"
+    with open(esquema + ".tmp", "w", encoding="utf-8") as f: f.write(colores)
+    os.replace(esquema + ".tmp", esquema)
+    fuente = '"JetBrainsMono Nerd Font,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"'
+    conf = ("[Appearance]\ncolor_scheme_path=" + esquema + "\ncustom_palette=true\nicon_theme=breeze-dark\n"
+            "standard_dialogs=default\nstyle=Fusion\n\n[Fonts]\nfixed=" + fuente + "\ngeneral=" + fuente + "\n\n"
+            "[Interface]\nactivate_item_on_single_click=1\nbuttonbox_layout=0\ncursor_flash_time=1000\n"
+            "dialog_buttons_have_icons=1\ndouble_click_interval=400\ngui_effects=@Invalid()\nkeyboard_scheme=2\n"
+            "menus_have_icons=true\nshow_shortcuts_in_context_menus=true\nstylesheets=@Invalid()\n"
+            "toolbutton_style=4\nunderline_shortcut=1\nwheel_scroll_lines=3\n")
+    with open(d + "/qt6ct.conf.tmp", "w", encoding="utf-8") as f: f.write(conf)
+    os.replace(d + "/qt6ct.conf.tmp", d + "/qt6ct.conf")
+
+def main(path):
+    im = Image.open(path).convert("RGB")
+    im.thumbnail((160, 160))
+    q = im.quantize(colors=14, method=Image.Quantize.MEDIANCUT)
+    pal = q.getpalette()
+    total = im.width * im.height
+    cands = []
+    for count, idx in q.getcolors():
+        r, g, b = pal[idx * 3: idx * 3 + 3]
+        h, s, v = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)
+        if v < 0.16 or s < 0.08:           # descarta negros y grises muertos
+            continue
+        peso = (count / total) ** 0.5 * (0.35 + s) * (0.4 + v)
+        cands.append((peso, h, s, v))
+    cands.sort(reverse=True)
+
+    # Tono dominante del wallpaper. Los tres acentos son ANÁLOGOS (casi el mismo tono, solo varía
+    # un poco) para que todo se vea cohesivo y no un arcoíris.
+    base = cands[0][1] if cands else 0.08
+    acentos = [base, (base + 0.05) % 1.0, (base - 0.05) % 1.0]
+
+    # ¿El fondo es claro justo donde van los textos (zona izquierda/centro)?
+    g = Image.open(path).convert("L")
+    w, h = g.size
+    # zona exacta del reloj y la fecha (x 5-40 %, y 28-52 %)
+    zona = g.crop((int(w * 0.05), int(h * 0.28), int(w * 0.40), int(h * 0.52))).resize((48, 48))
+    datos = zona.tobytes()
+    lum = sum(datos) / (len(datos) * 255)
+    claro = lum > 0.52
+
+    if claro:   # textos oscuros y mate sobre fondos claros
+        out = {
+            "arena":     mate(base, 0.30, 0.16),
+            "terracota": mate(acentos[0], 0.55, 0.40),
+            "salvia":    mate(acentos[1], 0.40, 0.34),
+            "pizarra":   mate(acentos[2], 0.40, 0.36),
+            "fondo":     mate(base, 0.20, 0.92),
+        }
+    else:       # textos claros y mate sobre fondos oscuros
+        out = {
+            "arena":     mate(base, 0.13, 0.84),
+            "terracota": mate(acentos[0], 0.42, 0.74),
+            "salvia":    mate(acentos[1], 0.30, 0.68),
+            "pizarra":   mate(acentos[2], 0.30, 0.70),
+            "fondo":     mate(base, 0.30, 0.10),
+        }
+    out["claro"] = claro
+
+    # ── Esquema de kitty: siempre oscuro (legible), teñido con el tono del wallpaper ──
+    def tono(hue, sat, val):
+        # acerca el tono ANSI al del wallpaper (con tope) y baja la saturación: la terminal combina con
+        # el resto y no se ve multicolor, pero rojo/verde/azul siguen distinguiéndose
+        d = ((base - hue + 0.5) % 1.0) - 0.5
+        desplazo = max(-0.09, min(0.09, d * 0.70))      # tope: el azul sigue siendo azulado, el rojo rojizo
+        return mate(hue + desplazo, sat * 0.75, val)
+    ansi = [("1", 0.99, 0.34, 0.68), ("2", 0.36, 0.30, 0.64), ("3", 0.11, 0.38, 0.76),
+            ("4", 0.60, 0.32, 0.72), ("5", 0.80, 0.28, 0.72), ("6", 0.50, 0.30, 0.68)]
+    k = []
+    fg = mate(base, 0.12, 0.84)
+    k.append(f"foreground {fg}")
+    k.append(f"background {mate(base, 0.30, 0.09)}")
+    k.append(f"selection_foreground {mate(base, 0.30, 0.09)}")
+    k.append(f"selection_background {mate(acentos[0], 0.42, 0.74)}")
+    k.append(f"cursor {mate(acentos[0], 0.42, 0.78)}")
+    k.append(f"url_color {mate(acentos[2], 0.30, 0.74)}")
+    k.append(f"color0 {mate(base, 0.25, 0.17)}")
+    k.append(f"color8 {mate(base, 0.15, 0.38)}")
+    for n, h, sat, val in ansi:
+        k.append(f"color{n} {tono(h, sat, val)}")
+        k.append(f"color{int(n) + 8} {tono(h, sat * 0.9, min(0.92, val + 0.12))}")
+    # Dos colores propios fuera de los 16 de ANSI: el ACENTO y el NEUTRO del escritorio.
+    # Los usan fastfetch y el prompt para verse igual que la barra, el lanzador y los anillos.
+    k.append(f"color16 {mate(acentos[0], 0.42, 0.74)}")
+    k.append(f"color17 {fg}")
+    k.append(f"color7 {mate(base, 0.10, 0.72)}")
+    k.append(f"color15 {mate(base, 0.08, 0.90)}")
+    kd = os.path.expanduser("~/.config/kitty")
+    os.makedirs(kd, exist_ok=True)
+    with open(kd + "/miarch-colors.conf.tmp", "w") as f:
+        f.write("# Generado por miarch-colors a partir del wallpaper. No editar.\n" + "\n".join(k) + "\n")
+    os.replace(kd + "/miarch-colors.conf.tmp", kd + "/miarch-colors.conf")
+    os.system("pkill -USR1 -x kitty 2>/dev/null")   # kitty recarga la config en vivo
+
+    # ── Esquema de colores de KDE (Dolphin y demás apps de KDE): mismo acento y neutro, siempre oscuro ──
+    try:
+        escribir_kde(base, acentos, fg)
+        escribir_qt6ct(base, acentos, fg)
+    except Exception as e:                      # nunca debe romper el cambio de wallpaper
+        print("aviso: no se pudo escribir el tema de Qt/KDE:", e, file=sys.stderr)
+    d = os.path.expanduser("~/.cache/miarch")
+    os.makedirs(d, exist_ok=True)
+    tmp = d + "/colors.json.tmp"
+    with open(tmp, "w") as f:
+        json.dump(out, f)
+    os.replace(tmp, d + "/colors.json")       # escritura atómica
+    print(out)
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        sys.exit(__doc__)
+    main(sys.argv[1])
