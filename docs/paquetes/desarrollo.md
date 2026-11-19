@@ -19,5 +19,5 @@
 - **Grupo `docker`:** el script añade tu usuario para usar Docker sin `sudo`. Estar en ese grupo equivale a ser administrador del equipo. Cierra sesión y vuelve a entrar. Si no lo quieres, quita esas líneas de `packages.sh`.
 - **Espacio en disco:** las imágenes de Docker y los modelos de Ollama pesan muchos GB. Si tu raíz (`/`) tiene menos de 100 GB y `/home` es otra partición, sus datos van a `/home/.datos-pesados`, **solo si todavía no tienen datos**. Si ya usabas Docker, no se mueve nada.
 - **Ollama:** `ollama pull llama3.2` descarga un modelo.
-- **Hermes WebUI Desktop** es solo la *ventana*: necesita un servidor `hermes-webui` en `localhost:8787` o remoto por SSH. El agente `hermes-agent` (AUR) exige Node 26 (no LTS) y Python 3.14, así que no se instala por defecto.
+- **Hermes WebUI Desktop** (`hermes-webui-desktop`, aparece en el lanzador como "Hermes WebUI Desktop") es solo la *ventana*: necesita un servidor `hermes-webui` en `localhost:8787` o remoto por SSH. El agente `hermes-agent` (AUR) exige Node 26 (no LTS) y Python 3.14, así que no se instala por defecto.
 - **Primer inicio de sesión:** `claude`, `codex`, `agy` y `gh auth login`.
