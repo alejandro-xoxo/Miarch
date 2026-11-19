@@ -30,6 +30,7 @@ PAQUETES=(
 
     # Fuentes
     ttf-jetbrains-mono-nerd   # incluye los íconos de la barra
+    noto-fonts-emoji noto-fonts   # emojis y letras de respaldo (sin esto los emojis no se ven)
 
     # Terminal y herramientas
     kitty zsh neovim eza fastfetch btop
