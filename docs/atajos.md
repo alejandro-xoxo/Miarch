@@ -11,7 +11,7 @@
 | `Super + L` | Bloquear pantalla |
 | `Super + ,` | Ajustes del equipo |
 | `Super + W` | Cambiar wallpaper (y los colores) |
-| `Super + B` | Navegador (Chrome) |
+| `Super + B` | Navegador (Firefox) |
 | `Super + V` · `Super + C` | VS Code · Claude Desktop |
 | `Super + E` | Archivos (Dolphin) |
 | `Super + F` | Ventana flotante |

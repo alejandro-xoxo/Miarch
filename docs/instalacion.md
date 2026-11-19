@@ -43,7 +43,7 @@ cd ~/Miarch && git pull && ./install.sh
 
 ## Seguridad
 - **pacman:** repositorios firmados de Arch.
-- **AUR (`yay`):** `quickshell-git`, `google-chrome`, `visual-studio-code-bin`, `claude-code`, `claude-desktop`, `antigravity-cli`, `hermes-webui-desktop-bin`. Son de la comunidad y **no están firmados por Arch**; el script los instala con `--noconfirm`, sin mostrarte el PKGBUILD. Quita esa opción en `packages.sh` si prefieres revisarlos uno a uno.
+- **AUR (`yay`):** `quickshell-git`, `visual-studio-code-bin`, `claude-code`, `claude-desktop`, `antigravity-cli`, `hermes-webui-desktop-bin`. Son de la comunidad y **no están firmados por Arch**; el script los instala con `--noconfirm`, sin mostrarte el PKGBUILD. Quita esa opción en `packages.sh` si prefieres revisarlos uno a uno.
 - **Oh My Zsh:** se clona con `git`; no se ejecuta ningún script descargado.
 - **Docker:** estar en el grupo `docker` equivale a ser administrador (ver [desarrollo](paquetes/desarrollo.md)).
 
@@ -51,4 +51,4 @@ cd ~/Miarch && git pull && ./install.sh
 Arch Linux (instalación mínima) con `sudo` y red. Probado en un portátil con Intel Core i5 de 8.ª generación; con otra GPU cambia `intel-media-driver` en `packages.sh`.
 
 ## Consumo
-Medido en ese portátil con Chrome, VS Code, Spotify y Claude abiertos: **Quickshell ≈ 9 % de un núcleo y ≈ 400 MB**; Hyprland ≈ 10 % y ≈ 230 MB. Lo que más consume son las apps que abres, no el escritorio.
+Medido en ese portátil con el navegador, VS Code, Spotify y Claude abiertos: **Quickshell ≈ 9 % de un núcleo y ≈ 400 MB**; Hyprland ≈ 10 % y ≈ 230 MB. Lo que más consume son las apps que abres, no el escritorio.

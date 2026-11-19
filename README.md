@@ -61,7 +61,7 @@ La terminal (kitty) y Dolphin comparten la misma paleta, tipografía y acento qu
 ![Adaptación al tamaño](docs/screenshots/terminal-adaptacion.jpg)
 
 ### Lanzador de apps (`Super + Espacio`)
-Búsqueda instantánea, entiende abreviaturas (`gcr` → Google Chrome) y ordena primero lo que más usas.
+Búsqueda instantánea, entiende abreviaturas (`ffx` → Firefox) y ordena primero lo que más usas.
 
 ![Lanzador](docs/screenshots/lanzador.jpg)
 
@@ -102,7 +102,7 @@ Cada tema tiene su propio archivo en [`docs/`](docs/README.md):
 | [Paquetes](docs/paquetes/README.md) | Todo lo que se instala, por módulo, con su origen y para qué sirve |
 | [Servicios](docs/servicios.md) | `iwd`, `bluetooth`, `power-profiles-daemon`, `docker`, `ollama` |
 | [Zsh](docs/zsh.md) | Oh My Zsh, plugins, prompt y alias |
-| [El escritorio](docs/escritorio.md) | Hyprland, Quickshell, colores del wallpaper, terminal, Neovim, Chrome |
+| [El escritorio](docs/escritorio.md) | Hyprland, Quickshell, colores del wallpaper, terminal, Neovim |
 | [Atajos](docs/atajos.md) | Todos los atajos de teclado |
 | [Scripts](docs/scripts.md) | Qué hace cada herramienta |
 | [Estructura](docs/estructura.md) | Mapa de carpetas del repositorio |

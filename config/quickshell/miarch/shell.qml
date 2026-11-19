@@ -1481,7 +1481,7 @@ ShellRoot {
         if (it.n.indexOf(q) >= 0) return 3
         if (it.x.indexOf(q) >= 0) return 4
         if (q.length < 3) return -1                 // las abreviaturas de 1-2 letras darían falsas coincidencias
-        let i = 0                                   // abreviaturas: "gcr" → Google ChRome
+        let i = 0                                   // abreviaturas: "ffx" → Firefox
         for (let k = 0; k < it.n.length && i < q.length; k++) if (it.n[k] === q[i]) i++
         return i === q.length ? 5 : -1
     }

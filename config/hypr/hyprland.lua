@@ -362,7 +362,7 @@ local mainMod = "SUPER" -- Sets "Windows" key as main modifier
 hl.bind(mainMod .. " + L", hl.dsp.exec_cmd("qs -c miarch ipc call lock lock"))   -- bloquear pantalla
 hl.bind(mainMod .. " + comma", hl.dsp.exec_cmd("qs -c miarch ipc call settings toggle"))   -- panel de Ajustes
 hl.bind(mainMod .. " + RETURN", hl.dsp.exec_cmd(terminal))                 -- terminal
-hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("google-chrome-stable"))        -- navegador (Chrome)
+hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("command -v firefox >/dev/null && firefox || google-chrome-stable"))   -- navegador (Firefox; Chrome si no está)
 hl.bind(mainMod .. " + V", hl.dsp.exec_cmd("code"))                     -- VS Code
 hl.bind(mainMod .. " + C", hl.dsp.exec_cmd("claude-desktop"))          -- Claude Desktop
 local closeWindowBind = hl.bind(mainMod .. " + SHIFT + Q", hl.dsp.window.close()) -- cerrar ventana (con Shift para evitar clics accidentales)
