@@ -175,6 +175,10 @@ cd ~/Miarch && git pull && ./install.sh
 
 Dentro de Hyprland, con el escritorio en marcha: `./scripts/tomar-capturas`. Usa un modo demo que oculta el nombre de tu red y deja todo como estaba al terminar.
 
+## ⚡ Consumo
+
+El escritorio es ligero: medido en un portátil con Intel Core i5 de 8.ª generación, con Chrome, VS Code, Spotify y Claude abiertos, **Quickshell (barra, anillos, paneles) usa ≈9 % de un núcleo y ≈400 MB**, y Hyprland ≈10 % y ≈230 MB. Lo que más consume son las aplicaciones que abres, no el escritorio. Los anillos de CPU y RAM de las capturas salen de ese mismo equipo.
+
 ## 📌 Requisitos
 
 - Arch Linux (instalación mínima) con `sudo` configurado y red (Wi‑Fi con `iwd`).
