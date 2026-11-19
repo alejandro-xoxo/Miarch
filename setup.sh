@@ -25,8 +25,9 @@ trap 'kill "$KEEPALIVE" 2>/dev/null || true' EXIT
 echo "📦 Herramientas base (git y compiladores para los paquetes de AUR)..."
 sudo pacman -S --needed --noconfirm git base-devel
 
-./packages.sh
-./install.sh
+# bash directo: funciona aunque se haya descargado el ZIP de GitHub, que borra los permisos de ejecución
+bash ./packages.sh
+bash ./install.sh
 
 echo ""
 echo "✅ ¡Todo listo! Reinicia con:  sudo reboot"
