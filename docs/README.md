@@ -7,6 +7,7 @@
 | [Servicios](servicios.md) | Lo que `packages.sh` activa |
 | [Zsh](zsh.md) | Oh My Zsh, plugins, prompt y alias |
 | [El escritorio](escritorio.md) | Hyprland, Quickshell, colores, terminal, Neovim, Chrome, inicio de sesión |
+| [Navegador](navegador.md) | Por qué Chrome: medición contra Chromium y Firefox |
 | [Atajos](atajos.md) | Todos los atajos de teclado |
 | [Scripts](scripts.md) | Qué hace cada herramienta de `scripts/` |
 | [Estructura](estructura.md) | Mapa de carpetas del repositorio |
