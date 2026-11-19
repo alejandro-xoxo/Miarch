@@ -9,6 +9,8 @@ sudo pacman -S --needed --noconfirm git && git clone https://github.com/alejandr
 
 `setup.sh` comprueba internet, pide `sudo` una sola vez (lo mantiene activo mientras dura), instala `git` y `base-devel`, y ejecuta `packages.sh` e `install.sh`. Tarda unos 30 minutos porque compila Quickshell. Después: `sudo reboot`.
 
+> **¿Descargaste el ZIP de GitHub?** El ZIP borra los permisos de ejecución y `./setup.sh` da "permiso denegado". Usa `bash setup.sh` (con `git clone` no pasa).
+
 ## Por pasos
 1. `./packages.sh`: paquetes ([lista](paquetes/README.md)), servicios ([lista](servicios.md)), Oh My Zsh ([zsh](zsh.md)), `yay` y los paquetes de AUR.
 2. `./install.sh`: copia configuraciones y scripts a tu `$HOME`, con copia de seguridad (`*.bak-FECHA`) de lo que reemplaza; sincroniza Neovim; añade el inicio automático de Hyprland en tty1; aplica el wallpaper y los colores.
