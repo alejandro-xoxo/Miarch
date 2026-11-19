@@ -8,7 +8,7 @@
 | `config/hypr/` | Hyprland (Lua) |
 | `config/quickshell/miarch/` | El escritorio: `shell.qml` |
 | `config/greeter/` | Pantalla de inicio de sesión |
-| `config/kitty/` · `config/nvim/` · `config/chrome/` | Terminal, Neovim, Chrome |
+| `config/kitty/` · `config/nvim/` | Terminal, Neovim |
 | `config/waybar/` | Tema anterior (respaldo) |
 | `home/.zshrc` | Configuración de zsh |
 | `scripts/` | Herramientas ([lista](scripts.md)) |
