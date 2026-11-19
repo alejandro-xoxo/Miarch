@@ -46,7 +46,6 @@ PAQUETES=(
 
     # Aplicaciones
     dolphin qt6ct breeze-icons   # gestor de archivos + tema de Qt (qt6ct) e íconos
-    firefox                   # navegador (más liviano que Chrome y firmado por Arch)
     spotify-launcher
 )
 echo "📦 Actualizando el sistema e instalando paquetes oficiales..."
@@ -143,6 +142,7 @@ fi
 echo "📥 Instalando paquetes de AUR..."
 yay -S --noconfirm --needed \
     quickshell-git \
+    google-chrome \
     visual-studio-code-bin \
     claude-code \
     claude-desktop \
