@@ -3,6 +3,9 @@
 # Úsalo DENTRO de Hyprland con el escritorio miarch en marcha. Tarda ~2 minutos y al terminar
 # deja todo como estaba (fondo, escritorio y escritorio de trabajo).
 #
+# Música: si defines PLAYER_FALSO="comando de un reproductor MPRIS de prueba", se usa para que salga la tarjeta
+# de música sin enseñar lo que escuchas. Sin eso, las capturas salen sin música (o con lo que suene).
+#
 # Modo demo: oculta el nombre de tu red en la barra. NO captura los paneles de Wi-Fi, Bluetooth
 # ni la página Sistema, porque muestran redes, dispositivos y datos del equipo.
 set -u
@@ -36,7 +39,15 @@ setfondo() {   # aplica un fondo y comprueba que de verdad quedó puesto
     done
     echo "  ⚠️  no se pudo aplicar $(basename "$1")"
 }
+PLAYER_PID=""
+player_on()  { [ -n "${PLAYER_FALSO:-}" ] || return 0; player_off; (setsid $PLAYER_FALSO >/dev/null 2>&1 & echo $! >"$TMP/player.pid"); sleep 2.5; PLAYER_PID="$(cat "$TMP/player.pid" 2>/dev/null)"; }
+player_off() { [ -n "$PLAYER_PID" ] && kill "$PLAYER_PID" 2>/dev/null; PLAYER_PID=""; }
+matar_clase() {   # cierra las ventanas de una clase (por PID, nunca por nombre)
+    for p in $(hyprctl clients -j | python3 -c "import json,sys;print(' '.join(str(c['pid']) for c in json.load(sys.stdin) if c['class']=='$1'))"); do kill "$p" 2>/dev/null; done
+    sleep 1
+}
 restaurar() {
+    player_off
     qs -p "$REPO/config/greeter" kill >/dev/null 2>&1
     [ -n "$ORIG_WALL" ] && [ -f "$ORIG_WALL" ] && { "$HOME/.local/bin/wallpaper.sh" "$ORIG_WALL" >/dev/null 2>&1; sleep 3; }
     qs_restart A=1
@@ -51,7 +62,12 @@ qs_restart MIARCH_DEMO=1
 hyprctl dispatch "hl.dsp.focus({ workspace = 5 })" >/dev/null 2>&1; sleep 1.5   # escritorio vacío
 
 setfondo "$FONDO_OSCURO"
+player_on
 shot escritorio-oscuro
+
+# Terminal (con fastfetch) y gestor de archivos sobre el mismo fondo
+(setsid kitty --class miarch-captura >/dev/null 2>&1 &); sleep 5; shot terminal; matar_clase miarch-captura
+(QT_QPA_PLATFORMTHEME=qt6ct setsid dolphin --new-window "$REPO" >/dev/null 2>&1 &); sleep 6; shot dolphin; matar_clase org.kde.dolphin
 qs -c miarch ipc call launcher open; sleep 2.5; shot lanzador; qs -c miarch ipc call launcher close; sleep 1
 for pg in apariencia accesibilidad energia; do
     qs -c miarch ipc call settings page "$pg"; sleep 3; shot "ajustes-$pg"
@@ -63,6 +79,7 @@ shot escritorio-claro
 
 # Bloqueo (modo de prueba: se desbloquea solo a los 9 s) e inicio de sesión (modo de prueba)
 setfondo "$FONDO_OSCURO"
+player_on
 qs_restart MIARCH_DEMO=1 MIARCH_LOCK_TEST=1
 qs -c miarch ipc call lock lock; sleep 3.5; shot bloqueo; sleep 7
 cp "$FONDO_OSCURO" "$TMP/wallpaper"; cp "$HOME/.cache/miarch/colors.json" "$TMP/colors.json"

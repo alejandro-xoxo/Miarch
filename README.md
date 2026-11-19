@@ -51,6 +51,13 @@ Cada vez que cambias el fondo (`Super + W`), los colores del reloj, la barra, lo
 |---|---|
 | ![Escritorio oscuro](docs/screenshots/escritorio-oscuro.jpg) | ![Escritorio claro](docs/screenshots/escritorio-claro.jpg) |
 
+### Terminal y archivos
+La terminal (kitty) y Dolphin comparten la misma paleta, tipografía y acento que el resto del escritorio.
+
+| Terminal con fastfetch | Dolphin |
+|---|---|
+| ![Terminal](docs/screenshots/terminal.jpg) | ![Dolphin](docs/screenshots/dolphin.jpg) |
+
 ### Lanzador de apps (`Super + Espacio`)
 Búsqueda instantánea, entiende abreviaturas (`gcr` → Google Chrome) y ordena primero lo que más usas.
 
@@ -64,17 +71,17 @@ Un panel con clics para todo: red, sonido, pantalla, apariencia (fondos, animaci
 | ![Apariencia](docs/screenshots/ajustes-apariencia.jpg) | ![Accesibilidad](docs/screenshots/ajustes-accesibilidad.jpg) | ![Energía](docs/screenshots/ajustes-energia.jpg) |
 
 ### Bloqueo (`Super + L`) e inicio de sesión
-Mismo estilo en las dos pantallas: wallpaper desenfocado, reloj grande y la contraseña con puntos.
+Mismo estilo en las dos pantallas: wallpaper desenfocado, reloj grande y la contraseña con puntos. Con música sonando, el bloqueo muestra la portada y los controles junto al reloj.
 
 | Pantalla de bloqueo | Inicio de sesión |
 |---|---|
 | ![Bloqueo](docs/screenshots/bloqueo.jpg) | ![Inicio de sesión](docs/screenshots/inicio-de-sesion.jpg) |
 
 ### Música
-Cuando algo suena (Spotify, el navegador…), aparece sola una tarjeta bajo los anillos con la portada, el título, el artista, la barra de progreso (clic para saltar) y los controles. También se ve en la barra y en la pantalla de bloqueo. Con Spotify: instala `spotify-launcher` (ya está en `packages.sh`), ábrelo una vez e inicia sesión.
+Cuando algo suena (Spotify, el navegador…), aparece sola una tarjeta bajo los anillos con la portada, el título, el artista, la barra de progreso (clic para saltar) y los controles. También se ve en la barra y, en grande y a la derecha del reloj, en la pantalla de bloqueo. Con Spotify: instala `spotify-launcher` (ya está en `packages.sh`), ábrelo una vez e inicia sesión.
 
 ### Dolphin y apps de Qt
-Dolphin y cualquier app de Qt siguen la paleta del wallpaper (mismo acento y neutro), con la tipografía del escritorio e íconos oscuros, a través de `qt6ct`. Dolphin además es ligeramente translúcido para tomar el desenfoque, como la terminal.
+Dolphin y cualquier app de Qt siguen la paleta del wallpaper (mismo acento y neutro), con la tipografía del escritorio e íconos oscuros, a través de `qt6ct` y `kdeglobals` (Dolphin, al ser de KDE, lee sus colores de ahí). Dolphin además es ligeramente translúcido para tomar el desenfoque, como la terminal.
 
 ### Wi‑Fi y Bluetooth con clics
 En la barra, un clic en el Wi‑Fi o el Bluetooth abre un panel para ver las redes y dispositivos, y conectarte escribiendo la contraseña ahí mismo. *(No hay capturas de estos paneles porque muestran las redes y los dispositivos de quien las toma.)*
