@@ -16,7 +16,7 @@ Al actualizar (y en una instalación nueva), Miarch instala la pantalla de inici
 Las teclas de volumen ahora hacen un pitido corto y muestran una barra de volumen que se actualiza sin apilarse. En silencio no suena.
 
 ## 2026-11-20.08 · Desbloquear e iniciar sesión como en una película
-Al desbloquear (y al iniciar sesión) se hace una secuencia de cine de unos 3,6 segundos: aparecen barras negras arriba y abajo, el fondo avanza despacio, sale el título MIARCH con las letras muy separadas, un destello de luz horizontal cruza la pantalla y todo se aclara hasta entrar a tu escritorio. Debajo del título aparece la firma "by alejandro-xoxo". Al desbloquear suena una música de tráiler (graves que crecen, un golpe y una cola larga) y se teclea el log real del sistema.
+Al desbloquear (y al iniciar sesión) se hace una secuencia de cine de unos 5,6 segundos: aparecen barras negras arriba y abajo, el fondo avanza despacio, sale el título MIARCH con las letras muy separadas, un destello de luz horizontal cruza la pantalla y todo se aclara suavemente hasta entrar a tu escritorio. Debajo del título aparece la firma "by alejandro-xoxo". Al desbloquear suena una música de tráiler (graves que crecen, un golpe y una cola larga) y se teclea el log real del sistema.
 
 ## 2026-11-20.06 · Notificaciones nuevas y menú de IA solo con apps
 Las notificaciones ahora las dibuja el propio escritorio: salen deslizándose arriba a la derecha, con el estilo de los paneles, icono, nombre de la app, barra de progreso (volumen, brillo), botones de acción y una cuenta atrás que se pausa si pones el ratón encima. Las críticas se marcan en rojo mate y no se van solas. Clic cierra una, clic derecho las cierra todas. Miarch quita `dunst`, que ya no hace falta.

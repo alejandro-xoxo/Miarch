@@ -2558,9 +2558,12 @@ ShellRoot {
         if (root.accesoOk) return
         root.accesoOk = true
         root.apertura = 0
-        Quickshell.execDetached(["pw-play", "--volume=0.6", Quickshell.env("HOME") + "/.config/quickshell/miarch/sonidos/desbloqueo.wav"])
         pLog.running = true
         tPorSiNoHayLog.start()
+    }
+    function arrancarApertura() {
+        Quickshell.execDetached(["pw-play", "--volume=0.6", Quickshell.env("HOME") + "/.config/quickshell/miarch/sonidos/desbloqueo.wav"])
+        animApertura.restart()                         // el sonido y la animación empiezan a la vez: el golpe cae con el destello
     }
     Process {
         id: pLog
@@ -2570,14 +2573,14 @@ ShellRoot {
                 const l = text.split("\n").map(x => x.trim()).filter(x => x.length > 0)
                 root.lineasLog = l.length > 0 ? l : ["[    0.000000] miarch: sesión desbloqueada"]
                 tPorSiNoHayLog.stop()
-                animApertura.restart()
+                root.arrancarApertura()
             }
         }
     }
-    Timer { id: tPorSiNoHayLog; interval: 600; onTriggered: { if (!animApertura.running) { root.lineasLog = ["[    0.000000] miarch: sesión desbloqueada"]; animApertura.restart() } } }
+    Timer { id: tPorSiNoHayLog; interval: 600; onTriggered: { if (!animApertura.running) { root.lineasLog = ["[    0.000000] miarch: sesión desbloqueada"]; root.arrancarApertura() } } }
     NumberAnimation {
         id: animApertura
-        target: root; property: "apertura"; from: 0; to: 1; duration: 3600
+        target: root; property: "apertura"; from: 0; to: 1; duration: 5600
         onFinished: { sesion.locked = false; root.accesoOk = false; root.apertura = 0 }
     }
     function intentar() {
@@ -2615,7 +2618,7 @@ ShellRoot {
                 Behavior on entrada { NumberAnimation { duration: 1500; easing.type: Easing.OutQuint } }
 
                 // 0 durante el log y 0→1 cuando la pantalla se despeja (último 38 % de la secuencia)
-                // Secuencia de cine (3,6 s): p = progreso 0..1. El golpe del sonido cae en p = 0.76.
+                // Secuencia de cine (5,6 s): p = progreso 0..1. El golpe del sonido cae en p = 0.76.
                 readonly property real p: root.apertura
                 function suave(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x) }
                 readonly property real abre: suave((p - 0.80) / 0.20)             // llega el fondo nítido
@@ -2683,7 +2686,7 @@ ShellRoot {
                         anchors.horizontalCenter: parent.horizontalCenter
                         text: "MIARCH"
                         color: root.arena
-                        font { family: root.fuente; pixelSize: candado.height * 0.085; weight: Font.Thin
+                        font { family: root.fuente; pixelSize: candado.height * 0.085; weight: Font.Normal
                                letterSpacing: candado.height * (0.012 + 0.03 * candado.suave((candado.p - 0.46) / 0.4)) }
                     }
                     Text {
@@ -2699,7 +2702,7 @@ ShellRoot {
                         text: "by alejandro-xoxo"
                         color: root.arena
                         opacity: 0.7 * candado.suave((candado.p - 0.56) / 0.12)
-                        font { family: root.fuente; pixelSize: candado.height * 0.02; weight: Font.Light; letterSpacing: 5 }
+                        font { family: root.fuente; pixelSize: candado.height * 0.02; weight: Font.Normal; letterSpacing: 5 }
                     }
                 }
                 // Destello anamórfico: una línea de luz horizontal que cruza la pantalla en el golpe del sonido
@@ -2712,7 +2715,7 @@ ShellRoot {
                         x: (parent.width - width) / 2; y: parent.height / 2 - height / 2
                         gradient: Gradient { orientation: Gradient.Vertical
                             GradientStop { position: 0; color: "transparent" }
-                            GradientStop { position: 0.5; color: Qt.alpha("#ffe9c8", 0.22) }
+                            GradientStop { position: 0.5; color: Qt.alpha("#ffe9c8", 0.10) }
                             GradientStop { position: 1; color: "transparent" } }
                     }
                     Rectangle {   // el filo brillante
@@ -2729,7 +2732,7 @@ ShellRoot {
                     anchors.fill: parent
                     color: "#fff3e0"
                     visible: opacity > 0
-                    opacity: 0.62 * candado.suave((candado.p - 0.76) / 0.12) * (1 - candado.suave((candado.p - 0.90) / 0.10))
+                    opacity: 0.22 * candado.suave((candado.p - 0.76) / 0.12) * (1 - candado.suave((candado.p - 0.90) / 0.10))
                 }
                 // Barras de cine arriba y abajo
                 Repeater {

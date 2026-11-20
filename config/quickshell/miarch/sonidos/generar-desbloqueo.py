@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """Genera desbloqueo.wav: sonido original de Miarch al desbloquear, estilo tráiler de cine (sin muestras de terceros).
-Línea de tiempo (coincide con la animación de la pantalla de bloqueo, 3,6 s):
-  0.00 - 2.66 s  subida de tensión: zumbido grave de metales que se abre, barrido de ruido y un vacío justo antes del golpe
-  2.74 s         golpe: bombo profundo con caída de tono, metales graves detonando y metal que resuena (ritmo del destello)
-  2.74 - 6.50 s  cola larga: cuerdas luminosas de re mayor que se abren y reverberación de catedral"""
+Línea de tiempo (coincide con la animación de la pantalla de bloqueo, 5,6 s):
+  0.00 - 4.18 s  subida de tensión: zumbido grave de metales que se abre, barrido de ruido y un vacío justo antes del golpe
+  4.26 s         golpe: bombo profundo con caída de tono, metales graves detonando y metal que resuena (ritmo del destello)
+  4.26 - 8.20 s  cola larga: cuerdas luminosas de re mayor que se abren y reverberación de catedral"""
 import numpy as np, wave
 SR = 44100
 rng = np.random.default_rng(11)
-T = 6.5
+T = 8.2
 n = int(SR * T)
 t = np.arange(n) / SR
-IMP = 2.74                                         # instante del golpe (76 % de 3,6 s)
+IMP = 4.256                                        # instante del golpe (76 % de 5,6 s)
 act = (t >= IMP).astype(float)
 s = np.clip(t - IMP, 0, None)                      # tiempo desde el golpe
 
@@ -43,7 +43,7 @@ for f, a in ((36.71, 1.0), (55.0, 0.7), (73.42, 0.6), (110.0, 0.35)):        # r
         bajos += a * saw_aditivo(f * (1 + det / 100), t, 2200)
 corte_met = 90 * (14 ** sube)                                                # 90 → ~1260 Hz
 metales = pasabajos(bajos * env_sube, np.where(t < IMP, corte_met, 1260))
-metales *= vacio * 0.55
+metales *= vacio * 0.42
 
 # barrido de ruido (whoosh) que sube hacia el golpe
 ruido = rng.standard_normal(n)
@@ -77,7 +77,9 @@ for f, a in ((293.66, 1.0), (369.99, 0.8), (440.0, 0.9), (587.33, 0.7), (739.99,
 env_cu = suave(s / 1.4) * np.exp(-np.clip(s - 1.4, 0, None) * 0.55) * act
 cuerdas = pasabajos(cuerdas * env_cu, 900 + 2600 * suave(s / 1.8)) * 0.034
 
-seco = metales + barrido + tension + bombo + brass + metal + chasq + cuerdas
+subida = metales + barrido + tension                  # la subida de tensión: casi seca
+golpe = bombo + brass + metal + chasq + cuerdas        # el golpe y su cola: aquí va la reverberación
+seco = subida + golpe
 
 # --- 4) reverberación de catedral: ruido que decae (4 s), oscurecido; convolución por FFT
 ri = int(SR * 4.2)
@@ -86,8 +88,8 @@ ir = rng.standard_normal(ri) * np.exp(-tr * 1.55)
 ir = pasabajos(ir, np.maximum(900, 7000 * np.exp(-tr * 0.9)))
 ir[: int(0.02 * SR)] *= np.linspace(0, 1, int(0.02 * SR))
 L = n + ri
-humedo = np.fft.irfft(np.fft.rfft(seco, L) * np.fft.rfft(ir, L), L)[:n]
-humedo *= np.max(np.abs(seco)) / (np.max(np.abs(humedo)) + 1e-9)
+humedo = np.fft.irfft(np.fft.rfft(golpe, L) * np.fft.rfft(ir, L), L)[:n]
+humedo *= np.max(np.abs(golpe)) / (np.max(np.abs(humedo)) + 1e-9)
 mezcla = seco * 0.80 + humedo * 0.62
 
 # --- 5) estéreo, normalización y cierre
