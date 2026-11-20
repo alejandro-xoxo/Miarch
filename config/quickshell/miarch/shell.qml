@@ -575,7 +575,15 @@ ShellRoot {
                 root.pantallasOcupado = false
                 try {
                     const d = JSON.parse(text)
-                    root.pantallasMensaje = d.msg || (d.ok ? "Operación completada" : "Error al aplicar cambio")
+                    if (d.aplicado_en_caliente === false) {
+                        root.pantallasMensaje = d.msg || "Cambio guardado; se aplicará al recargar o al volver a iniciar sesión"
+                    } else if (d.aplicado_en_caliente === true) {
+                        root.pantallasMensaje = ""
+                    } else if (!d.ok) {
+                        root.pantallasMensaje = d.msg || "Error al aplicar cambio"
+                    } else {
+                        root.pantallasMensaje = ""
+                    }
                 } catch (e) {
                     root.pantallasMensaje = "Error al ejecutar la acción"
                 }
