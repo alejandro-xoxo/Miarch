@@ -108,9 +108,10 @@ ShellRoot {
         onFinished: {
             if (root.prueba) { Qt.quit(); return }
             // shell de login: así se carga tu entorno (~/.zprofile, PATH) como en un inicio normal
-            // La consola de texto entre el login y el escritorio sale limpia: se borra, se oculta el cursor y la salida de
-            // start-hyprland va a un registro en vez de pintarse en pantalla.
-            Greetd.launch(["sh", "-c", "{ printf '\\033[2J\\033[H\\033[?25l' > /dev/tty; } 2>/dev/null; mkdir -p \"$HOME/.cache/miarch\"; exec zsh -lc 'exec start-hyprland' >> \"$HOME/.cache/miarch/sesion.log\" 2>&1"], [], true)
+            // OJO: greetd une los argumentos con espacios SIN comillas y los pasa a un shell (`... exec <args>`). Por eso lo que
+            // lleva espacios va en UN solo argumento y entre comillas simples. Un comando largo con `{ }`, `;` o redirecciones
+            // se rompe, la sesión muere al instante y vuelves al login en bucle.
+            Greetd.launch(["zsh", "-lc", "'exec start-hyprland'"], [], true)
         }
     }
     Timer { id: reintento; interval: 1300; onTriggered: { if (!root.prueba) Greetd.cancelSession(); root.iniciarSesion() } }
