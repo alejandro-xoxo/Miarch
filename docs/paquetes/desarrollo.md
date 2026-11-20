@@ -11,6 +11,7 @@
 | `ollama` | pacman | Modelos de IA locales (CPU; `ollama-vulkan` es la variante para GPU) |
 | `openai-codex` | pacman | CLI de Codex |
 | `claude-code` | AUR | CLI de Claude Code |
+| `openai-chatgpt` | AUR | App de ChatGPT con Codex (vista previa oficial de OpenAI para Linux; reempaqueta su `.deb`, unos 350 MB) |
 | `antigravity-cli` | AUR | CLI de Antigravity (`agy`) |
 
 ## Detalles
@@ -18,5 +19,6 @@
 - **Grupo `docker`:** el script añade tu usuario para usar Docker sin `sudo`. Estar en ese grupo equivale a ser administrador del equipo. Cierra sesión y vuelve a entrar. Si no lo quieres, quita esas líneas de `packages.sh`.
 - **Espacio en disco:** las imágenes de Docker y los modelos de Ollama pesan muchos GB. Si tu raíz (`/`) tiene menos de 100 GB y `/home` es otra partición, sus datos van a `/home/.datos-pesados`, **solo si todavía no tienen datos**. Si ya usabas Docker, no se mueve nada.
 - **Ollama:** `ollama pull llama3.2` descarga un modelo. Para Linux no existe app de escritorio oficial (solo programa y servicio), por eso Miarch no instala ninguna de terceros.
+- **Codex App:** `openai-chatgpt` reempaqueta el `.deb` oficial de OpenAI (vista previa de la app de ChatGPT con Codex para Linux, sin soporte oficial para Arch).
 - **Hermes Desktop:** la app oficial de Nous Research no está en AUR: `packages.sh` ejecuta su script oficial (`--include-desktop`, instala en `~/.hermes` y compila la app, tarda) solo si Hermes no está instalado. Miarch ya no instala `hermes-webui-desktop-bin` (era solo una ventana de un servidor WebUI) y lo quita al actualizar.
 - **Primer inicio de sesión:** `claude`, `codex`, `agy` y `gh auth login`.
