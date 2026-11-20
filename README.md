@@ -151,7 +151,7 @@ Si usas Claude Code, Codex o Antigravity, la instalación les deja una skill (`i
 Steam listo para jugar: controladores Vulkan de tu tarjeta, GameMode (sube el rendimiento mientras juegas y lo devuelve después), MangoHud, Gamescope con FSR para gráficas integradas y ProtonUp-Qt. Guía y opciones de lanzamiento en [docs/juegos.md](docs/juegos.md).
 
 ### Wi‑Fi y Bluetooth con clics
-En la barra, un clic en el Wi‑Fi o el Bluetooth abre un panel para ver las redes y dispositivos, y conectarte escribiendo la contraseña ahí mismo. En el Wi‑Fi puedes **conectar, desconectar, olvidar** una red, entrar a una **red oculta** y escribir la clave nueva si una red guardada la cambió; solo se listan las redes que están a tu alcance. En Bluetooth, los emparejados que no se detectan cerca quedan escondidos tras un botón. *(No hay capturas de estos paneles porque muestran las redes y los dispositivos de quien las toma.)*
+En la barra, un clic en el Wi‑Fi o el Bluetooth abre un panel para ver las redes y dispositivos, y conectarte escribiendo la contraseña ahí mismo. En el Wi‑Fi puedes **conectar, desconectar, olvidar** una red y escribir la clave nueva si una red guardada la cambió; solo se muestran las redes que hay cerca y las que el equipo ya conoce. En Bluetooth se listan los dispositivos cercanos y los que el equipo ya conoce. *(No hay capturas de estos paneles porque muestran las redes y los dispositivos de quien las toma.)*
 
 ---
 

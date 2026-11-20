@@ -7,7 +7,6 @@
   miarch-wifi disconnect
   miarch-wifi power on|off
   miarch-wifi forget "RED"
-  miarch-wifi connect-hidden "RED" -> red oculta; la clave (si lleva) va en MIARCH_PASS
 """
 import json, os, pty, re, select, signal, subprocess, sys, time
 
@@ -112,9 +111,8 @@ def es_conocida(nombre):
     _, k = iw("known-networks", "list")
     return any(columnas(f)[:1] == [nombre] for f in tabla(k))
 
-def conectar(IF, nombre, oculta=False):
+def conectar(IF, nombre):
     clave = os.environ.get("MIARCH_PASS", "")
-    sub = "connect-hidden" if oculta else "connect"
     conocida = es_conocida(nombre)
     # Con una clave nueva para una red ya guardada, iwd usaría la vieja y no la pediría: se olvida primero
     if clave and conocida:
@@ -122,12 +120,12 @@ def conectar(IF, nombre, oculta=False):
     enviada, texto, rc = False, "", 1
     for intento in (1, 2):
         if clave:
-            rc, out, enviada = ejecutar_con_clave(["iwctl", "station", IF, sub, nombre], clave)
+            rc, out, enviada = ejecutar_con_clave(["iwctl", "station", IF, "connect", nombre], clave)
         else:
-            rc, out = iw("station", IF, sub, nombre)
+            rc, out = iw("station", IF, "connect", nombre)
         texto = out.strip()
         # Justo después de arrancar, iwd aún no "ve" la red: se busca de nuevo y se reintenta una vez
-        if "invalid network name" in texto.lower() and intento == 1 and not oculta:
+        if "invalid network name" in texto.lower() and intento == 1:
             iw("station", IF, "scan")
             time.sleep(4)
             continue
@@ -146,7 +144,7 @@ def conectar(IF, nombre, oculta=False):
     else:
         msg = "No se pudo conectar"
     # Una red guardada que falla suele tener la contraseña cambiada: se pide una nueva en el panel
-    if conocida and not clave and not oculta:
+    if conocida and not clave:
         return {"ok": False, "msg": "La contraseña guardada ya no sirve. Escribe la nueva", "pedir_clave": True}
     return {"ok": False, "msg": msg}
 
@@ -161,8 +159,6 @@ def main():
         iw("station", IF, "scan"); res = {"ok": True}
     elif cmd == "connect":
         res = conectar(IF, a)
-    elif cmd == "connect-hidden":
-        res = conectar(IF, a, oculta=True)
     elif cmd == "disconnect":
         rc, _ = iw("station", IF, "disconnect"); res = {"ok": rc == 0}
     elif cmd == "power":

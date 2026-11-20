@@ -526,8 +526,6 @@ ShellRoot {
     property string wifiMensaje: ""
     property string redClave: ""                     // red que está pidiendo contraseña
     property string wifiClave: ""                    // lo que se lleva escrito (no se pierde al refrescar)
-    property bool ocultaAbierta: false               // formulario para conectar a una red oculta
-    property string ocultaNombre: ""
     property string _redesJson: ""
     property var btLista: []
     readonly property string btBin: Quickshell.env("HOME") + "/.local/bin/miarch-bluetooth"
@@ -570,9 +568,9 @@ ShellRoot {
                 root.wifiOcupado = false
                 try {
                     const d = JSON.parse(text)
-                    if (pAccion.accion === "connect" || pAccion.accion === "connect-hidden") {
+                    if (pAccion.accion === "connect") {
                         root.wifiMensaje = d.ok ? "" : (d.msg || "No se pudo conectar")
-                        if (d.ok) { root.redClave = ""; root.ocultaAbierta = false; root.wifiClave = "" }
+                        if (d.ok) { root.redClave = ""; root.wifiClave = "" }
                         // red guardada con la contraseña cambiada: se abre el campo para escribir la nueva
                         else if (d.pedir_clave) { root.wifiClave = ""; root.redClave = pAccion.arg }
                     } else if (pAccion.accion === "forget") {
@@ -595,7 +593,7 @@ ShellRoot {
         pAccion.arg = arg
         pAccion.environment = { "MIARCH_PASS": clave || "" }
         pAccion.command = arg !== "" ? [root.wifiBin, accion, arg] : [root.wifiBin, accion]
-        if (accion === "connect" || accion === "connect-hidden") { root.wifiOcupado = true; root.wifiMensaje = "" }
+        if (accion === "connect") { root.wifiOcupado = true; root.wifiMensaje = "" }
         else if (accion === "disconnect") root.wifiMensaje = "Desconectando…"
         else if (accion === "forget") root.wifiMensaje = "Olvidando la red…"
         pAccion.running = true
@@ -620,9 +618,6 @@ ShellRoot {
 
     // ---- Bluetooth (BlueZ nativo de Quickshell) ----
     property bool btMostrarSinNombre: false
-    property bool btMostrarGuardados: false          // mostrar también los emparejados que no se detectan cerca
-    property var btCerca: []                          // direcciones de los emparejados que BlueZ oye ahora mismo (tienen RSSI)
-    property int btGuardadosLejos: 0
     property int btSinNombre: 0
     property string _btClave: ""
     // BlueZ usa la dirección MAC como "nombre" cuando el dispositivo no dice cómo se llama
@@ -637,34 +632,18 @@ ShellRoot {
         if (!a) { root.btLista = []; root._btClave = ""; return }
         const todos = a.devices.values.slice()
         root.btSinNombre = todos.filter(d => root.btNombre(d) === "" && !d.paired && !d.connected).length
-        // solo lo que se puede usar ahora: conectados, emparejados que se oyen cerca, y los encontrados con nombre.
-        // Los emparejados que no se detectan se esconden (botón al pie para verlos).
-        root.btGuardadosLejos = todos.filter(d => d.paired && !d.connected && root.btCerca.indexOf(d.address) < 0).length
-        const visibles = todos.filter(d => d.connected
-            || (d.paired ? (root.btCerca.indexOf(d.address) >= 0 || root.btMostrarGuardados)
-                         : (root.btNombre(d) !== "" || root.btMostrarSinNombre)))
+        const visibles = todos.filter(d => d.connected || d.paired || root.btNombre(d) !== "" || root.btMostrarSinNombre)
         visibles.sort((x, y) =>
             (y.connected - x.connected) || (y.paired - x.paired) ||
             String(root.btNombre(x) || "~" + x.address).localeCompare(String(root.btNombre(y) || "~" + y.address)))
         // solo se reemplaza la lista si de verdad cambió algo (así las filas no parpadean cada segundo)
-        const clave = root.btMostrarGuardados + "#" + visibles.map(d => d.address + "|" + root.btNombre(d) + "|" + d.connected + "|" + d.paired).join(";")
+        const clave = visibles.map(d => d.address + "|" + root.btNombre(d) + "|" + d.connected + "|" + d.paired).join(";")
         if (clave !== root._btClave) { root._btClave = clave; root.btLista = visibles }
     }
     Timer {
         interval: 1000; repeat: true; triggeredOnStart: true
         running: root.conexionesAbierto && root.conexionesModo === "bt"
         onTriggered: root.ordenarBt()
-    }
-    // qué emparejados se oyen ahora: BlueZ les pone RSSI solo mientras los detecta
-    Process {
-        id: pBtCerca
-        command: ["sh", "-c", "bluetoothctl devices Paired 2>/dev/null | awk '{print $2}' | while read m; do bluetoothctl info \"$m\" 2>/dev/null | grep -q RSSI && echo \"$m\"; done"]
-        stdout: StdioCollector { onStreamFinished: { root.btCerca = text.trim() === "" ? [] : text.trim().split("\n"); root._btClave = ""; root.ordenarBt() } }
-    }
-    Timer {
-        interval: 4000; repeat: true; triggeredOnStart: true
-        running: root.conexionesAbierto && root.conexionesModo === "bt"
-        onTriggered: { if (!pBtCerca.running) pBtCerca.running = true }
     }
     Timer {
         id: tBtTimeout
@@ -1053,55 +1032,11 @@ ShellRoot {
                                 topPadding: 6
                             }
                             Text {
-                                visible: !root.wifiOcupado && root.redClave === "" && root.wifiMensaje !== "" && root.wifiEncendido && !root.ocultaAbierta
+                                visible: !root.wifiOcupado && root.redClave === "" && root.wifiMensaje !== "" && root.wifiEncendido
                                 text: root.wifiMensaje
                                 color: root.terracota
                                 font { family: root.fuente; pixelSize: 12 * root.esc; weight: Font.Medium; letterSpacing: 2 }
                                 topPadding: 6
-                            }
-                            // Red oculta: no sale en la lista; se conecta escribiendo su nombre (y la contraseña si lleva)
-                            Opcion {
-                                visible: root.wifiEncendido && !root.ocultaAbierta
-                                texto: "Red oculta…"
-                                onClic: { root.ocultaNombre = ""; root.wifiClave = ""; root.redClave = ""; root.wifiMensaje = ""; root.ocultaAbierta = true }
-                            }
-                            Column {
-                                visible: root.wifiEncendido && root.ocultaAbierta
-                                width: parent.width; spacing: 6; topPadding: 6
-                                Rectangle {
-                                    x: 8; width: parent.width - 16; height: 40; radius: 12
-                                    color: Qt.alpha(root.arena, 0.07); border.width: 1; border.color: Qt.alpha(root.arena, 0.25)
-                                    Text { visible: ocNombre.text.length === 0; x: 14; anchors.verticalCenter: parent.verticalCenter; text: "Nombre de la red"
-                                           color: Qt.alpha(root.arena, 0.35); font { family: root.fuente; pixelSize: 14 * root.esc; weight: Font.Light } }
-                                    TextInput { id: ocNombre; x: 14; width: parent.width - 28; anchors.verticalCenter: parent.verticalCenter; clip: true
-                                                color: root.arena; selectionColor: root.terracota; font { family: root.fuente; pixelSize: 15 * root.esc }
-                                                enabled: !root.wifiOcupado; onTextChanged: root.ocultaNombre = text
-                                                Component.onCompleted: forceActiveFocus()
-                                                Keys.onEscapePressed: root.ocultaAbierta = false }
-                                }
-                                Rectangle {
-                                    x: 8; width: parent.width - 16; height: 40; radius: 12
-                                    color: Qt.alpha(root.arena, 0.07); border.width: 1; border.color: Qt.alpha(root.arena, 0.25)
-                                    Text { visible: ocClave.text.length === 0; x: 14; anchors.verticalCenter: parent.verticalCenter; text: "Contraseña (vacía si es abierta)"
-                                           color: Qt.alpha(root.arena, 0.35); font { family: root.fuente; pixelSize: 14 * root.esc; weight: Font.Light } }
-                                    TextInput { id: ocClave; x: 14; width: parent.width - 28; anchors.verticalCenter: parent.verticalCenter; clip: true
-                                                echoMode: TextInput.Password; passwordCharacter: "•"
-                                                color: root.arena; selectionColor: root.terracota; font { family: root.fuente; pixelSize: 15 * root.esc }
-                                                enabled: !root.wifiOcupado; Keys.onEscapePressed: root.ocultaAbierta = false
-                                                onAccepted: if (ocNombre.text.length > 0) root.wifiAccion("connect-hidden", ocNombre.text, ocClave.text) }
-                                }
-                                Row {
-                                    x: 8; spacing: 8
-                                    Opcion { activo: ocNombre.text.length > 0; texto: root.wifiOcupado ? "…" : "Conectar"
-                                             onClic: if (ocNombre.text.length > 0) root.wifiAccion("connect-hidden", ocNombre.text, ocClave.text) }
-                                    Opcion { texto: "Cancelar"; onClic: root.ocultaAbierta = false }
-                                }
-                                Text {
-                                    visible: root.wifiOcupado || root.wifiMensaje !== ""
-                                    x: 12; text: root.wifiOcupado ? "Conectando…" : root.wifiMensaje
-                                    color: root.wifiOcupado ? Qt.alpha(root.arena, 0.6) : root.terracota
-                                    font { family: root.fuente; pixelSize: 12 * root.esc; weight: Font.Medium; letterSpacing: 2 }
-                                }
                             }
                         }
 
@@ -1225,14 +1160,6 @@ ShellRoot {
                                 color: Qt.alpha(root.arena, 0.45)
                                 font { family: root.fuente; pixelSize: 12 * root.esc; weight: Font.Medium; letterSpacing: 2 }
                                 topPadding: 8
-                            }
-                            Text {
-                                visible: root.adaptadorBt && root.adaptadorBt.enabled && (root.btGuardadosLejos > 0 || root.btMostrarGuardados)
-                                text: root.btMostrarGuardados ? "Ocultar los guardados que no están cerca" : ("Mostrar " + root.btGuardadosLejos + " guardado(s) que no se detectan")
-                                color: Qt.alpha(root.arena, 0.5)
-                                font { family: root.fuente; pixelSize: 12 * root.esc; weight: Font.Medium; letterSpacing: 1 }
-                                topPadding: 4
-                                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.btMostrarGuardados = !root.btMostrarGuardados; root._btClave = ""; root.ordenarBt() } }
                             }
                             Text {
                                 visible: root.adaptadorBt && root.adaptadorBt.enabled && (root.btSinNombre > 0 || root.btMostrarSinNombre)
