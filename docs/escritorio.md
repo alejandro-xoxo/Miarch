@@ -90,9 +90,9 @@ El diseño sonoro se genera sintéticamente sin muestras externas mediante el sc
 
 El gestor de acceso gráfico se basa en el demonio `greetd` ejecutando una sesión dedicada de Hyprland bajo el usuario de sistema `greeter` con la interfaz en Quickshell (`config/greeter`).
 
-- **Estética y comportamiento**: Replica la presentación de la pantalla de bloqueo y reproduce la animación de bienvenida ("BIENVENIDO, <usuario>").
+- **Estética y comportamiento**: Replica la presentación de la pantalla de bloqueo y reproduce la animación de bienvenida ("BIENVENIDO, <usuario>"). Al conceder el acceso, teclea el registro del sistema en vivo (`systemctl list-units`, formateado como `[  OK  ] <unidad> — <descripción>`) acompañado del sonido de switches mecánicos (`/usr/share/miarch/greeter/desbloqueo.wav`), alineando los tiempos de barras de cine, título y fondo con el desbloqueo.
 - **Tolerancia a fallos**: Dispone de un temporizador de seguridad de 8 segundos; si la sesión gráfica no completa su inicialización en dicho periodo, conmuta automáticamente al inicio en modo texto mediante `agreety`.
-- **Instalación y configuración**: Desplegado mediante `scripts/miarch-greeter-install`, el cual instala `greetd`, transfiere los archivos a `/usr/share/miarch/greeter`, copia el fondo y paleta a `/var/lib/miarch-greeter`, respalda la configuración existente como `/etc/greetd/config.toml.miarch-bak` y activa el servicio `systemd`.
+- **Instalación y configuración**: Desplegado mediante `scripts/miarch-greeter-install`, el cual comprueba la seguridad con `scripts/comprobar-greeter`, instala `greetd`, transfiere los archivos y el sonido a `/usr/share/miarch/greeter`, copia el fondo y paleta a `/var/lib/miarch-greeter`, respalda la configuración existente como `/etc/greetd/config.toml.miarch-bak` y activa el servicio `systemd`.
 - **Inhabilitación y recuperación**: Se puede omitir su instalación creando el archivo testigo `~/.config/miarch/sin-greeter`. Si se requiere restaurar el acceso manual desde la consola de emergencia (`Ctrl+Alt+F2`), se ejecuta:
   ```bash
   sudo systemctl disable greetd && sudo systemctl enable getty@tty1
