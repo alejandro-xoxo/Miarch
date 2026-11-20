@@ -65,6 +65,17 @@ done
 # CONFIGURACIONES
 # =========================
 ui_etapa "Aplicando las configuraciones"
+# tema oscuro del sistema: lo leen Chrome, Dolphin y las apps GTK (por el portal y por GTK). No se pisa nada que ya exista.
+if command -v gsettings &>/dev/null; then
+    [ "$(gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null)" = "'prefer-dark'" ] \
+        || gsettings set org.gnome.desktop.interface color-scheme prefer-dark 2>/dev/null || true
+fi
+for v in gtk-3.0 gtk-4.0; do
+    if [ ! -f "$HOME/.config/$v/settings.ini" ]; then
+        mkdir -p "$HOME/.config/$v"
+        printf '[Settings]\ngtk-application-prefer-dark-theme=1\n' > "$HOME/.config/$v/settings.ini"
+    fi
+done
 copy_config "$CONFIG_DIR/hypr"              "$HOME/.config/hypr"
 copy_config "$CONFIG_DIR/kitty"             "$HOME/.config/kitty"
 copy_config "$CONFIG_DIR/nvim"              "$HOME/.config/nvim"

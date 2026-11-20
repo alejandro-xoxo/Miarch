@@ -6,6 +6,7 @@ Instalados por `packages.sh`. Hyprland es la ventana y el escritorio; la barra, 
 |---|---|---|
 | `hyprland` | pacman | Gestor de ventanas (Wayland) |
 | `xdg-desktop-portal-hyprland` | pacman | Portales: capturas de pantalla y compartir pantalla |
+| `xdg-desktop-portal-gtk` | pacman | Avisa a Chrome y a las apps de que el sistema es oscuro (sin él salen claras) |
 | `polkit` | pacman | Ventanas de permisos de administrador |
 | `awww` | pacman | Fondos de pantalla con transición (antes `swww`) |
 | `dunst` | pacman | Notificaciones |
