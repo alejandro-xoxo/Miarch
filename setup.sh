@@ -10,6 +10,8 @@ if [ "$EUID" -eq 0 ]; then
     exit 1
 fi
 cd "$(dirname "${BASH_SOURCE[0]}")"
+# punto de entrada: empieza de cero aunque haya heredado variables de otra ejecución
+unset MIARCH_UI_INICIO MIARCH_UI_TOTAL MIARCH_UI_ACTUAL MIARCH_UI_SUB MIARCH_UI_COMPACTO MIARCH_SUDO_VIVO MIARCH_STATS
 
 # barra del avance TOTAL de toda la instalación: 2 etapas de setup.sh + las de packages.sh + las de install.sh
 ETAPAS_PAQUETES="$(bash ./packages.sh --etapas)"

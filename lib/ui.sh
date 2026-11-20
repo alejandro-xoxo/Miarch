@@ -63,9 +63,19 @@ case "$UI_NIVEL" in
 esac
 
 ui_total() { [ -n "${MIARCH_UI_TOTAL:-}" ] || UI_TOTAL="$1"; }
-ui_columnas() { local c; c="$(tput cols 2>/dev/null || echo 80)"; [ "${c:-80}" -ge 40 ] 2>/dev/null && echo "$c" || echo 80; }
-ui_ancho() { local c; c="$(ui_columnas)"; [ "$c" -gt 78 ] && echo 78 || echo "$c"; }
+# Ancho REAL de la terminal. "tput cols" dentro de $( ) no ve la ventana (su salida es una tubería) y devuelve 80: la línea
+# animada se pasaba del borde, se partía en varias y cada cuadro añadía una línea nueva en lugar de reemplazar la anterior.
+ui_columnas() {
+    local c=""
+    [ -r /dev/tty ] && c="$(stty size </dev/tty 2>/dev/null | cut -d' ' -f2)"
+    [[ "$c" =~ ^[0-9]+$ ]] || c="${COLUMNS:-}"
+    [[ "$c" =~ ^[0-9]+$ ]] || c="$(tput cols 2>/dev/null || echo 80)"
+    [ "${c:-0}" -ge 20 ] 2>/dev/null && echo "$c" || echo 80
+}
+# ancho útil: deja 2 columnas de margen (los caracteres anchos o un borde exacto harían que la línea se parta)
+ui_ancho() { local c; c="$(ui_columnas)"; c=$(( c - 2 )); [ "$c" -gt 78 ] && c=78; [ "$c" -lt 18 ] && c=18; echo "$c"; }
 ui_registrar() { echo "$1" >> "$UI_STATS" 2>/dev/null || true; }
+ui_recortar() { local t="$1" max="$2"; [ "$max" -lt 4 ] && max=4; if [ "${#t}" -gt "$max" ]; then printf '%s…' "${t:0:$(( max - 1 ))}"; else printf '%s' "$t"; fi; }
 ui_repetir() { local n="$1" c="$2" s="" i; for ((i = 0; i < n; i++)); do s+="$c"; done; printf '%s' "$s"; }
 ui_tiempo() { local s="$1"; if [ "$s" -ge 60 ]; then printf '%dm %02ds' $((s / 60)) $((s % 60)); else printf '%ds' "$s"; fi; }
 
@@ -146,7 +156,7 @@ ui_error() { ui_registrar fallo; printf '  %s%s%s %s\n' "$C_ERR" "$S_ERR" "$C_R"
 # ui_ejecutar "Mensaje" comando args...  → devuelve el código de salida del comando
 ui_ejecutar() {
     local msg="$1"; shift
-    local inicio rc=0 pid i=0 ultima ancho disp seg desde puntos t pref
+    local inicio rc=0 pid i=0 ultima ancho disp seg desde puntos t tmp fijo vmsg libre
     inicio=$(date +%s)
     printf '\n=== %s | %s\n' "$(date '+%F %T')" "$msg" >> "$UI_LOG"
     desde="$(wc -c < "$UI_LOG")"
@@ -157,26 +167,34 @@ ui_ejecutar() {
         "$@" >> "$UI_LOG" 2>&1 < /dev/null &
         pid=$!
         ancho="$(ui_ancho)"
+        trap 'ancho="$(ui_ancho)"' WINCH        # si cambias el tamaño de la ventana, se vuelve a medir al instante
         while kill -0 "$pid" 2>/dev/null; do
             seg=$(( $(date +%s) - inicio ))
             ultima="$(tail -c 400 "$UI_LOG" 2>/dev/null | tr '\r' '\n' | sed 's/\x1b\[[0-9;?]*[A-Za-z]//g' | grep -v '^[[:space:]]*$' | tail -n 1)"
-            pref="  ${UI_GIRO[i % ${#UI_GIRO[@]}]}  $msg  ($(ui_tiempo "$seg"))  "
-            disp="${ultima:0:$(( ancho - ${#pref} - 1 ))}"; [ $(( ancho - ${#pref} - 1 )) -gt 0 ] || disp=""
-            printf '\r\033[K  %s%s%s  %s  (%s)  %s%s%s' "$C_ACENTO" "${UI_GIRO[i % ${#UI_GIRO[@]}]}" "$C_R" "$msg" "$(ui_tiempo "$seg")" "$C_TENUE" "$disp" "$C_R"
+            tmp="$(ui_tiempo "$seg")"
+            # texto fijo = "  ⠋  mensaje  (12s)  ": si no cabe entero, se recorta el mensaje; lo que sobra se usa para la última línea de salida
+            fijo=$(( 2 + 1 + 2 + ${#tmp} + 4 + 2 ))
+            vmsg="$msg"; [ $(( ${#msg} + fijo )) -gt "$ancho" ] && vmsg="${msg:0:$(( ancho - fijo - 1 > 4 ? ancho - fijo - 1 : 4 ))}…"
+            libre=$(( ancho - fijo - ${#vmsg} ))
+            disp=""; [ "$libre" -gt 6 ] && disp="${ultima:0:$libre}"
+            printf '\r\033[K  %s%s%s  %s  (%s)  %s%s%s' "$C_ACENTO" "${UI_GIRO[i % ${#UI_GIRO[@]}]}" "$C_R" "$vmsg" "$tmp" "$C_TENUE" "$disp" "$C_R"
             i=$(( i + 1 )); sleep 0.1
         done
         wait "$pid" && rc=0 || rc=$?
+        trap - WINCH
         printf '\r\033[K'
     fi
     t="$(ui_tiempo $(( $(date +%s) - inicio )))"
     ancho="$(ui_ancho)"
     if [ "$rc" -eq 0 ]; then
         ui_registrar ok
-        puntos=$(( ancho - ${#S_OK} - ${#msg} - ${#t} - 8 )); [ "$puntos" -ge 2 ] || puntos=2
-        printf '  %s%s%s %s %s%s%s %s\n' "$C_OK" "$S_OK" "$C_R" "$msg" "$C_TENUE" "$(ui_repetir "$puntos" '.')" "$C_R" "$t"
+        vmsg="$(ui_recortar "$msg" $(( ancho - ${#S_OK} - ${#t} - 9 )))"       # una sola fila aunque la ventana sea estrecha
+        puntos=$(( ancho - ${#S_OK} - ${#vmsg} - ${#t} - 8 )); [ "$puntos" -ge 2 ] || puntos=2
+        printf '  %s%s%s %s %s%s%s %s\n' "$C_OK" "$S_OK" "$C_R" "$vmsg" "$C_TENUE" "$(ui_repetir "$puntos" '.')" "$C_R" "$t"
     else
         ui_registrar fallo
-        printf '  %s%s%s %s  (código %d, %s)\n' "$C_ERR" "$S_ERR" "$C_R" "$msg" "$rc" "$t"
+        vmsg="$(ui_recortar "$msg" $(( ancho - ${#S_ERR} - ${#t} - 20 )))"
+        printf '  %s%s%s %s  (código %d, %s)\n' "$C_ERR" "$S_ERR" "$C_R" "$vmsg" "$rc" "$t"
         tail -c +"$(( desde + 1 ))" "$UI_LOG" | tr '\r' '\n' | grep -v '^[[:space:]]*$' | tail -n 8 | sed "s/^/      ${C_TENUE}/; s/\$/${C_R}/"
         printf '      %sRegistro completo: %s%s\n' "$C_TENUE" "$UI_LOG" "$C_R"
     fi

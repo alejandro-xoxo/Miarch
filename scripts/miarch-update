@@ -2,12 +2,18 @@
 # Miarch · actualizador semiautomático. Lo abre el botón de actualizaciones (la nube) de la barra.
 #   1. REVISA primero, sin descargar ni instalar nada: cambios nuevos de Miarch en GitHub, paquetes de Miarch que
 #      faltan en este equipo y actualizaciones del sistema (repos oficiales y AUR).
+#      También detecta si las configuraciones del repo aún no se aplicaron en este equipo (por ejemplo en el repo del propio
+#      autor, que ya trae los cambios y nunca "descarga" nada).
 #   2. Te muestra qué hay. Si no hay nada, lo dice y termina.
 #   3. Si hay algo, pide UNA confirmación y hace solo lo que hace falta:
 #      descarga y aplica los cambios de Miarch (conservando tus ajustes y tu fondo), instala los paquetes que faltan
 #      y actualiza el sistema (yay -Syu, sin más preguntas). Después recarga el escritorio.
 # Uso: miarch-update [--forzar]    (--forzar vuelve a aplicar las configuraciones aunque no haya cambios nuevos)
 set -uo pipefail
+
+# Este es un punto de entrada: empieza de cero aunque haya heredado variables de otra ejecución (si no, el tiempo del
+# resumen se acumulaba de una actualización a la siguiente).
+unset MIARCH_UI_INICIO MIARCH_UI_TOTAL MIARCH_UI_ACTUAL MIARCH_UI_SUB MIARCH_UI_COMPACTO MIARCH_SUDO_VIVO MIARCH_STATS
 
 REPO="${MIARCH_DIR:-$HOME/Miarch}"
 FORZAR=0; [ "${1:-}" = "--forzar" ] && FORZAR=1
@@ -42,6 +48,8 @@ RAMA="$(git rev-parse --abbrev-ref HEAD)"
 UP="@{u}"; git rev-parse -q --verify "$UP" >/dev/null 2>&1 || UP="origin/$RAMA"
 NUEVOS="$(git rev-list --count "HEAD..$UP" 2>/dev/null || echo 0)"
 SUCIO=0; [ -n "$(git status --porcelain --untracked-files=no)" ] && SUCIO=1
+CFG_MARCA="$HOME/.cache/miarch/configs-aplicadas"   # guarda el commit cuyas configuraciones se aplicaron por última vez
+CFG_PENDIENTES=0; [ "$(cat "$CFG_MARCA" 2>/dev/null)" != "$(git rev-parse HEAD)" ] && CFG_PENDIENTES=1
 PAQ_CAMBIA=0; [ "$NUEVOS" -gt 0 ] && ! git diff --quiet HEAD "$UP" -- packages.sh && PAQ_CAMBIA=1
 
 # un packages.sh antiguo no conoce --faltantes y ejecutaría la instalación completa: solo se pregunta si lo soporta
@@ -60,6 +68,7 @@ if [ "$NUEVOS" -gt 0 ]; then
 else
     ui_ok "Miarch: al día"
 fi
+[ "$CFG_PENDIENTES" = 1 ] && [ "$NUEVOS" -eq 0 ] && ui_info "Las configuraciones de Miarch de este equipo no están al día con los archivos del repositorio: se volverán a aplicar."
 if [ "${#FALTAN[@]}" -gt 0 ]; then
     ui_info "Paquetes de Miarch que faltan en este equipo (${#FALTAN[@]}): $(unir "${FALTAN[@]}")"
 elif [ "$PAQ_CAMBIA" = 1 ]; then
@@ -77,7 +86,7 @@ fi
 
 # qué se haría
 HACER_MIARCH=0; { [ "$NUEVOS" -gt 0 ] && [ "$SUCIO" = 0 ]; } && HACER_MIARCH=1
-[ "$FORZAR" = 1 ] && HACER_MIARCH=1
+{ [ "$FORZAR" = 1 ] || [ "$CFG_PENDIENTES" = 1 ]; } && HACER_MIARCH=1
 HACER_PAQ=0; { [ "${#FALTAN[@]}" -gt 0 ] || [ "$PAQ_CAMBIA" = 1 ]; } && HACER_PAQ=1
 HACER_SIS=0; [ "$N_SIS" -gt 0 ] && HACER_SIS=1
 if [ "$HACER_MIARCH$HACER_PAQ$HACER_SIS" = "000" ]; then
@@ -88,7 +97,7 @@ if [ "$HACER_MIARCH$HACER_PAQ$HACER_SIS" = "000" ]; then
 fi
 
 PLAN=()
-[ "$HACER_MIARCH" = 1 ] && PLAN+=("$([ "$NUEVOS" -gt 0 ] && echo "descargar y aplicar los cambios de Miarch" || echo "volver a aplicar las configuraciones")")
+[ "$HACER_MIARCH" = 1 ] && PLAN+=("$([ "$NUEVOS" -gt 0 ] && echo "descargar y aplicar los cambios de Miarch" || echo "aplicar las configuraciones de Miarch")")
 [ "$HACER_PAQ" = 1 ]    && PLAN+=("instalar los paquetes de Miarch que faltan")
 [ "$HACER_SIS" = 1 ]    && PLAN+=("actualizar $N_SIS $(plural "$N_SIS" paquete paquetes) del sistema")
 echo
@@ -111,14 +120,18 @@ if [ "$HACER_MIARCH" = 1 ]; then
         fi
     else
         ui_etapa "Revisando los archivos de Miarch"
-        ui_info "Sin cambios nuevos: se vuelven a aplicar los archivos que ya tienes."
+        ui_info "Sin cambios nuevos que descargar: se aplican los archivos que ya tienes."
     fi
 fi
 if [ "$HACER_MIARCH" = 1 ]; then
     ui_etapa "Aplicando los cambios de Miarch (se conservan tus ajustes y tu fondo)"
     HYPR="$HOME/.config/hypr/hyprland.lua"
     GUARDADOS="$(grep -E '^local (ESCALA|KB|NATURAL|TAP|SENS|CURSOR|MOVIMIENTO|ANIM|BLUR)[[:space:]]*=' "$HYPR" 2>/dev/null || true)"
-    MIARCH_ACTUALIZANDO=1 ui_ejecutar "Copiando configuraciones y scripts" bash ./install.sh || ui_aviso "install.sh terminó con avisos (arriba están las últimas líneas)."
+    if MIARCH_ACTUALIZANDO=1 ui_ejecutar "Copiando configuraciones y scripts" bash ./install.sh; then
+        mkdir -p "$(dirname "$CFG_MARCA")"; git rev-parse HEAD > "$CFG_MARCA"
+    else
+        ui_aviso "install.sh terminó con avisos (arriba están las últimas líneas). Se volverá a intentar la próxima vez."
+    fi
     if [ -n "$GUARDADOS" ] && [ -f "$HYPR" ]; then
         GUARDADOS="$GUARDADOS" python3 -I - "$HYPR" <<'PY'
 import os, re, sys
@@ -136,7 +149,8 @@ PY
     if [ -z "${MIARCH_SIN_REINICIO:-}" ]; then
         hyprctl reload >/dev/null 2>&1 || true
         qs kill -c miarch >/dev/null 2>&1; sleep 1
-        (setsid qs -c miarch >/dev/null 2>&1 &)
+        # Quickshell queda vivo mucho tiempo y lanza el siguiente actualizador: no debe heredar las variables de ESTA ejecución
+        (env -u MIARCH_UI_INICIO -u MIARCH_UI_TOTAL -u MIARCH_UI_ACTUAL -u MIARCH_UI_SUB -u MIARCH_UI_COMPACTO -u MIARCH_SUDO_VIVO -u MIARCH_STATS setsid qs -c miarch >/dev/null 2>&1 &)
         ui_ok "Hyprland y el escritorio recargados"
     fi
 fi
