@@ -2843,13 +2843,6 @@ ShellRoot {
                             GradientStop { position: 1; color: "transparent" } }
                     }
                 }
-                // Luz: todo se aclara tras el golpe y se disuelve en el escritorio
-                Rectangle {
-                    anchors.fill: parent
-                    color: "#fff3e0"
-                    visible: opacity > 0
-                    opacity: 0.22 * candado.suave((candado.p - 0.76) / 0.12) * (1 - candado.suave((candado.p - 0.90) / 0.10))
-                }
                 // Barras de cine arriba y abajo
                 Repeater {
                     model: [ true, false ]
@@ -2873,8 +2866,8 @@ ShellRoot {
                     anchors.verticalCenterOffset: -candado.height * 0.09 + (1 - candado.entrada) * 60
                     width: lado + candado.height * 0.04 + Math.min(candado.width * 0.24, 460)
                     height: lado
-                    opacity: p ? Math.min(1, candado.entrada) : 0
-                    visible: opacity > 0
+                    opacity: (p ? Math.min(1, candado.entrada) : 0) * (1 - Math.min(1, root.apertura * 6))
+                    visible: opacity > 0 && !(root.accesoOk && root.apertura > 0.2)
                     Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
 
                     Timer {
@@ -3010,6 +3003,7 @@ ShellRoot {
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.verticalCenterOffset: (1 - candado.entrada) * 60
                     opacity: Math.min(1, candado.entrada) * (1 - Math.min(1, root.apertura * 6))
+                    visible: opacity > 0
                     spacing: 6
 
                     Text {
