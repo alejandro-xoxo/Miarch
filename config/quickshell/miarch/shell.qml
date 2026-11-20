@@ -620,9 +620,6 @@ ShellRoot {
 
     // ---- Bluetooth (BlueZ nativo de Quickshell) ----
     property bool btMostrarSinNombre: false
-    property bool btMostrarGuardados: false          // mostrar también los emparejados que no se detectan cerca
-    property var btCerca: []                          // direcciones de los emparejados que BlueZ oye ahora mismo (tienen RSSI)
-    property int btGuardadosLejos: 0
     property int btSinNombre: 0
     property string _btClave: ""
     // BlueZ usa la dirección MAC como "nombre" cuando el dispositivo no dice cómo se llama
@@ -637,34 +634,18 @@ ShellRoot {
         if (!a) { root.btLista = []; root._btClave = ""; return }
         const todos = a.devices.values.slice()
         root.btSinNombre = todos.filter(d => root.btNombre(d) === "" && !d.paired && !d.connected).length
-        // solo lo que se puede usar ahora: conectados, emparejados que se oyen cerca, y los encontrados con nombre.
-        // Los emparejados que no se detectan se esconden (botón al pie para verlos).
-        root.btGuardadosLejos = todos.filter(d => d.paired && !d.connected && root.btCerca.indexOf(d.address) < 0).length
-        const visibles = todos.filter(d => d.connected
-            || (d.paired ? (root.btCerca.indexOf(d.address) >= 0 || root.btMostrarGuardados)
-                         : (root.btNombre(d) !== "" || root.btMostrarSinNombre)))
+        const visibles = todos.filter(d => d.connected || d.paired || root.btNombre(d) !== "" || root.btMostrarSinNombre)
         visibles.sort((x, y) =>
             (y.connected - x.connected) || (y.paired - x.paired) ||
             String(root.btNombre(x) || "~" + x.address).localeCompare(String(root.btNombre(y) || "~" + y.address)))
         // solo se reemplaza la lista si de verdad cambió algo (así las filas no parpadean cada segundo)
-        const clave = root.btMostrarGuardados + "#" + visibles.map(d => d.address + "|" + root.btNombre(d) + "|" + d.connected + "|" + d.paired).join(";")
+        const clave = visibles.map(d => d.address + "|" + root.btNombre(d) + "|" + d.connected + "|" + d.paired).join(";")
         if (clave !== root._btClave) { root._btClave = clave; root.btLista = visibles }
     }
     Timer {
         interval: 1000; repeat: true; triggeredOnStart: true
         running: root.conexionesAbierto && root.conexionesModo === "bt"
         onTriggered: root.ordenarBt()
-    }
-    // qué emparejados se oyen ahora: BlueZ les pone RSSI solo mientras los detecta
-    Process {
-        id: pBtCerca
-        command: ["sh", "-c", "bluetoothctl devices Paired 2>/dev/null | awk '{print $2}' | while read m; do bluetoothctl info \"$m\" 2>/dev/null | grep -q RSSI && echo \"$m\"; done"]
-        stdout: StdioCollector { onStreamFinished: { root.btCerca = text.trim() === "" ? [] : text.trim().split("\n"); root._btClave = ""; root.ordenarBt() } }
-    }
-    Timer {
-        interval: 4000; repeat: true; triggeredOnStart: true
-        running: root.conexionesAbierto && root.conexionesModo === "bt"
-        onTriggered: { if (!pBtCerca.running) pBtCerca.running = true }
     }
     Timer {
         id: tBtTimeout
@@ -1225,14 +1206,6 @@ ShellRoot {
                                 color: Qt.alpha(root.arena, 0.45)
                                 font { family: root.fuente; pixelSize: 12 * root.esc; weight: Font.Medium; letterSpacing: 2 }
                                 topPadding: 8
-                            }
-                            Text {
-                                visible: root.adaptadorBt && root.adaptadorBt.enabled && (root.btGuardadosLejos > 0 || root.btMostrarGuardados)
-                                text: root.btMostrarGuardados ? "Ocultar los guardados que no están cerca" : ("Mostrar " + root.btGuardadosLejos + " guardado(s) que no se detectan")
-                                color: Qt.alpha(root.arena, 0.5)
-                                font { family: root.fuente; pixelSize: 12 * root.esc; weight: Font.Medium; letterSpacing: 1 }
-                                topPadding: 4
-                                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.btMostrarGuardados = !root.btMostrarGuardados; root._btClave = ""; root.ordenarBt() } }
                             }
                             Text {
                                 visible: root.adaptadorBt && root.adaptadorBt.enabled && (root.btSinNombre > 0 || root.btMostrarSinNombre)
