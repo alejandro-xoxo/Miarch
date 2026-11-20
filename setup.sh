@@ -11,24 +11,35 @@ if [ "$EUID" -eq 0 ]; then
 fi
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
-echo "==> Comprobando internet..."
+# barra del avance TOTAL de toda la instalación: 2 etapas de setup.sh + las de packages.sh + las de install.sh
+ETAPAS_PAQUETES="$(bash ./packages.sh --etapas)"
+ETAPAS_INSTALL="$(bash ./install.sh --etapas)"
+export MIARCH_UI_TOTAL=$(( 2 + ETAPAS_PAQUETES + ETAPAS_INSTALL ))
+export MIARCH_UI_ACTUAL=0
+source ./lib/ui.sh
+
+ui_etapa "Comprobando internet"
 if ! curl -fsS --max-time 8 -o /dev/null https://archlinux.org; then
     echo "[ERROR] No hay internet. Conéctate y vuelve a ejecutar ./setup.sh"
     echo "   Wi-Fi:  iwctl station wlan0 connect \"NOMBRE_DE_TU_RED\"    (con cable ya debería funcionar)"
     exit 1
 fi
 
-echo "==> Pidiendo sudo una vez (se mantiene activo mientras dure la instalación)..."
+echo "[i] Se pide la contraseña de sudo una sola vez (se mantiene activa mientras dure la instalación)."
 sudo -v
 ( while true; do sudo -n true; sleep 45; kill -0 "$$" 2>/dev/null || exit; done ) &
 KEEPALIVE=$!
 trap 'kill "$KEEPALIVE" 2>/dev/null || true' EXIT
 
-echo "==> Herramientas base (git y compiladores para los paquetes de AUR)..."
-sudo pacman -S --needed --noconfirm git base-devel
+ui_etapa "Herramientas base (git y compiladores para los paquetes de AUR)"
+ui_ejecutar "Instalando git y base-devel" sudo pacman -S --needed --noconfirm git base-devel
 
 # bash directo: funciona aunque se haya descargado el ZIP de GitHub, que borra los permisos de ejecución
+# los scripts hijos continúan la misma barra; el sudo ya está activo
+export MIARCH_SUDO_VIVO=1
+export MIARCH_UI_ACTUAL=2
 bash ./packages.sh
+export MIARCH_UI_ACTUAL=$(( 2 + ETAPAS_PAQUETES ))
 bash ./install.sh
 
 echo ""
