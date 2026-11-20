@@ -2924,7 +2924,7 @@ ShellRoot {
     function arrancarApertura() {
         if (!root.accesoOk) return                     // se volvió a bloquear mientras tanto: no se desbloquea nada
         Quickshell.execDetached(["pw-play", "--volume=0.6", Quickshell.env("HOME") + "/.config/quickshell/miarch/sonidos/desbloqueo.wav"])
-        animApertura.restart()                         // el sonido y la animación empiezan a la vez: el golpe cae con el destello
+        animApertura.restart()                         // el sonido y la animación empiezan a la vez
     }
     Process {
         id: pLog
@@ -2972,7 +2972,7 @@ ShellRoot {
                 Behavior on entrada { NumberAnimation { duration: 1500; easing.type: Easing.OutQuint } }
 
                 // 0 durante el log y 0→1 cuando la pantalla se despeja (último 38 % de la secuencia)
-                // Secuencia de cine (5,6 s): p = progreso 0..1. El golpe del sonido cae en p = 0.76.
+                // Secuencia de cine (5,6 s): p = progreso 0..1.
                 readonly property real p: root.apertura
                 function suave(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x) }
                 readonly property real abre: suave((p - 0.80) / 0.20)             // llega el fondo nítido
@@ -3059,28 +3059,6 @@ ShellRoot {
                         font { family: root.fuente; pixelSize: candado.height * 0.02; weight: Font.Normal; letterSpacing: 5 }
                     }
                 }
-                // Destello anamórfico: una línea de luz horizontal que cruza la pantalla en el golpe del sonido
-                Item {
-                    visible: candado.p > 0.66 && candado.p < 0.9
-                    anchors.fill: parent
-                    opacity: Math.sin(Math.PI * Math.max(0, Math.min(1, (candado.p - 0.66) / 0.22)))
-                    Rectangle {   // resplandor suave
-                        width: parent.width * candado.suave((candado.p - 0.66) / 0.16); height: candado.height * 0.07
-                        x: (parent.width - width) / 2; y: parent.height / 2 - height / 2
-                        gradient: Gradient { orientation: Gradient.Vertical
-                            GradientStop { position: 0; color: "transparent" }
-                            GradientStop { position: 0.5; color: Qt.alpha("#ffe9c8", 0.10) }
-                            GradientStop { position: 1; color: "transparent" } }
-                    }
-                    Rectangle {   // el filo brillante
-                        width: parent.width * candado.suave((candado.p - 0.66) / 0.16); height: 3
-                        x: (parent.width - width) / 2; y: parent.height / 2 - 1.5
-                        gradient: Gradient { orientation: Gradient.Horizontal
-                            GradientStop { position: 0; color: "transparent" }
-                            GradientStop { position: 0.5; color: "#fff3e0" }
-                            GradientStop { position: 1; color: "transparent" } }
-                    }
-                }
                 // Barras de cine arriba y abajo
                 Repeater {
                     model: [ true, false ]
@@ -3099,14 +3077,16 @@ ShellRoot {
                     readonly property var p: root.jugador
                     readonly property real avance: (p && p.length > 0) ? Math.min(1, p.position / p.length) : 0
                     readonly property real lado: Math.min(candado.height * 0.30, candado.width * 0.2)
-                    x: candado.width * 0.46
+                    readonly property real salida: root.accesoOk ? candado.suave(root.apertura / 0.18) : 0
+                    x: candado.width * 0.46 + 40 * salida
+                    scale: 1 - 0.04 * salida
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.verticalCenterOffset: -candado.height * 0.09 + (1 - candado.entrada) * 60
                     width: lado + candado.height * 0.04 + Math.min(candado.width * 0.24, 460)
                     height: lado
-                    opacity: (p ? Math.min(1, candado.entrada) : 0) * (1 - Math.min(1, root.apertura * 6))
-                    visible: opacity > 0 && !(root.accesoOk && root.apertura > 0.2)
-                    Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
+                    opacity: (p ? Math.min(1, candado.entrada) : 0) * (1 - salida)
+                    visible: opacity > 0 && (!root.accesoOk || root.apertura < 0.18)
+                    Behavior on opacity { enabled: !root.accesoOk; NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
 
                     Timer {
                         running: musicaBloqueo.visible && musicaBloqueo.p !== null && musicaBloqueo.p.isPlaying
