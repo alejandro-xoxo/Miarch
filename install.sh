@@ -185,6 +185,15 @@ ui_etapa "Aplicando el wallpaper y los colores"
 # kitty toma sus colores de un archivo que genera miarch-colors a partir del wallpaper
 [ -s "$HOME/.cache/miarch-wallpaper" ] && "$HOME/.local/bin/miarch-colors" "$(cat "$HOME/.cache/miarch-wallpaper")" >/dev/null || true
 
+# anota el commit cuyas configuraciones se aplicaron (miarch-update y la nube de la barra lo usan para saber si hay algo pendiente)
+if git -C "$DOTFILES_DIR" rev-parse HEAD >/dev/null 2>&1; then
+    mkdir -p "$HOME/.cache/miarch"; git -C "$DOTFILES_DIR" rev-parse HEAD > "$HOME/.cache/miarch/configs-aplicadas"
+fi
+# una instalación nueva no necesita ver las novedades anteriores: se anota la última como vista (solo si aún no hay marca)
+if [ ! -s "$HOME/.cache/miarch/novedades-vistas" ] && [ -f "$DOTFILES_DIR/NOVEDADES.md" ]; then
+    mkdir -p "$HOME/.cache/miarch"; grep -m1 '^## ' "$DOTFILES_DIR/NOVEDADES.md" | awk '{print $2}' > "$HOME/.cache/miarch/novedades-vistas"
+fi
+
 if [ -z "${MIARCH_UI_SUB:-}" ]; then     # solo si no lo lanza setup.sh o miarch-update (que muestra su propio resumen)
     ui_resumen "Configuraciones aplicadas"
     ui_info "Dentro de Hyprland recarga con: hyprctl reload   (y reinicia el escritorio: qs kill -c miarch; qs -c miarch &)"

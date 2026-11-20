@@ -23,6 +23,38 @@ si()  { local r; read -rp "  ? $1 [S/n] " r; [[ -z "$r" || "$r" =~ ^[sSyY] ]]; }
 unir() { local s="" x; for x in "$@"; do s+="${s:+, }$x"; done; printf "%s" "$s"; }
 plural() { [ "$1" = 1 ] && echo "$2" || echo "$3"; }
 
+# Lee NOVEDADES.md por la entrada estándar y muestra solo el TÍTULO de las entradas que aún no has visto (marca = id de la última
+# vista), una línea cada una y como máximo 3. El detalle de cada una está en NOVEDADES.md.
+NOV_MARCA="$HOME/.cache/miarch/novedades-vistas"
+novedades() {
+    awk -v marca="$(cat "$NOV_MARCA" 2>/dev/null)" -v max=3 -v ca="${C_ACENTO:-}" -v cr="${C_R:-}" '
+        /^## / { id=$2; t=$0; sub(/^## [^ ]+ · /,"",t)
+                 if ((marca=="" || id>marca) && n<max) { n++; printf "      %s▸%s %s\n", ca, cr, t } }'
+}
+ultima_novedad() { grep -m1 '^## ' NOVEDADES.md 2>/dev/null | awk '{print $2}'; }
+
+# Convierte una lista de archivos (uno por línea) en las partes de tu equipo que cambian, con nombres legibles.
+areas() {
+    local f a=()
+    while IFS= read -r f; do
+        case "$f" in
+            config/hypr/*)        a+=("Hyprland (atajos y reglas de ventanas)") ;;
+            config/quickshell/*)  a+=("el escritorio (barra, paneles y bloqueo)") ;;
+            config/greeter/*)     a+=("la pantalla de inicio de sesión") ;;
+            config/kitty/*)       a+=("la terminal") ;;
+            config/nvim/*)        a+=("Neovim") ;;
+            config/chrome/*)      a+=("Chrome") ;;
+            config/vscode/*)      a+=("VS Code") ;;
+            home/.zshrc)          a+=("Zsh") ;;
+            packages.sh)          a+=("la lista de paquetes") ;;
+            install.sh|setup.sh|lib/*) a+=("el instalador") ;;
+            scripts/*)            a+=("las herramientas de Miarch") ;;
+            wallpapers/*)         a+=("los fondos de pantalla") ;;
+        esac
+    done
+    printf '%s\n' "${a[@]}" | awk '!v[$0]++'
+}
+
 [ -d "$REPO/.git" ] || { echo "[ERROR] No encuentro el repositorio de Miarch en $REPO (¿lo clonaste en otra carpeta? usa MIARCH_DIR=carpeta)"; fin 1; }
 cd "$REPO"
 # interfaz (logo, etapas, animación, resumen). Si el repositorio no la trae, versiones mínimas sin animación.
@@ -62,13 +94,29 @@ N_SIS=$(( ${#SIS_OFI[@]} + ${#SIS_AUR[@]} ))
 
 echo
 if [ "$NUEVOS" -gt 0 ]; then
-    ui_info "Miarch: $NUEVOS $(plural "$NUEVOS" 'cambio nuevo' 'cambios nuevos') en GitHub (rama $RAMA):"
-    git log --format='        - %s' "HEAD..$UP" | head -12
+    ui_info "Miarch: $NUEVOS $(plural "$NUEVOS" 'cambio nuevo' 'cambios nuevos') en GitHub (rama $RAMA)"
+    NOV_TXT="$(git show "$UP:NOVEDADES.md" 2>/dev/null | novedades)"
+    if [ -n "$NOV_TXT" ]; then
+        ui_info "Novedades:"; printf '%s\n' "$NOV_TXT"
+    else
+        git log --format='        - %s' "HEAD..$UP" | head -12          # sin novedades escritas: los títulos de los cambios
+    fi
+    mapfile -t AREAS < <(git diff --name-only HEAD "$UP" 2>/dev/null | areas)
+    [ "${#AREAS[@]}" -gt 0 ] && ui_info "Cambia en tu equipo: $(unir "${AREAS[@]}")"
     [ "$SUCIO" = 1 ] && ui_aviso "Tienes cambios sin guardar en $REPO: no se pueden descargar sin pisarlos. Guárdalos (commit) y vuelve a intentarlo."
 else
     ui_ok "Miarch: al día"
 fi
-[ "$CFG_PENDIENTES" = 1 ] && [ "$NUEVOS" -eq 0 ] && ui_info "Las configuraciones de Miarch de este equipo no están al día con los archivos del repositorio: se volverán a aplicar."
+if [ "$CFG_PENDIENTES" = 1 ] && [ "$NUEVOS" -eq 0 ]; then
+    ui_info "Configuraciones de Miarch sin aplicar en este equipo"
+    NOV_TXT="$(novedades < NOVEDADES.md 2>/dev/null)"
+    [ -n "$NOV_TXT" ] && { ui_info "Novedades:"; printf '%s\n' "$NOV_TXT"; }
+    MARCA_CFG="$(cat "$CFG_MARCA" 2>/dev/null)"
+    if [ -n "$MARCA_CFG" ] && git cat-file -e "$MARCA_CFG^{commit}" 2>/dev/null; then
+        mapfile -t AREAS < <(git diff --name-only "$MARCA_CFG" HEAD 2>/dev/null | areas)
+        [ "${#AREAS[@]}" -gt 0 ] && ui_info "Cambia en tu equipo: $(unir "${AREAS[@]}")"
+    fi
+fi
 if [ "${#FALTAN[@]}" -gt 0 ]; then
     ui_info "Paquetes de Miarch que faltan en este equipo (${#FALTAN[@]}): $(unir "${FALTAN[@]}")"
 elif [ "$PAQ_CAMBIA" = 1 ]; then
@@ -129,6 +177,7 @@ if [ "$HACER_MIARCH" = 1 ]; then
     GUARDADOS="$(grep -E '^local (ESCALA|KB|NATURAL|TAP|SENS|CURSOR|MOVIMIENTO|ANIM|BLUR)[[:space:]]*=' "$HYPR" 2>/dev/null || true)"
     if MIARCH_ACTUALIZANDO=1 ui_ejecutar "Copiando configuraciones y scripts" bash ./install.sh; then
         mkdir -p "$(dirname "$CFG_MARCA")"; git rev-parse HEAD > "$CFG_MARCA"
+        [ -n "$(ultima_novedad)" ] && ultima_novedad > "$NOV_MARCA"      # ya viste las novedades hasta esta
     else
         ui_aviso "install.sh terminó con avisos (arriba están las últimas líneas). Se volverá a intentar la próxima vez."
     fi
