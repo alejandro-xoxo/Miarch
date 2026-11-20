@@ -3,6 +3,9 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-20.27 · Crunchyroll en el lanzador
+Crunchyroll ya está disponible en el lanzador de aplicaciones (`Super + Espacio`) en una ventana propia de Chrome con aceleración y Widevine. Inicia sesión con tu cuenta la primera vez.
+
 ## 2026-11-20.26 · Wi-Fi y Bluetooth más simples
 Los paneles de Wi-Fi y Bluetooth ahora muestran de forma directa lo que hay cerca y lo que el equipo ya conoce, sin esconder dispositivos emparejados tras botones ni requerir formularios de red oculta.
 
