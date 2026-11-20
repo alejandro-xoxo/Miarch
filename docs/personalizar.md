@@ -11,6 +11,20 @@ Miarch se actualiza con la nube de la barra, y una actualización reemplaza sus 
 
 `install.sh` crea esos archivos con ejemplos comentados la primera vez y **nunca los pisa**. Escribe ahí lo tuyo; el resto de Miarch no hay que tocarlo.
 
+## Con ayuda de un agente de IA
+Si usas un agente como Claude Code, `install.sh` le instala la skill **`instalar-configurar`** (está en `skills/instalar-configurar/`). Con ella, cuando le pidas "instala X", "configura Y" u "optimiza mi sistema", el agente busca la forma mejor y más ligera de hacerlo en Linux (un ajuste que ya existe, el paquete oficial, AUR o Flatpak, midiendo cuando importa el consumo), te pide permiso antes de `sudo`, deja el cambio en la carpeta personal o en `packages.sh` para que sobreviva a las actualizaciones, y comprueba que funciona. Es una copia gestionada por Miarch: se refresca al actualizar, así que no la edites en `~/.claude/skills/`.
+
+## Con ayuda de un agente de IA
+Si usas un agente (Claude Code, Codex, Antigravity…), `install.sh` le instala la skill **`instalar-configurar`** (está en `skills/instalar-configurar/`, en el formato abierto de skills, así que sirve igual en todos). Con ella, cuando le pidas "instala X", "configura Y" u "optimiza mi sistema", el agente busca la forma mejor y más ligera de hacerlo en Linux (un ajuste que ya existe, el paquete oficial, AUR o Flatpak, midiendo cuando importa el consumo), te pide permiso antes de `sudo`, deja el cambio en la carpeta personal o en `packages.sh` para que sobreviva a las actualizaciones, y comprueba que funciona.
+
+| Agente | Carpeta donde se instala |
+|---|---|
+| Claude Code | `~/.claude/skills/` |
+| Codex | `~/.codex/skills/` |
+| Antigravity (`agy`) | `~/.gemini/config/skills/` |
+
+Es una copia gestionada por Miarch: se refresca al actualizar, así que no la edites ahí. Para cualquier otro agente, `AGENTS.md` (en la raíz del repositorio) le da las mismas indicaciones si trabaja dentro de `~/Miarch`.
+
 ## Qué se cambia dónde
 | Quieres cambiar | Dónde |
 |---|---|
