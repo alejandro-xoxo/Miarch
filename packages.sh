@@ -72,6 +72,7 @@ configurar_docker_ollama() {
         sudo install -d -m 755 "$datos"
         if [ ! -s /etc/docker/daemon.json ] && [ -z "$(ls -A /var/lib/docker 2>/dev/null)" ]; then
             sudo install -d -m 711 "$datos/docker"
+            sudo install -d -m 755 /etc/docker   # el paquete docker no crea esta carpeta
             printf '{\n  "data-root": "%s/docker"\n}\n' "$datos" | sudo tee /etc/docker/daemon.json >/dev/null
         else
             echo "ℹ️  Docker ya tiene datos o configuración: no se mueve su carpeta."
