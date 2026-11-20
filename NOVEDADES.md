@@ -3,6 +3,9 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-20.16 · Entrada limpia después del login
+Al terminar la animación del inicio de sesión, la consola de texto que aparecía unos instantes (con el cursor parpadeando y texto de arranque) ahora sale en negro y sin cursor; el texto de arranque va al registro `~/.cache/miarch/sesion.log`.
+
 ## 2026-11-20.15 · Miarch 1.0
 Primera versión estable. Reúne todo lo de estos días: menú de IA (Super + C), Steam y juegos, Wi-Fi completo, notificaciones nuevas, barra de volumen con sonido, pantalla de inicio de sesión propia, bloqueo y entrada de cine con firma, actualizador más robusto y la skill para agentes de IA.
 
