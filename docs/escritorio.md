@@ -129,7 +129,12 @@ La interacción inalámbrica se ejecuta a través del script mediador `scripts/m
 - **Control de estado**: Si una red guardada rechaza la conexión por cambio de clave, el panel solicita la nueva credencial. Solo se listan redes verificadas dentro del radio de alcance. Las solicitudes de apagado y olvido comprueban el estado efectivo tras su ejecución. Las acciones se registran en `~/.cache/miarch/wifi.log`, que se recorta al pasar de 100 KB.
 
 ### Panel Bluetooth
-Presenta la lista de dispositivos periféricos vinculados y gestiona la conexión. Con el fin de evitar saturación visual, los dispositivos emparejados que no emitan señal detectable en las inmediaciones permanecen ocultos tras un botón expandible.
+Presenta la lista de dispositivos periféricos vinculados y gestiona el emparejamiento y la conexión. Para los dispositivos ya emparejados, la conexión o desconexión se gestiona de forma inmediata con las funciones nativas del objeto Bluetooth de Quickshell. Para vincular dispositivos nuevos no emparejados, el panel delega en el script mediador `scripts/miarch-bluetooth`:
+- **Emparejamiento seguro y secuencial**: Admite solo un emparejamiento concurrente, ignorando pulsaciones adicionales mientras haya una vinculación en curso. Si el adaptador tiene el modo emparejable desactivado al abrir el panel, se activa (`pairable = true`, `pairableTimeout = 0`) una sola vez sin repetirlo en cada refresco.
+- **Agente dedicado**: `miarch-bluetooth pair <MAC>` registra un agente efímero con capacidad `NoInputNoOutput` para la duración del comando (`timeout 45 bluetoothctl --agent NoInputNoOutput pair MAC`), evitando que `bluetoothd` quede colgado esperando respuestas interactivas. Al completarse, registra confianza (`trust`) y conecta el dispositivo (`connect`).
+- **Validación y tolerancia a fallos**: Comprueba previamente la capacidad de respuesta del servicio (`timeout 6 bluetoothctl show`), validando la dirección MAC (`^([0-9A-F]{2}:){5}[0-9A-F]{2}$`). Si el demonio no responde, sugiere el comando para reiniciar el servicio.
+- **Temporización y retroalimentación en la interfaz**: Muestra el estado "Emparejando…" bajo el dispositivo. Si transcurren 30 segundos sin completarse, cancela la operación (`cancelPair()`) y muestra un mensaje indicando que se ponga el dispositivo en modo de emparejamiento. Cada intento se registra en `~/.cache/miarch/bluetooth.log` (rotado a 100 KB).
+- **Filtro de presencia**: Los dispositivos emparejados que no emitan señal detectable en las inmediaciones (sin RSSI activo) permanecen ocultos tras un botón expandible para evitar saturación visual.
 
 ## Terminal Kitty (`config/kitty/kitty.conf`)
 

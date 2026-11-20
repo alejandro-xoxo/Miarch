@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Miarch · puente entre el panel de Quickshell y bluetoothctl para emparejar dispositivos.
+
+set -u
+
+LOG_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/miarch"
+LOG_FILE="$LOG_DIR/bluetooth.log"
+
+log_record() {
+    local entry="$1"
+    mkdir -p "$LOG_DIR" 2>/dev/null || true
+    if [ -f "$LOG_FILE" ]; then
+        local sz
+        sz=$(wc -c < "$LOG_FILE" 2>/dev/null || echo 0)
+        if [ "$sz" -gt 102400 ]; then
+            local chunk
+            chunk=$(tail -c 51200 "$LOG_FILE" 2>/dev/null || true)
+            printf "%s\n" "${chunk#*$'\n'}" > "$LOG_FILE" 2>/dev/null || true
+        fi
+    fi
+    printf "%s %s\n" "$(date '+%F %T')" "$entry" >> "$LOG_FILE" 2>/dev/null || true
+}
+
+cmd="${1:-}"
+
+case "$cmd" in
+    pair)
+        mac="${2:-}"
+
+        # Valida que MAC cumpla ^([0-9A-F]{2}:){5}[0-9A-F]{2}$
+        if [[ ! "$mac" =~ ^([0-9A-F]{2}:){5}[0-9A-F]{2}$ ]]; then
+            res='{"ok": false, "msg": "Dirección MAC no válida"}'
+            log_record "pair ${mac:-vacia} -> $res"
+            echo "$res"
+            exit 1
+        fi
+
+        # (a) Comprueba que bluetoothd responde con timeout 6 bluetoothctl show
+        show_out=$(timeout 6 bluetoothctl show 2>&1)
+        show_rc=$?
+        if [ $show_rc -ne 0 ] || [[ "$show_out" =~ (Waiting to connect|No default controller) ]]; then
+            res='{"ok": false, "msg": "El servicio Bluetooth no responde. Reinícialo con: sudo systemctl restart bluetooth"}'
+            log_record "pair $mac -> $res"
+            echo "$res"
+            exit 1
+        fi
+
+        # (b) Registra un agente para la duración del comando con timeout 45 bluetoothctl --agent NoInputNoOutput pair MAC
+        pair_out=$(timeout 45 bluetoothctl --agent NoInputNoOutput pair "$mac" 2>&1)
+        pair_rc=$?
+
+        if [ $pair_rc -eq 124 ] || [[ "$pair_out" =~ [Tt]imeout|[Tt]iempo\ agotado ]]; then
+            res='{"ok": false, "msg": "Tiempo de espera agotado al emparejar. Pon el dispositivo en modo de emparejamiento y vuelve a intentarlo."}'
+            log_record "pair $mac -> $res"
+            echo "$res"
+            exit 1
+        fi
+
+        if [ $pair_rc -ne 0 ] || [[ "$pair_out" =~ (Failed to pair|Failed|not available) ]]; then
+            res='{"ok": false, "msg": "No se pudo emparejar. Pon el dispositivo en modo de emparejamiento y vuelve a intentarlo."}'
+            log_record "pair $mac -> $res"
+            echo "$res"
+            exit 1
+        fi
+
+        # luego trust MAC y connect MAC
+        timeout 10 bluetoothctl trust "$mac" >/dev/null 2>&1 || true
+        if timeout 20 bluetoothctl connect "$mac" >/dev/null 2>&1; then
+            res='{"ok": true, "msg": "Dispositivo emparejado y conectado"}'
+        else
+            res='{"ok": true, "msg": "Dispositivo emparejado"}'
+        fi
+
+        log_record "pair $mac -> $res"
+        echo "$res"
+        exit 0
+        ;;
+    *)
+        echo '{"ok": false, "msg": "Uso: miarch-bluetooth pair MAC"}'
+        exit 1
+        ;;
+esac

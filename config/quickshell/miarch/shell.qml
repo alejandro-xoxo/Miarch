@@ -530,7 +530,12 @@ ShellRoot {
     property string ocultaNombre: ""
     property string _redesJson: ""
     property var btLista: []
-    property var btPendiente: null
+    readonly property string btBin: Quickshell.env("HOME") + "/.local/bin/miarch-bluetooth"
+    property string btEmparejandoMac: ""
+    property var btEmparejandoDev: null
+    property string btMsgMac: ""
+    property string btMsg: ""
+    property string btMensaje: ""
     readonly property string wifiBin: Quickshell.env("HOME") + "/.local/bin/miarch-wifi"
 
     function abrirConexiones(modo) {
@@ -661,19 +666,107 @@ ShellRoot {
         running: root.conexionesAbierto && root.conexionesModo === "bt"
         onTriggered: { if (!pBtCerca.running) pBtCerca.running = true }
     }
-    Timer { id: tPendiente; interval: 3500; onTriggered: { if (root.btPendiente && root.btPendiente.paired) root.btPendiente.connect(); root.btPendiente = null } }
+    Timer {
+        id: tBtTimeout
+        interval: 30000
+        repeat: false
+        onTriggered: {
+            if (pBtAccion.running) pBtAccion.running = false
+            if (root.btEmparejandoDev) {
+                try { root.btEmparejandoDev.cancelPair() } catch (e) {}
+            }
+            const aviso = "No se pudo emparejar. Pon el dispositivo en modo de emparejamiento y vuelve a intentarlo."
+            root.btMsgMac = root.btEmparejandoMac
+            root.btMsg = aviso
+            root.btMensaje = aviso
+            root.btEmparejandoMac = ""
+            root.btEmparejandoDev = null
+            root._btClave = ""
+            root.ordenarBt()
+        }
+    }
+    Process {
+        id: pBtAccion
+        property string targetMac: ""
+        stdout: StdioCollector {
+            onStreamFinished: {
+                tBtTimeout.stop()
+                const mac = pBtAccion.targetMac
+                let ok = false
+                let msg = ""
+                try {
+                    const res = JSON.parse(text)
+                    ok = !!res.ok
+                    msg = res.msg || ""
+                } catch (e) {
+                    ok = false
+                    msg = "No se pudo emparejar. Pon el dispositivo en modo de emparejamiento y vuelve a intentarlo."
+                }
+                if (!ok) {
+                    if (root.btEmparejandoDev) {
+                        try { root.btEmparejandoDev.cancelPair() } catch (err) {}
+                    }
+                    const aviso = msg || "No se pudo emparejar. Pon el dispositivo en modo de emparejamiento y vuelve a intentarlo."
+                    root.btMsgMac = mac
+                    root.btMsg = aviso
+                    root.btMensaje = aviso
+                } else {
+                    root.btMsgMac = ""
+                    root.btMsg = ""
+                    root.btMensaje = msg
+                }
+                root.btEmparejandoMac = ""
+                root.btEmparejandoDev = null
+                root._btClave = ""
+                root.ordenarBt()
+            }
+        }
+    }
     function btClic(d) {
-        if (d.connected) d.disconnect()
-        else if (d.paired) d.connect()
-        else { d.trusted = true; d.pair(); root.btPendiente = d; tPendiente.restart() }
+        if (!d) return
+        if (d.connected) {
+            d.disconnect()
+            return
+        }
+        if (d.paired) {
+            d.connect()
+            return
+        }
+        if (d.pairing || root.btEmparejandoMac !== "" || pBtAccion.running) return
+        const mac = (d.address || "").toUpperCase()
+        if (!mac) return
+        root.btEmparejandoMac = mac
+        root.btEmparejandoDev = d
+        root.btMsgMac = ""
+        root.btMsg = ""
+        root.btMensaje = ""
+        pBtAccion.targetMac = mac
+        pBtAccion.command = [root.btBin, "pair", mac]
+        tBtTimeout.restart()
+        pBtAccion.running = true
+        root.ordenarBt()
+    }
+    function asegurarBtPairable() {
+        if (root.adaptadorBt && !root.adaptadorBt.pairable) {
+            root.adaptadorBt.pairable = true
+            root.adaptadorBt.pairableTimeout = 0
+        }
     }
     onConexionesAbiertoChanged: {
         if (root.adaptadorBt) root.adaptadorBt.discovering = root.conexionesAbierto && root.conexionesModo === "bt"
-        if (!root.conexionesAbierto) { root.redClave = ""; root.wifiClave = ""; root.wifiMensaje = "" }
+        if (!root.conexionesAbierto) {
+            root.redClave = ""; root.wifiClave = ""; root.wifiMensaje = ""
+            root.btMensaje = ""; root.btMsgMac = ""; root.btMsg = ""
+        } else if (root.conexionesModo === "bt") {
+            root.asegurarBtPairable()
+        }
     }
     onConexionesModoChanged: {
         if (root.adaptadorBt) root.adaptadorBt.discovering = root.conexionesAbierto && root.conexionesModo === "bt"
         root.redClave = ""
+        if (root.conexionesAbierto && root.conexionesModo === "bt") {
+            root.asegurarBtPairable()
+        }
     }
 
     IpcHandler {
@@ -1078,9 +1171,26 @@ ShellRoot {
                                                     font { family: root.fuente; pixelSize: 15 * root.esc; weight: modelData.connected ? Font.Medium : Font.Light }
                                                 }
                                                 Text {
-                                                    text: modelData.connected ? "Conectado" : (modelData.paired ? "Emparejado" : "Toca para emparejar")
-                                                    color: modelData.connected ? root.terracota : Qt.alpha(root.arena, 0.4)
-                                                    font { family: root.fuente; pixelSize: 11 * root.esc; weight: Font.Medium; letterSpacing: 2 }
+                                                    width: parent.width; elide: Text.ElideRight
+                                                    text: {
+                                                        const m = (modelData.address || "").toUpperCase()
+                                                        if (modelData.pairing || (root.btEmparejandoMac !== "" && m === root.btEmparejandoMac)) return "Emparejando…"
+                                                        if (root.btMsgMac !== "" && m === root.btMsgMac && root.btMsg !== "") return root.btMsg
+                                                        return modelData.connected ? "Conectado" : (modelData.paired ? "Emparejado" : "Toca para emparejar")
+                                                    }
+                                                    color: {
+                                                        const m = (modelData.address || "").toUpperCase()
+                                                        if (modelData.pairing || (root.btEmparejandoMac !== "" && m === root.btEmparejandoMac)) return Qt.alpha(root.arena, 0.6)
+                                                        if (root.btMsgMac !== "" && m === root.btMsgMac && root.btMsg !== "") return root.terracota
+                                                        return modelData.connected ? root.terracota : Qt.alpha(root.arena, 0.4)
+                                                    }
+                                                    font {
+                                                        family: root.fuente; pixelSize: 11 * root.esc; weight: Font.Medium
+                                                        letterSpacing: {
+                                                            const m = (modelData.address || "").toUpperCase()
+                                                            return (root.btMsgMac !== "" && m === root.btMsgMac && root.btMsg !== "") ? 1 : 2
+                                                        }
+                                                    }
                                                 }
                                             }
                                             Text {
@@ -1099,6 +1209,15 @@ ShellRoot {
                                         }
                                     }
                                 }
+                            }
+                            Text {
+                                visible: root.adaptadorBt && root.adaptadorBt.enabled && root.btMensaje !== ""
+                                text: root.btMensaje
+                                color: root.terracota
+                                font { family: root.fuente; pixelSize: 12 * root.esc; weight: Font.Medium; letterSpacing: 1 }
+                                wrapMode: Text.WordWrap
+                                width: parent.width
+                                topPadding: 4
                             }
                             Text {
                                 visible: root.adaptadorBt && root.adaptadorBt.enabled

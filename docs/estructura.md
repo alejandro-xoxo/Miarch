@@ -19,6 +19,7 @@ Miarch/
 ├── lib/
 │   └── ui.sh
 ├── scripts/
+│   ├── miarch-bluetooth
 │   ├── miarch-chrome-tema
 │   ├── miarch-colors
 │   ├── miarch-fetch
@@ -76,7 +77,7 @@ flowchart TD
     ApplyPhase --> GreeterInstall
 
     Hyprland["config/hypr/hyprland.lua"] --> Quickshell["config/quickshell/miarch/shell.qml"]
-    Quickshell --> HelperScripts["scripts/ (miarch-set, miarch-wifi, miarch-volumen, miarch-info)"]
+    Quickshell --> HelperScripts["scripts/ (miarch-set, miarch-wifi, miarch-bluetooth, miarch-volumen, miarch-info)"]
     
     Wallpaper["scripts/wallpaper.sh"] --> Colors["scripts/miarch-colors"]
     Colors --> CacheColors["~/.cache/miarch/colors.json"]
@@ -120,6 +121,7 @@ flowchart TD
 | `scripts/wallpaper.sh` | Aplica un fondo de pantalla aleatorio con `awww` y lanza `miarch-colors`. |
 | `scripts/miarch-set` | Interfaz programática para alterar variables del panel y del compositor en tiempo de ejecución. |
 | `scripts/miarch-wifi` | Puente de comunicación en formato JSON entre la interfaz gráfica y el demonio `iwd` (`iwctl`). Administra credenciales seguras mediante `MIARCH_PASS` y pseudo-terminales (`pty`). |
+| `scripts/miarch-bluetooth` | Mediador para emparejamiento Bluetooth seguro mediante `bluetoothctl` con agente `NoInputNoOutput`, registro de confianza y conexión automática. Genera salida JSON y registra operaciones en `~/.cache/miarch/bluetooth.log`. |
 | `scripts/miarch-volumen` | Ajusta y conmuta el volumen de audio con `wpctl`, reproduce retroalimentación sonora con tasa limitada (110 ms) y activa el indicador visual en Quickshell vía IPC. |
 | `scripts/miarch-info` | Exporta datos estructurados en JSON sobre hardware y sistema operativo para la sección de Sistema del panel de ajustes. |
 | `scripts/miarch-fetch` | Presentación de métricas de fastfetch ajustadas proporcionalmente al ancho de la terminal. |
