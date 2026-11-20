@@ -9,7 +9,7 @@ sudo pacman -S --needed --noconfirm git && git clone https://github.com/alejandr
 
 `setup.sh` comprueba internet, pide `sudo` una sola vez (lo mantiene activo mientras dura), instala `git` y `base-devel`, y ejecuta `packages.sh` e `install.sh`. Tarda unos 30 minutos porque compila Quickshell. Después: `sudo reboot`.
 
-Mientras trabaja ves **una barra con el avance total** (por ejemplo `[##########--------------------]  36%  (8/22)`) y, en cada paso largo, una animación con el tiempo transcurrido y la última línea de salida. Todo el detalle queda en `~/.cache/miarch/instalacion.log`; si un paso falla, se muestran sus últimas líneas y la ruta del registro.
+Los scripts (`setup.sh`, `packages.sh`, `install.sh` y el actualizador) comparten una misma interfaz, con la paleta morada del portafolio del autor: logo animado, etapas con título, resultados alineados con su duración y un recuadro final con el resumen. Mientras trabaja ves **una barra con el avance total** (por ejemplo `[##########--------------------]  36%  (8/22)`) y, en cada paso largo, una animación con el tiempo transcurrido y la última línea de salida. Todo el detalle queda en `~/.cache/miarch/instalacion.log`; si un paso falla, se muestran sus últimas líneas y la ruta del registro.
 
 > **¿Descargaste el ZIP de GitHub?** El ZIP borra los permisos de ejecución y `./setup.sh` da "permiso denegado". Usa `bash setup.sh` (con `git clone` no pasa).
 

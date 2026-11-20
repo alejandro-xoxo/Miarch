@@ -14,11 +14,12 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib/ui.sh"
 ETAPAS=7   # setup.sh pregunta cuántas etapas tiene este script para dibujar la barra del total
 [ "${1:-}" = "--etapas" ] && { echo "$ETAPAS"; exit 0; }
 ui_total "$ETAPAS"
+[ -n "${MIARCH_UI_SUB:-}" ] || ui_banner "configuraciones"   # solo si no lo lanza setup.sh
 
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIR="$DOTFILES_DIR/config"
 STAMP="$(date +%Y%m%d-%H%M%S)"
-echo "[i] Repositorio: $DOTFILES_DIR"
+ui_info "Repositorio: $DOTFILES_DIR"
 
 # =========================
 # FUNCIONES AUXILIARES
@@ -40,7 +41,7 @@ copy_config() {
         mkdir -p "$(dirname "$dest")"
         cp -r "$src" "$dest"
     else
-        echo "[!] $src no existe, se omite"
+        ui_aviso "$src no existe, se omite"
     fi
 }
 
@@ -76,7 +77,7 @@ install -Dm644 "$CONFIG_DIR/chrome/chrome-flags.conf" "$HOME/.config/chrome-flag
 # Se fusiona con tus ajustes: solo se tocan las claves de config/vscode/settings.json y nunca se borra nada tuyo.
 # =========================
 ui_etapa "Ajustando la fuente de la terminal de VS Code"
-python3 -I - "$CONFIG_DIR/vscode/settings.json" "$HOME/.config/Code/User/settings.json" <<'PY' || echo "[!] No se pudo ajustar la fuente de la terminal de VS Code"
+python3 -I - "$CONFIG_DIR/vscode/settings.json" "$HOME/.config/Code/User/settings.json" <<'PY' || ui_aviso "No se pudo ajustar la fuente de la terminal de VS Code"
 import json, os, sys
 origen, destino = sys.argv[1:3]
 nuevos = json.load(open(origen, encoding="utf-8"))
@@ -103,7 +104,7 @@ PY
 # =========================
 ui_etapa "Copiando los wallpapers"
 if [ -d "$DOTFILES_DIR/wallpapers" ]; then
-    echo "[i] Destino: $WALL_DIR"
+    ui_info "Destino de los wallpapers: $WALL_DIR"
     cp -rn "$DOTFILES_DIR/wallpapers/." "$WALL_DIR/"
 fi
 
@@ -112,7 +113,7 @@ fi
 # =========================
 ui_etapa "Sincronizando los plugins de Neovim"
 if command -v nvim &>/dev/null; then
-    ui_ejecutar "Plugins de Neovim (Lazy.nvim)" nvim --headless "+Lazy! sync" +qa || echo "[!] Neovim terminó con avisos (normal en el primer arranque)"
+    ui_ejecutar "Plugins de Neovim (Lazy.nvim)" nvim --headless "+Lazy! sync" +qa || ui_aviso "Neovim terminó con avisos (normal en el primer arranque)"
 fi
 
 # =========================
@@ -139,8 +140,9 @@ ui_etapa "Aplicando el wallpaper y los colores"
 # kitty toma sus colores de un archivo que genera miarch-colors a partir del wallpaper
 [ -s "$HOME/.cache/miarch-wallpaper" ] && "$HOME/.local/bin/miarch-colors" "$(cat "$HOME/.cache/miarch-wallpaper")" >/dev/null || true
 
-echo ""
-echo "[OK] ¡Listo!"
-echo "   Dentro de Hyprland recarga con: hyprctl reload   (y reinicia el escritorio: qs kill -c miarch; qs -c miarch &)"
-echo "   Si no, reinicia e inicia sesión en tty1."
-echo "   Opcional, pantalla de inicio de sesión gráfica:  ./scripts/miarch-greeter-install"
+if [ -z "${MIARCH_UI_SUB:-}" ]; then     # solo si no lo lanza setup.sh o miarch-update (que muestra su propio resumen)
+    ui_resumen "Configuraciones aplicadas"
+    ui_info "Dentro de Hyprland recarga con: hyprctl reload   (y reinicia el escritorio: qs kill -c miarch; qs -c miarch &)"
+    ui_info "Si no, reinicia e inicia sesión en tty1."
+    ui_info "Opcional, pantalla de inicio de sesión gráfica:  ./scripts/miarch-greeter-install"
+fi
