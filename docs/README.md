@@ -10,6 +10,9 @@
 | [Navegador](navegador.md) | Por qué Chrome: medición contra Chromium y Firefox |
 | [Juegos](juegos.md) | Steam: qué se instala, primer uso, opciones de lanzamiento y consejos para gráficas integradas |
 | [Personalizar](personalizar.md) | Dónde poner tus cambios para que ninguna actualización los borre |
+| [Actualizador](actualizador.md) | Cómo revisa, qué hace y en qué orden, y qué conserva |
+| [IA](ia.md) | Menú de IA (`Super + C`), apps y CLIs, la skill para agentes y `AGENTS.md` |
+| [Seguridad](seguridad.md) | Bloqueo, inicio de sesión, credenciales, código de terceros y revisión previa a la v1.0 |
 | [Atajos](atajos.md) | Todos los atajos de teclado |
 | [Scripts](scripts.md) | Qué hace cada herramienta de `scripts/` |
 | [Estructura](estructura.md) | Mapa de carpetas del repositorio |
