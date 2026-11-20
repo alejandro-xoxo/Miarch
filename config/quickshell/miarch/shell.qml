@@ -333,7 +333,9 @@ ShellRoot {
                   "s=0; grep -q -- --sobran \"$d/packages.sh\" 2>/dev/null && s=$(bash \"$d/packages.sh\" --sobran 2>/dev/null | grep -c .); " +
                   // pantalla de inicio de sesión de Miarch (greetd) aún sin instalar, salvo que se haya rechazado
                   "g=0; [ -e \"$HOME/.config/miarch/sin-greeter\" ] || [ \"$(systemctl is-enabled greetd 2>/dev/null)\" = enabled ] || g=1; " +
-                  "echo $((n + c + f + s + g))"]
+                  // aviso si el repositorio se mudó a otro remoto
+                  "mu=0; git -C \"$d\" cat-file -e \"$u:MUDANZA\" 2>/dev/null && mu=1; " +
+                  "echo $((n + c + f + s + g + mu))"]
         stdout: StdioCollector {
             onStreamFinished: {
                 const t = text.trim()
