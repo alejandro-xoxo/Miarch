@@ -14,7 +14,7 @@ FORZAR=0; [ "${1:-}" = "--forzar" ] && FORZAR=1
 
 fin() { echo; read -rp "Enter para cerrar " _; exit "${1:-0}"; }
 si()  { local r; read -rp "  ? $1 [S/n] " r; [[ -z "$r" || "$r" =~ ^[sSyY] ]]; }
-unir() { local IFS=", "; echo "$*"; }
+unir() { local s="" x; for x in "$@"; do s+="${s:+, }$x"; done; printf "%s" "$s"; }
 plural() { [ "$1" = 1 ] && echo "$2" || echo "$3"; }
 
 [ -d "$REPO/.git" ] || { echo "[ERROR] No encuentro el repositorio de Miarch en $REPO (¿lo clonaste en otra carpeta? usa MIARCH_DIR=carpeta)"; fin 1; }
@@ -24,19 +24,18 @@ if [ -f "$REPO/lib/ui.sh" ]; then
     source "$REPO/lib/ui.sh"
 else
     ui_banner() { :; }; ui_total() { :; }; ui_resumen() { :; }
-    ui_etapa()  { printf '\n==> %s\n' "$*"; }
+    ui_etapa()  { printf '\n==> %s\n' "$*"; }; ui_titulo() { printf '\n==> %s\n' "$*"; }
     ui_ok()     { echo "[OK] $*"; };  ui_info() { echo "[i] $*"; }
     ui_aviso()  { echo "[!] $*"; };   ui_error() { echo "[ERROR] $*" >&2; }
     ui_ejecutar() { local m="$1"; shift; echo "   ... $m"; "$@"; }
 fi
 export MIARCH_UI_SUB=1      # packages.sh e install.sh no repiten el logo ni el resumen
-ui_total 1
 ui_banner "actualizador"
 
 # =====================================================================================================
 # 1) REVISAR (no descarga ni instala nada)
 # =====================================================================================================
-ui_etapa "Revisando qué hay pendiente"
+ui_titulo "Revisando qué hay pendiente"
 git fetch -q origin 2>/dev/null || { ui_error "No hay conexión con GitHub. Revisa el Wi-Fi y vuelve a intentarlo."; fin 1; }
 RAMA="$(git rev-parse --abbrev-ref HEAD)"
 UP="@{u}"; git rev-parse -q --verify "$UP" >/dev/null 2>&1 || UP="origin/$RAMA"
@@ -44,7 +43,9 @@ NUEVOS="$(git rev-list --count "HEAD..$UP" 2>/dev/null || echo 0)"
 SUCIO=0; [ -n "$(git status --porcelain --untracked-files=no)" ] && SUCIO=1
 PAQ_CAMBIA=0; [ "$NUEVOS" -gt 0 ] && ! git diff --quiet HEAD "$UP" -- packages.sh && PAQ_CAMBIA=1
 
-mapfile -t FALTAN < <(bash ./packages.sh --faltantes 2>/dev/null)
+# un packages.sh antiguo no conoce --faltantes y ejecutaría la instalación completa: solo se pregunta si lo soporta
+FALTAN=()
+grep -q -- '--faltantes' ./packages.sh 2>/dev/null && mapfile -t FALTAN < <(bash ./packages.sh --faltantes 2>/dev/null)
 ui_info "Consultando las actualizaciones del sistema..."
 mapfile -t SIS_OFI < <(command -v checkupdates >/dev/null && checkupdates 2>/dev/null)
 mapfile -t SIS_AUR < <(command -v yay >/dev/null && timeout 40 yay -Qua 2>/dev/null)
@@ -93,7 +94,8 @@ echo
 si "Se va a: $(unir "${PLAN[@]}"). ¿Continuar? (pide tu contraseña si hace falta)" || { ui_info "No se hizo ningún cambio."; fin 0; }
 
 # etapas reales = las tareas elegidas (la barra del total muestra solo lo que de verdad se hará)
-UI_TOTAL=$(( UI_ACTUAL + HACER_MIARCH * 2 + HACER_PAQ + HACER_SIS ))
+UI_ACTUAL=0
+UI_TOTAL=$(( HACER_MIARCH * 2 + HACER_PAQ + HACER_SIS ))
 { [ "$HACER_PAQ" = 1 ] || [ "$HACER_SIS" = 1 ]; } && { sudo -v || { ui_error "Sin permiso de administrador: no se instala nada."; fin 1; }; }
 
 # =====================================================================================================
@@ -140,10 +142,11 @@ fi
 
 if [ "$HACER_PAQ" = 1 ]; then
     # la lista pudo cambiar con la descarga: se vuelve a mirar qué falta de verdad
-    mapfile -t FALTAN < <(bash ./packages.sh --faltantes 2>/dev/null)
+    FALTAN=()
+    grep -q -- '--faltantes' ./packages.sh 2>/dev/null && mapfile -t FALTAN < <(bash ./packages.sh --faltantes 2>/dev/null)
     if [ "${#FALTAN[@]}" -gt 0 ]; then
         ui_etapa "Instalando ${#FALTAN[@]} $(plural "${#FALTAN[@]}" 'paquete que faltaba' 'paquetes que faltaban'): $(unir "${FALTAN[@]}")"
-        bash ./packages.sh || ui_aviso "packages.sh terminó con errores (arriba). Se volverá a ofrecer la próxima vez."
+        MIARCH_UI_COMPACTO=1 bash ./packages.sh || ui_aviso "packages.sh terminó con errores (arriba). Se volverá a ofrecer la próxima vez."
     else
         ui_etapa "Revisando los paquetes de Miarch"
         ui_ok "No falta ningún paquete: no se instala nada"
