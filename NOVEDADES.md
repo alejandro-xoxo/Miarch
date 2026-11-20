@@ -3,6 +3,9 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-20.12 · Barra de volumen sencilla
+El volumen ya no usa una notificación (se quedaba pegada): ahora sale una barra pequeña abajo, sin animación, que se actualiza al pulsar y se va sola al segundo.
+
 ## 2026-11-20.11 · Arreglo: las teclas de volumen
 Las teclas de volumen dejaron de funcionar con el cambio del pitido: Hyprland no encuentra los scripts sin su ruta completa. Ya suben, bajan y silencian otra vez.
 

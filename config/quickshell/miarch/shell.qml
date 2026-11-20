@@ -1708,6 +1708,66 @@ ShellRoot {
         function search(texto: string): void { root.lanzadorAbierto = true; root.consultaLanz = texto }
     }
 
+    // ═════════════════ BARRA DE VOLUMEN (sin animación: aparece, se actualiza y se va) ═════════════════
+    // La llama miarch-volumen:  qs -c miarch ipc call osd mostrar <0-100> <texto> <1 si está en silencio>
+    property bool osdVisible: false
+    property int osdValor: 0
+    property string osdTexto: ""
+    property bool osdSilencio: false
+    Timer { id: tOsd; interval: 1200; onTriggered: root.osdVisible = false }
+    IpcHandler {
+        target: "osd"
+        function mostrar(valor: int, texto: string, silencio: int): void {
+            root.osdValor = Math.max(0, Math.min(100, valor)); root.osdTexto = texto; root.osdSilencio = silencio === 1
+            root.osdVisible = true; tOsd.restart()
+        }
+    }
+    Variants {
+        model: Quickshell.screens
+        PanelWindow {
+            required property var modelData
+            screen: modelData
+            readonly property bool enEstaPantalla: Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name === modelData.name : modelData === Quickshell.screens[0]
+            visible: root.osdVisible && enEstaPantalla
+            anchors { bottom: true }
+            margins { bottom: 70 }
+            implicitWidth: 300; implicitHeight: 52
+            color: "transparent"
+            mask: Region {}                                  // no captura el ratón
+            exclusionMode: ExclusionMode.Ignore
+            WlrLayershell.layer: WlrLayer.Overlay
+            WlrLayershell.namespace: "miarch-osd"
+            WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+            Rectangle {
+                anchors.fill: parent; radius: 26
+                color: Qt.alpha(Qt.lighter(root.fondo, 1.3), 0.95)
+                border.width: 1; border.color: Qt.alpha(root.arena, 0.13)
+                Text {
+                    x: 22; anchors.verticalCenter: parent.verticalCenter
+                    text: root.osdSilencio ? "MUDO" : "VOL"
+                    color: root.osdSilencio ? Qt.alpha(root.arena, 0.5) : root.terracota
+                    font { family: root.fuente; pixelSize: 11 * root.esc; weight: Font.Medium; letterSpacing: 3 }
+                }
+                Rectangle {
+                    x: 78; width: parent.width - 78 - 66; height: 6; radius: 3
+                    anchors.verticalCenter: parent.verticalCenter
+                    color: Qt.alpha(root.arena, 0.14)
+                    Rectangle {
+                        width: parent.width * (root.osdSilencio ? 0 : root.osdValor) / 100; height: parent.height; radius: 3
+                        color: root.terracota
+                    }
+                }
+                Text {
+                    anchors.right: parent.right; anchors.rightMargin: 22
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: root.osdTexto
+                    color: root.arena
+                    font { family: root.fuente; pixelSize: 13 * root.esc; weight: Font.Medium }
+                }
+            }
+        }
+    }
+
     // ═════════════════ NOTIFICACIONES ═════════════════
     // Quickshell es el servidor de notificaciones (reemplaza a dunst): arriba a la derecha, bajo la barra, con el mismo
     // estilo que los paneles. Se deslizan al entrar, muestran una cuenta atrás (se pausa con el ratón encima), barra de

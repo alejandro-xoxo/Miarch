@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Miarch · volumen con sonido y aviso. Uso: miarch-volumen up | down | mute
-# Cambia el volumen, suena un pitido corto (el del tema de sonidos de freedesktop) y muestra la barra en una notificación
-# que se reemplaza en vez de apilarse. Sin sonido si queda en silencio o si ya sonó hace un instante (tecla mantenida).
+# Cambia el volumen, suena un pitido corto (el del tema de sonidos de freedesktop) y muestra una barra sencilla (sin animación,
+# la dibuja el escritorio: qs ipc osd) que se va sola. Sin sonido si queda en silencio o si ya sonó hace un instante (tecla mantenida).
 S=@DEFAULT_AUDIO_SINK@
 case "${1:-}" in
     up)   wpctl set-volume -l 1 "$S" 5%+; wpctl set-mute "$S" 0 ;;
@@ -23,10 +23,7 @@ if [ "$silencio" = 0 ] && [ "${1:-}" != mute ] && [ "$vol" -gt 0 ]; then
     fi
 fi
 
-if [ "$silencio" = 1 ] || [ "$vol" -eq 0 ]; then icono=audio-volume-muted; texto="Silenciado"; valor=0
-elif [ "$vol" -lt 34 ]; then icono=audio-volume-low; texto="$vol%"; valor=$vol
-elif [ "$vol" -lt 67 ]; then icono=audio-volume-medium; texto="$vol%"; valor=$vol
-else icono=audio-volume-high; texto="$vol%"; valor=$vol; fi
-id="$(cat "$run/miarch-volumen.id" 2>/dev/null || true)"
-nuevo="$(notify-send -p -a Volumen ${id:+-r "$id"} -t 1600 -h "int:value:$valor" -i "$icono" "Volumen" "$texto" 2>/dev/null)" && echo "$nuevo" > "$run/miarch-volumen.id"
+if [ "$silencio" = 1 ] || [ "$vol" -eq 0 ]; then texto="Silenciado"; valor=0
+else texto="$vol%"; valor=$vol; fi
+qs -c miarch ipc call osd mostrar "$valor" "$texto" "$silencio" >/dev/null 2>&1
 exit 0
