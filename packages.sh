@@ -11,7 +11,8 @@ fi
 
 USER="${USER:-$(id -un)}"; export USER   # en una terminal mínima puede venir vacío y con set -u el script se detendría
 
-echo "==> Instalando paquetes de Miarch..."
+# barra de progreso total y animación mientras trabaja cada comando
+source "$(dirname "${BASH_SOURCE[0]}")/lib/ui.sh"
 
 # =========================
 # PAQUETES OFICIALES (pacman: repositorios firmados de Arch)
@@ -52,15 +53,31 @@ PAQUETES=(
     dolphin qt6ct breeze-icons   # gestor de archivos + tema de Qt (qt6ct) e íconos
     spotify-launcher
 )
-echo "==> Actualizando el sistema e instalando paquetes oficiales..."
-sudo pacman -Syu --noconfirm
-sudo pacman -S --noconfirm --needed "${PAQUETES[@]}"
+# AUR (paquetes de la comunidad: no están firmados por Arch)
+AUR_PAQUETES=(
+    quickshell-git
+    google-chrome
+    visual-studio-code-bin
+    claude-code
+    claude-desktop
+    antigravity-cli
+    hermes-webui-desktop-bin     # ventana de escritorio de Hermes WebUI (necesita un servidor hermes-webui local o remoto)
+)
+
+# setup.sh pregunta cuántas etapas tiene este script para dibujar la barra del total
+ETAPAS=$(( 6 + ${#AUR_PAQUETES[@]} ))
+[ "${1:-}" = "--etapas" ] && { echo "$ETAPAS"; exit 0; }
+
+ui_total "$ETAPAS"
+ui_sudo
+ui_etapa "Actualizando el sistema e instalando los paquetes oficiales"
+ui_ejecutar "Actualizando el sistema (pacman -Syu)" sudo pacman -Syu --noconfirm
+ui_ejecutar "Instalando ${#PAQUETES[@]} paquetes oficiales" sudo pacman -S --noconfirm --needed "${PAQUETES[@]}"
 
 # =========================
 # DOCKER Y OLLAMA
 # =========================
 configurar_docker_ollama() {
-    echo "==> Configurando Docker y Ollama..."
 
     # Las imágenes de Docker y los modelos de Ollama pesan muchos GB. Si la raíz (/) es pequeña y /home es
     # otra partición, se guardan en /home. Solo se hace si todavía no hay datos (antes del primer arranque).
@@ -68,7 +85,7 @@ configurar_docker_ollama() {
     raiz_gb="$(df -BG --output=size / | tail -1 | tr -dc '0-9')"
     datos="/home/.datos-pesados"
     if [ "${raiz_gb:-0}" -lt 100 ] && [ "$(findmnt -n -o SOURCE --target /home)" != "$(findmnt -n -o SOURCE --target /)" ]; then
-        echo "==> La raíz tiene ${raiz_gb} GB: Docker y Ollama guardarán sus datos en $datos (partición /home)."
+        echo "[i] La raíz tiene ${raiz_gb} GB: Docker y Ollama guardarán sus datos en $datos (partición /home)."
         sudo install -d -m 755 "$datos"
         if [ ! -s /etc/docker/daemon.json ] && [ -z "$(ls -A /var/lib/docker 2>/dev/null)" ]; then
             sudo install -d -m 711 "$datos/docker"
@@ -103,17 +120,18 @@ configurar_docker_ollama() {
 # =========================
 # SERVICIOS
 # =========================
-echo "==> Activando servicios (Wi-Fi, Bluetooth, modos de energía)..."
+ui_etapa "Activando servicios (Wi-Fi, Bluetooth, modos de energía)"
 sudo systemctl enable --now iwd.service bluetooth.service power-profiles-daemon.service \
     || echo "[!] No se pudo activar algún servicio (revisa: systemctl status iwd bluetooth power-profiles-daemon)"
+ui_etapa "Configurando Docker y Ollama"
 configurar_docker_ollama
 
 # =========================
 # ZSH + OH MY ZSH (se clona el repositorio; NO se ejecuta ningún script descargado)
 # =========================
-echo "==> Configurando Zsh y Oh My Zsh..."
+ui_etapa "Configurando Zsh y Oh My Zsh"
 if [ ! -d "$HOME/.oh-my-zsh" ]; then
-    git clone --depth=1 https://github.com/ohmyzsh/ohmyzsh.git "$HOME/.oh-my-zsh"
+    ui_ejecutar "Descargando Oh My Zsh" git clone --depth=1 https://github.com/ohmyzsh/ohmyzsh.git "$HOME/.oh-my-zsh"
 fi
 
 if [ "$(getent passwd "$USER" | cut -d: -f7)" != "/usr/bin/zsh" ]; then
@@ -123,8 +141,7 @@ fi
 ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
 for plugin in zsh-autosuggestions zsh-syntax-highlighting zsh-history-substring-search; do
     if [ ! -d "$ZSH_CUSTOM/plugins/$plugin" ]; then
-        echo "==> Plugin: $plugin"
-        git clone --depth=1 "https://github.com/zsh-users/$plugin" "$ZSH_CUSTOM/plugins/$plugin" \
+        ui_ejecutar "Descargando el plugin $plugin" git clone --depth=1 "https://github.com/zsh-users/$plugin" "$ZSH_CUSTOM/plugins/$plugin" \
             || echo "[!] No se pudo clonar $plugin"
     else
         echo "[OK] Plugin $plugin ya instalado"
@@ -134,30 +151,25 @@ done
 # =========================
 # AUR (paquetes de la comunidad: no están firmados por Arch)
 # =========================
-if ! command -v yay &>/dev/null; then
-    echo "==> Instalando yay (ayudante de AUR)..."
-    tmp="$(mktemp -d)"
+instalar_yay() {
+    local tmp; tmp="$(mktemp -d)"
     git clone https://aur.archlinux.org/yay-bin.git "$tmp/yay-bin"
     (cd "$tmp/yay-bin" && makepkg -si --noconfirm)
     rm -rf "$tmp"
+}
+ui_etapa "Preparando AUR (yay)"
+if ! command -v yay &>/dev/null; then
+    ui_ejecutar "Instalando yay (ayudante de AUR)" instalar_yay
+else
+    echo "   [OK] yay ya está instalado"
 fi
 
 # Nota de seguridad: --noconfirm instala sin que veas el PKGBUILD de cada paquete.
 # Si prefieres revisarlos, quita --noconfirm (yay te los mostrará uno por uno).
-echo "==> Instalando paquetes de AUR (uno por uno: si uno falla, los demás siguen)..."
-AUR_PAQUETES=(
-    quickshell-git
-    google-chrome
-    visual-studio-code-bin
-    claude-code
-    claude-desktop
-    antigravity-cli
-    hermes-webui-desktop-bin     # ventana de escritorio de Hermes WebUI (necesita un servidor hermes-webui local o remoto)
-)
 AUR_FALLIDOS=()
 for paquete in "${AUR_PAQUETES[@]}"; do
-    echo "   -> $paquete"
-    yay -S --noconfirm --needed "$paquete" || AUR_FALLIDOS+=("$paquete")
+    ui_etapa "Instalando $paquete (AUR)"
+    ui_ejecutar "$paquete" yay -S --noconfirm --needed "$paquete" || AUR_FALLIDOS+=("$paquete")
 done
 if [ "${#AUR_FALLIDOS[@]}" -gt 0 ]; then
     echo ""
@@ -169,7 +181,7 @@ fi
 # =========================
 # JAVA 21 POR DEFECTO
 # =========================
-echo "==> Dejando Java 21 como versión por defecto..."
+ui_etapa "Dejando Java 21 como versión por defecto"
 sudo archlinux-java set java-21-openjdk || echo "[!] No se pudo fijar Java 21 (revisa: archlinux-java status)"
 
 echo ""

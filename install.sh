@@ -9,12 +9,16 @@ if [ "$EUID" -eq 0 ]; then
     exit 1
 fi
 
-echo "==> Instalando dotfiles de Miarch..."
+# barra de progreso total y animación mientras trabaja cada comando
+source "$(dirname "${BASH_SOURCE[0]}")/lib/ui.sh"
+ETAPAS=7   # setup.sh pregunta cuántas etapas tiene este script para dibujar la barra del total
+[ "${1:-}" = "--etapas" ] && { echo "$ETAPAS"; exit 0; }
+ui_total "$ETAPAS"
 
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIR="$DOTFILES_DIR/config"
 STAMP="$(date +%Y%m%d-%H%M%S)"
-echo "==> Repositorio: $DOTFILES_DIR"
+echo "[i] Repositorio: $DOTFILES_DIR"
 
 # =========================
 # FUNCIONES AUXILIARES
@@ -51,7 +55,7 @@ mkdir -p "$HOME/.config" "$HOME/.local/bin" "$WALL_DIR"
 # =========================
 # SCRIPTS (van a ~/.local/bin)
 # =========================
-echo "==> Instalando scripts..."
+ui_etapa "Instalando los scripts de Miarch"
 for f in wallpaper.sh miarch-colors miarch-set miarch-wifi miarch-info miarch-fetch miarch-update; do
     [ -f "$DOTFILES_DIR/scripts/$f" ] && install -Dm755 "$DOTFILES_DIR/scripts/$f" "$HOME/.local/bin/$f"
 done
@@ -59,7 +63,7 @@ done
 # =========================
 # CONFIGURACIONES
 # =========================
-echo "==> Aplicando configuraciones..."
+ui_etapa "Aplicando las configuraciones"
 copy_config "$CONFIG_DIR/hypr"              "$HOME/.config/hypr"
 copy_config "$CONFIG_DIR/kitty"             "$HOME/.config/kitty"
 copy_config "$CONFIG_DIR/nvim"              "$HOME/.config/nvim"
@@ -71,6 +75,7 @@ install -Dm644 "$CONFIG_DIR/chrome/chrome-flags.conf" "$HOME/.config/chrome-flag
 # VS CODE: la terminal necesita la fuente con íconos (sin ella el prompt y el logo se deforman)
 # Se fusiona con tus ajustes: solo se tocan las claves de config/vscode/settings.json y nunca se borra nada tuyo.
 # =========================
+ui_etapa "Ajustando la fuente de la terminal de VS Code"
 python3 -I - "$CONFIG_DIR/vscode/settings.json" "$HOME/.config/Code/User/settings.json" <<'PY' || echo "[!] No se pudo ajustar la fuente de la terminal de VS Code"
 import json, os, sys
 origen, destino = sys.argv[1:3]
@@ -96,25 +101,26 @@ PY
 # =========================
 # WALLPAPERS
 # =========================
+ui_etapa "Copiando los wallpapers"
 if [ -d "$DOTFILES_DIR/wallpapers" ]; then
-    echo "==> Copiando wallpapers a $WALL_DIR"
+    echo "[i] Destino: $WALL_DIR"
     cp -rn "$DOTFILES_DIR/wallpapers/." "$WALL_DIR/"
 fi
 
 # =========================
 # NEOVIM (Lazy.nvim instala los plugins solo)
 # =========================
+ui_etapa "Sincronizando los plugins de Neovim"
 if command -v nvim &>/dev/null; then
-    echo "==> Sincronizando plugins de Neovim..."
-    nvim --headless "+Lazy! sync" +qa &>/dev/null || echo "[!] Neovim terminó con avisos (normal en el primer arranque)"
+    ui_ejecutar "Plugins de Neovim (Lazy.nvim)" nvim --headless "+Lazy! sync" +qa || echo "[!] Neovim terminó con avisos (normal en el primer arranque)"
 fi
 
 # =========================
 # INICIO AUTOMÁTICO DE HYPRLAND EN tty1
 # (si luego instalas la pantalla de inicio de sesión gráfica, esto deja de hacer falta)
 # =========================
+ui_etapa "Configurando el inicio automático de Hyprland en tty1"
 if ! grep -q "Miarch - Inicio automático" "$HOME/.zprofile" 2>/dev/null; then
-    echo "==> Inicio automático de Hyprland en tty1..."
     cat >> "$HOME/.zprofile" << 'EOF'
 
 # Miarch - Inicio automático de Hyprland (solo en tty1)
@@ -127,6 +133,7 @@ fi
 # =========================
 # WALLPAPER Y COLORES (solo si ya estás dentro de Hyprland)
 # =========================
+ui_etapa "Aplicando el wallpaper y los colores"
 # al actualizar (miarch-update) no se cambia tu fondo: solo se vuelven a calcular los colores del actual
 [ -n "${MIARCH_ACTUALIZANDO:-}" ] || "$HOME/.local/bin/wallpaper.sh" || true
 # kitty toma sus colores de un archivo que genera miarch-colors a partir del wallpaper
