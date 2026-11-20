@@ -304,14 +304,39 @@ ui_etapa "Hermes Desktop (app oficial)"
 if [ -x "$HOME/.local/bin/hermes" ] || command -v hermes >/dev/null 2>&1; then
     ui_ok "Hermes ya está instalado"
 else
-    HERMES_SH="$(mktemp -d)/install.sh"
-    if curl -fsSL --max-time 60 -o "$HERMES_SH" https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh; then
-        ui_ejecutar "Instalando Hermes Desktop (compila la app: tarda)" timeout 1800 bash "$HERMES_SH" --non-interactive --include-desktop \
-            || ui_aviso "No se pudo instalar Hermes Desktop. Reintenta con:  curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash -s -- --include-desktop"
+    hay_red=0
+    for i in 1 2 3 4; do
+        codigo=0
+        curl -fsI --max-time 8 https://hermes-assets.nousresearch.com >/dev/null 2>&1 || codigo=$?
+        if [ "$codigo" -eq 0 ] || [ "$codigo" -eq 22 ]; then
+            hay_red=1
+            break
+        fi
+        [ "$i" -lt 4 ] && sleep "${MIARCH_ESPERA:-15}"
+    done
+
+    if [ "$hay_red" = 1 ]; then
+        HERMES_DIR="$(mktemp -d)"
+        HERMES_SH="$HERMES_DIR/install.sh"
+        if curl -fsSL --max-time 60 -o "$HERMES_SH" https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh; then
+            instalado=0
+            for intento in 1 2 3; do
+                if ui_ejecutar "Instalando Hermes Desktop (compila la app: tarda)" timeout 1800 bash "$HERMES_SH" --non-interactive --include-desktop; then
+                    instalado=1
+                    break
+                fi
+                [ "$intento" -lt 3 ] && sleep "${MIARCH_ESPERA:-20}"
+            done
+            if [ "$instalado" = 0 ]; then
+                ui_aviso "No se pudo instalar Hermes Desktop. Reintenta con:  curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash -s -- --include-desktop. Se reintentará la próxima vez que actualices."
+            fi
+        else
+            ui_aviso "No se pudo descargar el instalador de Hermes (¿sin internet?). Se reintentará la próxima vez que actualices."
+        fi
+        rm -rf "$HERMES_DIR"
     else
-        ui_aviso "No se pudo descargar el instalador de Hermes (¿sin internet?). Se reintentará al actualizar."
+        ui_aviso "No se pudo conectar con hermes-assets.nousresearch.com (¿sin internet?). Se reintentará la próxima vez que actualices."
     fi
-    rm -rf "$(dirname "$HERMES_SH")"
 fi
 
 # =========================

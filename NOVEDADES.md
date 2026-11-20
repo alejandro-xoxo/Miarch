@@ -3,6 +3,9 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-20.19 · Reintentos y tolerancia a cortes de red en Hermes Desktop
+La instalación de Hermes Desktop en `packages.sh` ahora aguanta cortes temporales de red: antes de lanzar el instalador comprueba la conectividad con el servidor de assets (hasta 4 intentos con espera de 15 s) y reintenta la instalación hasta 3 veces (con pausas de 20 s), avisando y posponiendo el reintento para la siguiente actualización sin romper el proceso.
+
 ## 2026-11-20.18 · Aplicaciones Electron y XWayland nítidas
 Las aplicaciones de Electron y Chromium (VS Code, Claude Desktop, ChatGPT, Antigravity) ya no se ven borrosas ni pixeladas en pantallas con escala: ahora corren en Wayland nativo con flags dedicados y las que usen XWayland aprovechan el escalado nítido con `force_zero_scaling`.
 
