@@ -3,6 +3,9 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-20.11 · Arreglo: las teclas de volumen
+Las teclas de volumen dejaron de funcionar con el cambio del pitido: Hyprland no encuentra los scripts sin su ruta completa. Ya suben, bajan y silencian otra vez.
+
 ## 2026-11-20.10 · Pantalla de inicio de sesión por defecto
 Al actualizar (y en una instalación nueva), Miarch instala la pantalla de inicio de sesión gráfica con el estilo del bloqueo, para que al reiniciar no salga la terminal. Si falla, sigues entrando por la terminal. Si no la quieres: `touch ~/.config/miarch/sin-greeter`.
 
