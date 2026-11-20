@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Miarch · pantalla de inicio de sesión (greetd + Quickshell)
 // Mismo estilo que el bloqueo: wallpaper desenfocado, reloj grande, contraseña con puntos.
 // Modo de prueba (no toca el sistema):  MIARCH_GREETER_TEST=1 MIARCH_GREETER_DATA=<carpeta> qs -p <esta carpeta>

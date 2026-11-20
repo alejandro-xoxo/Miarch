@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Miarch · volumen con sonido y aviso. Uso: miarch-volumen up | down | mute
 # Cambia el volumen, suena un pitido corto (el del tema de sonidos de freedesktop) y muestra una barra sencilla (sin animación,
 # la dibuja el escritorio: qs ipc osd) que se va sola. Sin sonido si queda en silencio o si ya sonó hace un instante (tecla mantenida).
