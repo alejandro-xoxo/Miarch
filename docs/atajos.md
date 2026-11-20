@@ -13,7 +13,8 @@
 | `Super + Shift + Esc` | Menú con dos pestañas (`←` `→` o clic para cambiar): **Energía** (bloquear, suspender, cerrar sesión, reiniciar y apagar; las tres últimas piden una segunda pulsación) y **Atajos** (todos estos atajos, de más a menos útil, para quien empieza) |
 | `Super + W` | Cambiar wallpaper (y los colores) |
 | `Super + B` | Navegador (Chrome) |
-| `Super + V` · `Super + C` | VS Code · Claude Desktop |
+| `Super + V` | VS Code |
+| `Super + C` | Menú de IA: Claude Desktop y CLI, Antigravity, Codex, Hermes Desktop, Ollama |
 | `Super + E` | Archivos (Dolphin) |
 | `Super + F` | Ventana flotante |
 | `Super + P` · `Super + J` | Pseudo-mosaico · cambiar la división |

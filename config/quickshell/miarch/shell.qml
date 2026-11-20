@@ -1648,6 +1648,137 @@ ShellRoot {
         function search(texto: string): void { root.lanzadorAbierto = true; root.consultaLanz = texto }
     }
 
+    // ═════════════════ MENÚ DE IA (Super + C) ═════════════════
+    // Herramientas de IA: las de terminal se abren en kitty. Solo se pueden lanzar las que están instaladas.
+    property bool iaAbierto: false
+    property int iaSel: 0
+    property var iaDisp: []
+    readonly property var iaLista: [
+        { t: "Claude Desktop",  d: "La app de Claude",                       bin: "claude-desktop", cmd: "claude-desktop" },
+        { t: "Claude",          d: "Claude Code en la terminal",             bin: "claude",         cmd: "kitty claude" },
+        { t: "Antigravity",     d: "Antigravity (agy) en la terminal",       bin: "agy",            cmd: "kitty agy" },
+        { t: "Codex",           d: "Codex de OpenAI en la terminal",         bin: "codex",          cmd: "kitty codex" },
+        { t: "Hermes Desktop",  d: "La app oficial de Hermes (Nous Research)", bin: "hermes",       cmd: "hermes desktop" },
+        { t: "Ollama",          d: "Modelos locales: lista los instalados en la terminal", bin: "ollama", cmd: "kitty sh -c 'ollama list; echo; echo \"ollama run NOMBRE  para hablar con uno\"; exec zsh'" }
+    ]
+    function iaTiene(i) { return root.iaDisp.indexOf(root.iaLista[i].bin) >= 0 }
+    function iaEjecutar(i) {
+        if (!root.iaTiene(i)) return
+        root.iaAbierto = false
+        Quickshell.execDetached(["sh", "-c", "PATH=\"$HOME/.local/bin:$PATH\"; " + root.iaLista[i].cmd])
+    }
+    Process {
+        id: pIa
+        command: ["sh", "-c", "PATH=\"$HOME/.local/bin:$PATH\"; for b in claude-desktop claude agy codex hermes ollama; do command -v $b >/dev/null 2>&1 && echo $b; done"]
+        stdout: StdioCollector { onStreamFinished: root.iaDisp = text.trim().split("\n") }
+    }
+    onIaAbiertoChanged: { if (root.iaAbierto) { root.iaSel = 0; pIa.running = true } }
+    IpcHandler {
+        target: "ia"
+        function toggle(): void { root.iaAbierto = !root.iaAbierto }
+        function open(): void { root.iaAbierto = true }
+        function close(): void { root.iaAbierto = false }
+    }
+    Variants {
+        model: Quickshell.screens
+        PanelWindow {
+            required property var modelData
+            screen: modelData
+            readonly property bool enEstaPantalla: Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name === modelData.name : modelData === Quickshell.screens[0]
+            visible: root.iaAbierto && enEstaPantalla
+            anchors { top: true; bottom: true; left: true; right: true }
+            color: "transparent"
+            exclusionMode: ExclusionMode.Ignore
+            WlrLayershell.layer: WlrLayer.Overlay
+            WlrLayershell.namespace: "miarch-ia"
+            WlrLayershell.keyboardFocus: visible ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+
+            Item {
+                id: iaVista
+                anchors.fill: parent
+                focus: true
+                property real entrada: 0
+                Connections {
+                    target: root
+                    function onIaAbiertoChanged() { if (root.iaAbierto) { iaVista.entrada = 0; iaVista.entrada = 1; iaVista.forceActiveFocus() } }
+                }
+                Behavior on entrada { NumberAnimation { duration: 600; easing.type: Easing.OutBack; easing.overshoot: 1.4 } }
+                Keys.onPressed: event => {
+                    if (event.key === Qt.Key_Escape) root.iaAbierto = false
+                    else if (event.key === Qt.Key_Down || event.key === Qt.Key_Tab) root.iaSel = Math.min(root.iaSel + 1, root.iaLista.length - 1)
+                    else if (event.key === Qt.Key_Up || event.key === Qt.Key_Backtab) root.iaSel = Math.max(root.iaSel - 1, 0)
+                    else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) root.iaEjecutar(root.iaSel)
+                    else return
+                    event.accepted = true
+                }
+                Rectangle { anchors.fill: parent; color: root.fondo; opacity: Math.min(1, iaVista.entrada) * 0.8 }
+                MouseArea { anchors.fill: parent; onClicked: root.iaAbierto = false }
+
+                Column {
+                    x: parent.width * 0.5 - width / 2
+                    y: parent.height * 0.5 - height / 2 + (1 - iaVista.entrada) * 40
+                    opacity: Math.min(1, iaVista.entrada)
+                    width: Math.min(parent.width * 0.5, 620)
+                    spacing: 6
+                    Text {
+                        text: "IA"
+                        color: Qt.alpha(root.arena, 0.85)
+                        font { family: root.fuente; pixelSize: 30 * root.esc; weight: Font.Thin; letterSpacing: 9 }
+                        bottomPadding: 14
+                    }
+                    Repeater {
+                        model: root.iaLista
+                        Item {
+                            required property var modelData
+                            required property int index
+                            readonly property bool sel: root.iaSel === index
+                            readonly property bool hay: root.iaDisp.indexOf(modelData.bin) >= 0
+                            width: parent.width; height: 62 * root.esc
+                            Rectangle {
+                                width: 3; height: parent.height - 18; radius: 1.5
+                                anchors.verticalCenter: parent.verticalCenter
+                                color: root.terracota
+                                opacity: sel ? 1 : 0
+                                Behavior on opacity { NumberAnimation { duration: 150 } }
+                            }
+                            Column {
+                                x: 26; anchors.verticalCenter: parent.verticalCenter
+                                width: parent.width - 40
+                                spacing: 2
+                                Text {
+                                    text: modelData.t
+                                    color: sel && hay ? root.terracota : root.arena
+                                    opacity: hay ? (sel ? 1 : 0.6) : 0.3
+                                    font { family: root.fuente; pixelSize: 24 * root.esc; weight: Font.Light }
+                                    Behavior on color { ColorAnimation { duration: 150 } }
+                                }
+                                Text {
+                                    width: parent.width; elide: Text.ElideRight
+                                    text: hay ? modelData.d : "no está instalada"
+                                    color: root.arena
+                                    opacity: hay ? 0.5 : 0.3
+                                    font { family: root.fuente; pixelSize: 12 * root.esc; weight: Font.Light }
+                                }
+                            }
+                            MouseArea {
+                                anchors.fill: parent; hoverEnabled: true
+                                cursorShape: hay ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                onEntered: root.iaSel = index
+                                onClicked: root.iaEjecutar(index)
+                            }
+                        }
+                    }
+                    Text {
+                        text: "↑ ↓ elegir    ENTER abrir    ESC cerrar"
+                        color: Qt.alpha(root.arena, 0.3)
+                        font { family: root.fuente; pixelSize: 11 * root.esc; weight: Font.Medium; letterSpacing: 3 }
+                        topPadding: 22
+                    }
+                }
+            }
+        }
+    }
+
     // ═════════════════ MENÚ DE ENERGÍA (Super + Shift + Esc) ═════════════════
     property bool energiaAbierto: false
     property int energiaSel: 0
@@ -1669,7 +1800,7 @@ ShellRoot {
         { k: "Super + .",                 d: "Captura de una zona al portapapeles" },
         { k: "Super + W",                 d: "Cambiar el fondo (y los colores del sistema)" },
         { k: "Super + V",                 d: "Abrir VS Code" },
-        { k: "Super + C",                 d: "Abrir Claude Desktop" },
+        { k: "Super + C",                 d: "Menú de IA: Claude, Antigravity, Codex, Hermes, Ollama" },
         { k: "Super + clic izq. y arrastrar", d: "Mover la ventana" },
         { k: "Super + clic der. y arrastrar", d: "Cambiar el tamaño de la ventana" },
         { k: "Super + rueda del ratón",   d: "Cambiar de escritorio" },

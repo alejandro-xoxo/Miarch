@@ -8,6 +8,6 @@
 | `spotify-launcher` | pacman | Spotify (la tarjeta de música lo detecta solo) |
 | `google-chrome` | AUR | Navegador (`Super + B`); flags de Wayland en `config/chrome/` |
 | `visual-studio-code-bin` | AUR | VS Code (`Super + V`) |
-| `claude-desktop` | AUR | Claude Desktop (`Super + C`) |
+| `claude-desktop` | AUR | Claude Desktop (se abre desde el menú de IA, `Super + C`) |
 
 Los paquetes de AUR son de la comunidad y **no están firmados por Arch**. Ver [instalación](../instalacion.md#seguridad).
