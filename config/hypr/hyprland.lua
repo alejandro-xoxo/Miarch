@@ -110,7 +110,7 @@ hl.env("HYPRCURSOR_SIZE", CURSOR)
 -----------------------
 
 -- Miarch: nivel de desenfoque (se cambia desde el panel de Ajustes)
-local BLUR = "fuerte"
+local BLUR = "medio"
 local blurs = {
     ninguno = { enabled = false, size = 3,  passes = 1, vibrancy = 0.17 },
     suave   = { enabled = true,  size = 4,  passes = 2, vibrancy = 0.17 },
@@ -360,7 +360,8 @@ local mainMod = "SUPER" -- Sets "Windows" key as main modifier
 
 -- Example binds, see https://wiki.hypr.land/configuring/core/binds/ for more
 hl.bind(mainMod .. " + L", hl.dsp.exec_cmd("qs -c miarch ipc call lock lock"))   -- bloquear pantalla
-hl.bind(mainMod .. " + comma", hl.dsp.exec_cmd("qs -c miarch ipc call settings toggle"))   -- panel de Ajustes
+hl.bind(mainMod .. " + ESCAPE", hl.dsp.exec_cmd("qs -c miarch ipc call settings toggle"))   -- panel de Ajustes
+hl.bind(mainMod .. " + SHIFT + ESCAPE", hl.dsp.exec_cmd("qs -c miarch ipc call settings page energia"))   -- apagar, reiniciar, suspender, cerrar sesión (Ajustes › Energía)
 hl.bind(mainMod .. " + RETURN", hl.dsp.exec_cmd(terminal))                 -- terminal
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("google-chrome-stable"))        -- navegador (Chrome)
 hl.bind(mainMod .. " + V", hl.dsp.exec_cmd("code"))                     -- VS Code

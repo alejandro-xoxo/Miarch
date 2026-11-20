@@ -12,7 +12,7 @@ Todo el escritorio propio, en un solo archivo organizado por secciones:
 | Barra | Escritorios, música, actualizaciones, Bluetooth, Wi‑Fi, volumen, batería, ajustes y bloqueo |
 | Lanzador | `Super + Espacio`: búsqueda instantánea con abreviaturas, ordena por uso |
 | Conexiones | Paneles de Wi‑Fi y Bluetooth (clic en la barra) |
-| Ajustes | `Super + ,`: red, sonido, pantalla, apariencia, teclado y ratón, accesibilidad, energía y sistema |
+| Ajustes | `Super + Esc`: red, sonido, pantalla, apariencia, teclado y ratón, accesibilidad, energía y sistema |
 | Bloqueo | `Super + L`: wallpaper desenfocado, reloj, anillos, música y contraseña |
 
 ## Colores del wallpaper
