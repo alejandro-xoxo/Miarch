@@ -3,6 +3,9 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-19.11 · Pestaña de atajos en el menú de energía
+Super + Shift + Esc ahora tiene dos pestañas: Energía y Atajos. Atajos lista todos los atajos de teclado, de más a menos útil, con lo que hace cada uno.
+
 ## 2026-11-19.10 · La actualización explica qué trae
 Antes de pedirte confirmar, la ventana de actualización muestra en español qué trae cada novedad y qué partes de tu equipo cambian.
 Verás solo lo que aún no has visto; las novedades se escriben en este archivo (NOVEDADES.md).
