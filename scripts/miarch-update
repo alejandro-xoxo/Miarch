@@ -1,19 +1,21 @@
 #!/usr/bin/env bash
-# Miarch · actualizador semiautomático (al estilo de omarchy-update). Lo abre el botón de actualizaciones de la barra.
-#   1. Busca cambios nuevos de Miarch en GitHub y los baja.
-#   2. Aplica las configuraciones y scripts nuevos, conservando tus ajustes (animaciones, blur, escala, teclado...) y tu fondo.
-#   3. Si hay paquetes nuevos, pregunta antes de instalarlos (pide contraseña).
-#   4. Pregunta si actualizas también el sistema (yay -Syu, sin más preguntas).
-#   5. Recarga Hyprland y el escritorio.
+# Miarch · actualizador semiautomático. Lo abre el botón de actualizaciones (la nube) de la barra.
+#   1. REVISA primero, sin descargar ni instalar nada: cambios nuevos de Miarch en GitHub, paquetes de Miarch que
+#      faltan en este equipo y actualizaciones del sistema (repos oficiales y AUR).
+#   2. Te muestra qué hay. Si no hay nada, lo dice y termina.
+#   3. Si hay algo, pide UNA confirmación y hace solo lo que hace falta:
+#      descarga y aplica los cambios de Miarch (conservando tus ajustes y tu fondo), instala los paquetes que faltan
+#      y actualiza el sistema (yay -Syu, sin más preguntas). Después recarga el escritorio.
 # Uso: miarch-update [--forzar]    (--forzar vuelve a aplicar las configuraciones aunque no haya cambios nuevos)
 set -uo pipefail
 
 REPO="${MIARCH_DIR:-$HOME/Miarch}"
 FORZAR=0; [ "${1:-}" = "--forzar" ] && FORZAR=1
-CACHE="$HOME/.cache/miarch"; mkdir -p "$CACHE"
 
-fin()   { echo; read -rp "Enter para cerrar " _; exit "${1:-0}"; }
-si()    { local r; read -rp "  ? $1 [S/n] " r; [[ -z "$r" || "$r" =~ ^[sSyY] ]]; }
+fin() { echo; read -rp "Enter para cerrar " _; exit "${1:-0}"; }
+si()  { local r; read -rp "  ? $1 [S/n] " r; [[ -z "$r" || "$r" =~ ^[sSyY] ]]; }
+unir() { local s="" x; for x in "$@"; do s+="${s:+, }$x"; done; printf "%s" "$s"; }
+plural() { [ "$1" = 1 ] && echo "$2" || echo "$3"; }
 
 [ -d "$REPO/.git" ] || { echo "[ERROR] No encuentro el repositorio de Miarch en $REPO (¿lo clonaste en otra carpeta? usa MIARCH_DIR=carpeta)"; fin 1; }
 cd "$REPO"
@@ -22,47 +24,101 @@ if [ -f "$REPO/lib/ui.sh" ]; then
     source "$REPO/lib/ui.sh"
 else
     ui_banner() { :; }; ui_total() { :; }; ui_resumen() { :; }
-    ui_etapa()  { printf '\n==> %s\n' "$*"; }
+    ui_etapa()  { printf '\n==> %s\n' "$*"; }; ui_titulo() { printf '\n==> %s\n' "$*"; }
     ui_ok()     { echo "[OK] $*"; };  ui_info() { echo "[i] $*"; }
     ui_aviso()  { echo "[!] $*"; };   ui_error() { echo "[ERROR] $*" >&2; }
+    ui_ejecutar() { local m="$1"; shift; echo "   ... $m"; "$@"; }
 fi
+declare -F ui_titulo >/dev/null || ui_titulo() { ui_etapa "$*"; }   # librería anterior a ui_titulo
 export MIARCH_UI_SUB=1      # packages.sh e install.sh no repiten el logo ni el resumen
-ui_total 5
 ui_banner "actualizador"
 
-ui_etapa "Buscando cambios de Miarch"
+# =====================================================================================================
+# 1) REVISAR (no descarga ni instala nada)
+# =====================================================================================================
+ui_titulo "Revisando qué hay pendiente"
 git fetch -q origin 2>/dev/null || { ui_error "No hay conexión con GitHub. Revisa el Wi-Fi y vuelve a intentarlo."; fin 1; }
 RAMA="$(git rev-parse --abbrev-ref HEAD)"
 UP="@{u}"; git rev-parse -q --verify "$UP" >/dev/null 2>&1 || UP="origin/$RAMA"
 NUEVOS="$(git rev-list --count "HEAD..$UP" 2>/dev/null || echo 0)"
+SUCIO=0; [ -n "$(git status --porcelain --untracked-files=no)" ] && SUCIO=1
+PAQ_CAMBIA=0; [ "$NUEVOS" -gt 0 ] && ! git diff --quiet HEAD "$UP" -- packages.sh && PAQ_CAMBIA=1
 
+# un packages.sh antiguo no conoce --faltantes y ejecutaría la instalación completa: solo se pregunta si lo soporta
+FALTAN=()
+grep -q -- '--faltantes' ./packages.sh 2>/dev/null && mapfile -t FALTAN < <(bash ./packages.sh --faltantes 2>/dev/null)
+ui_info "Consultando las actualizaciones del sistema..."
+mapfile -t SIS_OFI < <(command -v checkupdates >/dev/null && checkupdates 2>/dev/null)
+mapfile -t SIS_AUR < <(command -v yay >/dev/null && timeout 40 yay -Qua 2>/dev/null)
+N_SIS=$(( ${#SIS_OFI[@]} + ${#SIS_AUR[@]} ))
+
+echo
 if [ "$NUEVOS" -gt 0 ]; then
-    ui_info "$NUEVOS cambio(s) nuevo(s) en la rama $RAMA:"
-    git log --format='      - %s' "HEAD..$UP" | head -15
-    if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
-        ui_aviso "Tienes cambios sin guardar en $REPO: no se descargan para no pisarlos."
-        ui_info "Guárdalos (commit) o descártalos y vuelve a ejecutar la actualización."
-        NUEVOS=0
-    elif git pull -q --ff-only 2>/dev/null; then
-        ui_ok "Cambios descargados"
-    else
-        ui_aviso "No se pudo descargar sin conflictos (tu copia local tiene commits propios)."
-        NUEVOS=0
-    fi
+    ui_info "Miarch: $NUEVOS $(plural "$NUEVOS" 'cambio nuevo' 'cambios nuevos') en GitHub (rama $RAMA):"
+    git log --format='        - %s' "HEAD..$UP" | head -12
+    [ "$SUCIO" = 1 ] && ui_aviso "Tienes cambios sin guardar en $REPO: no se pueden descargar sin pisarlos. Guárdalos (commit) y vuelve a intentarlo."
 else
-    ui_ok "Miarch ya está al día"
+    ui_ok "Miarch: al día"
+fi
+if [ "${#FALTAN[@]}" -gt 0 ]; then
+    ui_info "Paquetes de Miarch que faltan en este equipo (${#FALTAN[@]}): $(unir "${FALTAN[@]}")"
+elif [ "$PAQ_CAMBIA" = 1 ]; then
+    ui_info "La lista de paquetes de Miarch cambió: se revisará al aplicar los cambios."
+else
+    ui_ok "Paquetes de Miarch: no falta ninguno"
+fi
+if [ "$N_SIS" -gt 0 ]; then
+    ui_info "Sistema: ${#SIS_OFI[@]} oficiales y ${#SIS_AUR[@]} de AUR por actualizar:"
+    printf '%s\n' "${SIS_OFI[@]}" "${SIS_AUR[@]}" | grep -v '^$' | head -10 | sed 's/^/        - /'
+    [ "$N_SIS" -gt 10 ] && echo "        ... y $(( N_SIS - 10 )) más"
+else
+    ui_ok "Sistema: al día"
 fi
 
-# --- configuraciones y scripts ---
-ui_etapa "Aplicando configuraciones"
-if [ "$NUEVOS" -gt 0 ] || [ "$FORZAR" = 1 ]; then
+# qué se haría
+HACER_MIARCH=0; { [ "$NUEVOS" -gt 0 ] && [ "$SUCIO" = 0 ]; } && HACER_MIARCH=1
+[ "$FORZAR" = 1 ] && HACER_MIARCH=1
+HACER_PAQ=0; { [ "${#FALTAN[@]}" -gt 0 ] || [ "$PAQ_CAMBIA" = 1 ]; } && HACER_PAQ=1
+HACER_SIS=0; [ "$N_SIS" -gt 0 ] && HACER_SIS=1
+if [ "$HACER_MIARCH$HACER_PAQ$HACER_SIS" = "000" ]; then
+    echo
+    ui_ok "Todo está al día. No hay nada que descargar ni instalar."
+    ui_resumen "Todo al día"
+    fin 0
+fi
+
+PLAN=()
+[ "$HACER_MIARCH" = 1 ] && PLAN+=("$([ "$NUEVOS" -gt 0 ] && echo "descargar y aplicar los cambios de Miarch" || echo "volver a aplicar las configuraciones")")
+[ "$HACER_PAQ" = 1 ]    && PLAN+=("instalar los paquetes de Miarch que faltan")
+[ "$HACER_SIS" = 1 ]    && PLAN+=("actualizar $N_SIS $(plural "$N_SIS" paquete paquetes) del sistema")
+echo
+si "Se va a: $(unir "${PLAN[@]}"). ¿Continuar? (pide tu contraseña si hace falta)" || { ui_info "No se hizo ningún cambio."; fin 0; }
+
+# etapas reales = las tareas elegidas (la barra del total muestra solo lo que de verdad se hará)
+UI_ACTUAL=0
+UI_TOTAL=$(( HACER_MIARCH * 2 + HACER_PAQ + HACER_SIS ))
+{ [ "$HACER_PAQ" = 1 ] || [ "$HACER_SIS" = 1 ]; } && { sudo -v || { ui_error "Sin permiso de administrador: no se instala nada."; fin 1; }; }
+
+# =====================================================================================================
+# 2) HACER solo lo que hace falta
+# =====================================================================================================
+if [ "$HACER_MIARCH" = 1 ]; then
+    if [ "$NUEVOS" -gt 0 ]; then
+        ui_etapa "Descargando los cambios de Miarch"
+        if ui_ejecutar "Descargando $NUEVOS $(plural "$NUEVOS" cambio cambios) de GitHub" git pull -q --ff-only; then :; else
+            ui_aviso "No se pudo descargar sin conflictos (tu copia local tiene commits propios). No se aplicó nada de Miarch."
+            HACER_MIARCH=0; UI_TOTAL=$(( UI_TOTAL - 1 ))
+        fi
+    else
+        ui_etapa "Revisando los archivos de Miarch"
+        ui_info "Sin cambios nuevos: se vuelven a aplicar los archivos que ya tienes."
+    fi
+fi
+if [ "$HACER_MIARCH" = 1 ]; then
+    ui_etapa "Aplicando los cambios de Miarch (se conservan tus ajustes y tu fondo)"
     HYPR="$HOME/.config/hypr/hyprland.lua"
     GUARDADOS="$(grep -E '^local (ESCALA|KB|NATURAL|TAP|SENS|CURSOR|MOVIMIENTO|ANIM|BLUR)[[:space:]]*=' "$HYPR" 2>/dev/null || true)"
-    if declare -F ui_ejecutar >/dev/null; then
-        MIARCH_ACTUALIZANDO=1 ui_ejecutar "Aplicando configuraciones (se conservan tus ajustes y tu fondo)" bash ./install.sh || ui_aviso "install.sh terminó con avisos (arriba están las últimas líneas)."
-    else
-        MIARCH_ACTUALIZANDO=1 bash ./install.sh >"$CACHE/update-install.log" 2>&1 && ui_ok "Configuraciones aplicadas" || ui_aviso "install.sh terminó con avisos: mira $CACHE/update-install.log"
-    fi
+    MIARCH_ACTUALIZANDO=1 ui_ejecutar "Copiando configuraciones y scripts" bash ./install.sh || ui_aviso "install.sh terminó con avisos (arriba están las últimas líneas)."
     if [ -n "$GUARDADOS" ] && [ -f "$HYPR" ]; then
         GUARDADOS="$GUARDADOS" python3 -I - "$HYPR" <<'PY'
 import os, re, sys
@@ -77,52 +133,31 @@ open(ruta, "w", encoding="utf-8").write(txt)
 PY
         ui_ok "Tus ajustes (animaciones, blur, escala, teclado...) se conservaron"
     fi
-else
-    ui_info "Sin cambios nuevos que aplicar (clic derecho en la nube fuerza volver a aplicar)"
-fi
-
-# --- paquetes nuevos del repositorio ---
-ui_etapa "Paquetes de Miarch"
-SHA_ACTUAL="$(sha256sum packages.sh | cut -d' ' -f1)"
-SHA_ANTES="$(cat "$CACHE/packages.sha" 2>/dev/null || true)"
-if [ -z "$SHA_ANTES" ]; then
-    echo "$SHA_ACTUAL" > "$CACHE/packages.sha"           # primera vez: se toma la lista actual como ya instalada
-    ui_ok "Lista de paquetes al día"
-elif [ "$SHA_ANTES" != "$SHA_ACTUAL" ]; then
-    ui_info "La lista de paquetes de Miarch cambió."
-    if si "¿Instalar los paquetes nuevos ahora? (pide tu contraseña)"; then
-        if bash ./packages.sh; then echo "$SHA_ACTUAL" > "$CACHE/packages.sha"; else ui_aviso "packages.sh terminó con errores (arriba). Se volverá a ofrecer la próxima vez."; fi
-    else
-        ui_info "Salteado. Se volverá a ofrecer la próxima vez."
+    if [ -z "${MIARCH_SIN_REINICIO:-}" ]; then
+        hyprctl reload >/dev/null 2>&1 || true
+        qs kill -c miarch >/dev/null 2>&1; sleep 1
+        (setsid qs -c miarch >/dev/null 2>&1 &)
+        ui_ok "Hyprland y el escritorio recargados"
     fi
-else
-    ui_ok "Lista de paquetes al día"
 fi
 
-# --- sistema ---
-ui_etapa "Actualizaciones del sistema"
-if command -v yay >/dev/null && si "¿Actualizar también el sistema (yay -Syu)? Es automático, no hace más preguntas"; then
-    # --noconfirm: sin preguntas técnicas (antes yay se quedaba esperando "Paquetes a excluir" y parecía colgado)
-    if sudo -v; then
-        if declare -F ui_ejecutar >/dev/null; then
-            ui_ejecutar "Actualizando el sistema (yay -Syu)" yay -Syu --noconfirm || ui_aviso "La actualización del sistema falló (arriba están las últimas líneas)."
-        else
-            yay -Syu --noconfirm || ui_aviso "La actualización del sistema falló."
-        fi
+if [ "$HACER_PAQ" = 1 ]; then
+    # la lista pudo cambiar con la descarga: se vuelve a mirar qué falta de verdad
+    FALTAN=()
+    grep -q -- '--faltantes' ./packages.sh 2>/dev/null && mapfile -t FALTAN < <(bash ./packages.sh --faltantes 2>/dev/null)
+    if [ "${#FALTAN[@]}" -gt 0 ]; then
+        ui_etapa "Instalando ${#FALTAN[@]} $(plural "${#FALTAN[@]}" 'paquete que faltaba' 'paquetes que faltaban'): $(unir "${FALTAN[@]}")"
+        MIARCH_UI_COMPACTO=1 bash ./packages.sh || ui_aviso "packages.sh terminó con errores (arriba). Se volverá a ofrecer la próxima vez."
     else
-        ui_aviso "Sin permiso de administrador: se omite la actualización del sistema."
+        ui_etapa "Revisando los paquetes de Miarch"
+        ui_ok "No falta ningún paquete: no se instala nada"
     fi
-else
-    ui_info "Sistema sin actualizar"
 fi
 
-# --- recargar ---
-ui_etapa "Recargando el escritorio"
-if [ -z "${MIARCH_SIN_REINICIO:-}" ]; then
-    hyprctl reload >/dev/null 2>&1 || true
-    qs kill -c miarch >/dev/null 2>&1; sleep 1
-    (setsid qs -c miarch >/dev/null 2>&1 &)
-    ui_ok "Hyprland y el escritorio recargados"
+if [ "$HACER_SIS" = 1 ]; then
+    ui_etapa "Actualizando $N_SIS $(plural "$N_SIS" paquete paquetes) del sistema"
+    ui_ejecutar "Actualizando el sistema (yay -Syu)" yay -Syu --noconfirm || ui_aviso "La actualización del sistema falló (arriba están las últimas líneas)."
 fi
+
 ui_resumen "Actualización completa"
 fin 0
