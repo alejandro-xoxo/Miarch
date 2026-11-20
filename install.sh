@@ -23,6 +23,8 @@ backup() {
     if [ -e "$1" ] || [ -L "$1" ]; then
         echo "📦 Copia de seguridad: $1 → $1.bak-$STAMP"
         mv "$1" "$1.bak-$STAMP"
+        # solo se conservan las 2 copias más recientes (cada actualización crea una nueva)
+        ls -d "$1".bak-* 2>/dev/null | sort | head -n -2 | while read -r vieja; do rm -rf "$vieja"; done
     fi
 }
 
@@ -50,7 +52,7 @@ mkdir -p "$HOME/.config" "$HOME/.local/bin" "$WALL_DIR"
 # SCRIPTS (van a ~/.local/bin)
 # =========================
 echo "⚙️  Instalando scripts..."
-for f in wallpaper.sh miarch-colors miarch-set miarch-wifi miarch-info miarch-fetch; do
+for f in wallpaper.sh miarch-colors miarch-set miarch-wifi miarch-info miarch-fetch miarch-update; do
     [ -f "$DOTFILES_DIR/scripts/$f" ] && install -Dm755 "$DOTFILES_DIR/scripts/$f" "$HOME/.local/bin/$f"
 done
 
@@ -99,7 +101,8 @@ fi
 # =========================
 # WALLPAPER Y COLORES (solo si ya estás dentro de Hyprland)
 # =========================
-"$HOME/.local/bin/wallpaper.sh" || true
+# al actualizar (miarch-update) no se cambia tu fondo: solo se vuelven a calcular los colores del actual
+[ -n "${MIARCH_ACTUALIZANDO:-}" ] || "$HOME/.local/bin/wallpaper.sh" || true
 # kitty toma sus colores de un archivo que genera miarch-colors a partir del wallpaper
 [ -s "$HOME/.cache/miarch-wallpaper" ] && "$HOME/.local/bin/miarch-colors" "$(cat "$HOME/.cache/miarch-wallpaper")" >/dev/null || true
 
