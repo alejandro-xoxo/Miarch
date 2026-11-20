@@ -1912,8 +1912,6 @@ ShellRoot {
             { t: "Codex App", d: "La app de ChatGPT con Codex (vista previa)", tipo: "APP", logo: "openai", c: "#86a595", m: "Cx", bin: "chatgpt", cmd: "chatgpt" } ] },
         { t: "Antigravity", d: "La app de agentes de Google (2.0)", logo: "antigravity", c: "#7d9bc0", m: "A", items: [
             { t: "Antigravity", d: "La app de agentes de Google (2.0)", tipo: "APP", logo: "antigravity", c: "#7d9bc0", m: "A", bin: "antigravity", cmd: "antigravity" } ] },
-        { t: "Antigravity IDE", d: "El editor de código de Google con agentes", logo: "antigravity", c: "#7d9bc0", m: "A", items: [
-            { t: "Antigravity IDE", d: "El editor de código de Google con agentes", tipo: "APP", logo: "antigravity", c: "#7d9bc0", m: "A", bin: "antigravity-ide", cmd: "antigravity-ide" } ] },
         { t: "Hermes Desktop", d: "La app oficial de Hermes (Nous Research)", logo: "hermes", c: "#c0a06a", m: "H", items: [
             { t: "Hermes Desktop", d: "La app oficial de Hermes (Nous Research)", tipo: "APP", logo: "hermes", c: "#c0a06a", m: "H", bin: "hermes", cmd: "hermes desktop" } ] }
     ]
@@ -1935,7 +1933,7 @@ ShellRoot {
     function iaAtras() { if (root.iaNivel === 1) { root.iaNivel = 0; root.iaSel = root.iaGrupo } else root.iaAbierto = false }
     Process {
         id: pIa
-        command: ["sh", "-c", "PATH=\"$HOME/.local/bin:$PATH\"; for b in claude-desktop chatgpt antigravity antigravity-ide hermes; do command -v $b >/dev/null 2>&1 && echo $b; done"]
+        command: ["sh", "-c", "PATH=\"$HOME/.local/bin:$PATH\"; for b in claude-desktop chatgpt antigravity hermes; do command -v $b >/dev/null 2>&1 && echo $b; done"]
         stdout: StdioCollector { onStreamFinished: root.iaDisp = text.trim().split("\n") }
     }
     onIaAbiertoChanged: { if (root.iaAbierto) { root.iaNivel = 0; root.iaSel = 0; pIa.running = true } }
@@ -2574,10 +2572,10 @@ ShellRoot {
                 MultiEffect {
                     anchors.fill: parent
                     source: imgFondo
-                    blurEnabled: true; blurMax: 64; blur: 1.0 - candado.abre
+                    blurEnabled: true; blurMax: 64; blur: 1.0
                     autoPaddingEnabled: false
                 }
-                Rectangle { anchors.fill: parent; color: root.fondo; opacity: 0.58 * (1 - candado.abre) }
+                Rectangle { anchors.fill: parent; color: root.fondo; opacity: 0.58 }
 
                 // Marcos de esquina (estilo panel de control): al abrir se alejan y salen de la pantalla
                 Repeater {
@@ -2601,6 +2599,61 @@ ShellRoot {
                     text: "MIARCH  ·  SESIÓN BLOQUEADA"
                     color: root.arena
                     font { family: root.fuente; pixelSize: candado.height * 0.013; weight: Font.Medium; letterSpacing: 5 }
+                }
+
+                // ── Animación de desbloqueo ──
+                // 1) Mientras sale el log: barrido de escaneo de arriba abajo, dos pasadas
+                Rectangle {
+                    visible: root.accesoOk && root.apertura < 0.62
+                    width: parent.width; height: 2
+                    y: candado.height * ((root.apertura / 0.62 * 2) % 1)
+                    gradient: Gradient { orientation: Gradient.Vertical
+                        GradientStop { position: 0; color: "transparent" }
+                        GradientStop { position: 0.5; color: Qt.alpha(root.terracota, 0.55) }
+                        GradientStop { position: 1; color: "transparent" } }
+                }
+                // 2) Apertura: el fondo nítido se abre como una franja desde el centro (con dos líneas en sus bordes)
+                Item {
+                    id: franja
+                    visible: candado.abre > 0
+                    width: parent.width
+                    height: candado.height * Math.pow(candado.abre, 0.8)
+                    anchors.verticalCenter: parent.verticalCenter
+                    clip: true
+                    Image {
+                        x: 0; y: -(candado.height - franja.height) / 2
+                        width: candado.width; height: candado.height
+                        source: imgFondo.source
+                        fillMode: Image.PreserveAspectCrop
+                        asynchronous: true
+                    }
+                    Rectangle { anchors.fill: parent; color: root.fondo; opacity: 0.12 * (1 - candado.abre) }
+                }
+                Repeater {
+                    model: [ -1, 1 ]
+                    Rectangle {
+                        required property int modelData
+                        visible: candado.abre > 0 && candado.abre < 1
+                        width: parent.width * Math.min(1, candado.abre * 5); height: 1
+                        x: (parent.width - width) / 2
+                        y: candado.height / 2 + modelData * franja.height / 2
+                        color: root.terracota
+                        opacity: 0.9 * (1 - candado.abre)
+                    }
+                }
+                // 3) Ondas de choque desde el centro, al ritmo del golpe del sonido
+                Repeater {
+                    model: [ 1.0, 0.82 ]
+                    Rectangle {
+                        required property real modelData
+                        readonly property real p: Math.pow(candado.abre, modelData)
+                        visible: candado.abre > 0 && candado.abre < 1
+                        width: candado.height * (0.08 + 1.9 * p); height: width; radius: width / 2
+                        x: (candado.width - width) / 2; y: (candado.height - height) / 2
+                        color: "transparent"
+                        border.width: 2; border.color: root.terracota
+                        opacity: 0.55 * (1 - p)
+                    }
                 }
 
                 // Música (solo si hay un reproductor): tarjeta grande a la derecha del reloj

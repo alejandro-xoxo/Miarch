@@ -4,10 +4,7 @@ Una entrada por cosa importante, la más nueva arriba. La ventana de actualizaci
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
 ## 2026-11-20.08 · Pantalla de bloqueo más futurista, con sonido
-La pantalla de bloqueo gana marcos de esquina, una regla con un destello que la recorre y una contraseña en celdas con cursor ("AUTENTICACIÓN", "ACCESO CONCEDIDO" o "ACCESO DENEGADO"). Al acertar suena un sonido corto, sale el log real del sistema tecleándose y luego el fondo se despeja antes de entrar al escritorio (unos 2 segundos).
-
-## 2026-11-20.07 · Antigravity IDE
-El IDE de Antigravity (Google) se instala al actualizar y aparece en el menú de IA (Super + C).
+La pantalla de bloqueo gana marcos de esquina, una regla con un destello que la recorre y una contraseña en celdas con cursor ("AUTENTICACIÓN", "ACCESO CONCEDIDO" o "ACCESO DENEGADO"). Al acertar suena un sonido épico (subida de tensión, golpe grave y acorde con eco), mientras un barrido de escaneo recorre la pantalla y el log real del sistema se teclea; después el fondo nítido se abre como una franja desde el centro, con ondas de choque, antes de entrar al escritorio (unos 2,3 segundos).
 
 ## 2026-11-20.06 · Notificaciones nuevas y menú de IA solo con apps
 Las notificaciones ahora las dibuja el propio escritorio: salen deslizándose arriba a la derecha, con el estilo de los paneles, icono, nombre de la app, barra de progreso (volumen, brillo), botones de acción y una cuenta atrás que se pausa si pones el ratón encima. Las críticas se marcan en rojo mate y no se van solas. Clic cierra una, clic derecho las cierra todas. Miarch quita `dunst`, que ya no hace falta.
