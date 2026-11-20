@@ -3,6 +3,9 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-20.30 · Pantallas: el cambio de lado se aplica al momento
+Intercambiar las pantallas desde Ajustes ahora recarga Hyprland en caliente y comprueba la nueva disposición sin necesidad de reiniciar la sesión.
+
 ## 2026-11-20.29 · La entrada suena a teclado
 La secuencia de entrada elimina la línea blanca y despide la tarjeta de música con un desplazamiento suave. Mientras se teclea el log del sistema suenan pulsaciones de teclado mecánico.
 
