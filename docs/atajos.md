@@ -10,7 +10,7 @@
 | `Super + Shift + Q` | Cerrar ventana |
 | `Super + L` | Bloquear pantalla |
 | `Super + Esc` | Ajustes del equipo |
-| `Super + Shift + Esc` | Menú de energía: bloquear, suspender, cerrar sesión, reiniciar y apagar. `↑` `↓` y `Enter`; las tres últimas piden una segunda pulsación |
+| `Super + Shift + Esc` | Menú con dos pestañas (`←` `→` o clic para cambiar): **Energía** (bloquear, suspender, cerrar sesión, reiniciar y apagar; las tres últimas piden una segunda pulsación) y **Atajos** (todos estos atajos, de más a menos útil, para quien empieza) |
 | `Super + W` | Cambiar wallpaper (y los colores) |
 | `Super + B` | Navegador (Chrome) |
 | `Super + V` · `Super + C` | VS Code · Claude Desktop |

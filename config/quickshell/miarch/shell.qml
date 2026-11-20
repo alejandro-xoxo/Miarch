@@ -1562,6 +1562,34 @@ ShellRoot {
     property bool energiaAbierto: false
     property int energiaSel: 0
     property int energiaConfirmar: -1
+    property int energiaPestana: 0      // 0 = Energía, 1 = Atajos de teclado
+    // Todos los atajos, de más a menos útil (lo mismo que docs/atajos.md). Super = la tecla de Windows.
+    readonly property var atajosLista: [
+        { k: "Super + Espacio",           d: "Abrir el lanzador: escribe y abre cualquier programa" },
+        { k: "Super + Enter",             d: "Abrir una terminal" },
+        { k: "Super + Shift + Q",         d: "Cerrar la ventana en la que estás" },
+        { k: "Super + 1 … 0",             d: "Ir a ese escritorio (hay 10)" },
+        { k: "Super + Shift + 1 … 0",     d: "Mandar la ventana a ese escritorio" },
+        { k: "Super + Esc",               d: "Ajustes: red, sonido, pantalla, apariencia…" },
+        { k: "Super + L",                 d: "Bloquear la pantalla" },
+        { k: "Super + B",                 d: "Abrir el navegador (Chrome)" },
+        { k: "Super + E",                 d: "Abrir los archivos (Dolphin)" },
+        { k: "Super + flechas",           d: "Pasar el foco a la ventana de al lado" },
+        { k: "Super + F",                 d: "Poner o quitar la ventana flotante" },
+        { k: "Super + .",                 d: "Captura de una zona al portapapeles" },
+        { k: "Super + W",                 d: "Cambiar el fondo (y los colores del sistema)" },
+        { k: "Super + V",                 d: "Abrir VS Code" },
+        { k: "Super + C",                 d: "Abrir Claude Desktop" },
+        { k: "Super + clic izq. y arrastrar", d: "Mover la ventana" },
+        { k: "Super + clic der. y arrastrar", d: "Cambiar el tamaño de la ventana" },
+        { k: "Super + rueda del ratón",   d: "Cambiar de escritorio" },
+        { k: "Super + J  /  Super + P",   d: "Cambiar la división de ventanas / pseudo-mosaico" },
+        { k: "Super + S  /  Super + Shift + S", d: "Escritorio escondido: mostrarlo / mandarle la ventana" },
+        { k: "Super + Shift + Espacio",   d: "Lanzador de respaldo (rofi)" },
+        { k: "Volumen, brillo, multimedia", d: "Las teclas del portátil funcionan, también con la pantalla bloqueada" },
+        { k: "Super + Shift + Esc",       d: "Este menú: energía y atajos" },
+        { k: "Super + Ctrl + Shift + M",  d: "Salida de emergencia: cierra el escritorio al instante" }
+    ]
     readonly property var energiaOpciones: [
         { t: "Bloquear",      g: "", c: false, cmd: ["qs", "-c", "miarch", "ipc", "call", "lock", "lock"] },
         // al suspender se bloquea primero: al despertar pide la contraseña
@@ -1577,12 +1605,13 @@ ShellRoot {
         root.energiaAbierto = false
         Quickshell.execDetached(o.cmd)
     }
-    onEnergiaAbiertoChanged: { root.energiaSel = 0; root.energiaConfirmar = -1 }
+    onEnergiaAbiertoChanged: { root.energiaSel = 0; root.energiaConfirmar = -1; root.energiaPestana = 0 }
     IpcHandler {
         target: "power"
         function toggle(): void { root.energiaAbierto = !root.energiaAbierto }
         function open(): void { root.energiaAbierto = true }
         function close(): void { root.energiaAbierto = false }
+        function atajos(): void { root.energiaAbierto = true; root.energiaPestana = 1 }   // abre directo la pestaña de atajos
     }
 
     Variants {
@@ -1613,6 +1642,10 @@ ShellRoot {
 
                 Keys.onPressed: event => {
                     if (event.key === Qt.Key_Escape) { if (root.energiaConfirmar >= 0) root.energiaConfirmar = -1; else root.energiaAbierto = false }
+                    else if (event.key === Qt.Key_Left || event.key === Qt.Key_Right) { root.energiaPestana = 1 - root.energiaPestana; root.energiaConfirmar = -1 }
+                    else if (root.energiaPestana === 1 && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) { }
+                    else if (root.energiaPestana === 1 && (event.key === Qt.Key_Down || event.key === Qt.Key_Tab)) listaAtajos.contentY = Math.min(listaAtajos.contentY + 72, Math.max(0, listaAtajos.contentHeight - listaAtajos.height))
+                    else if (root.energiaPestana === 1 && (event.key === Qt.Key_Up || event.key === Qt.Key_Backtab)) listaAtajos.contentY = Math.max(listaAtajos.contentY - 72, 0)
                     else if (event.key === Qt.Key_Down || event.key === Qt.Key_Tab) { root.energiaSel = Math.min(root.energiaSel + 1, root.energiaOpciones.length - 1); root.energiaConfirmar = -1 }
                     else if (event.key === Qt.Key_Up || event.key === Qt.Key_Backtab) { root.energiaSel = Math.max(root.energiaSel - 1, 0); root.energiaConfirmar = -1 }
                     else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) root.energiaEjecutar(root.energiaSel)
@@ -1628,14 +1661,26 @@ ShellRoot {
                     x: parent.width * 0.5 - width / 2
                     y: parent.height * 0.5 - height / 2 + (1 - en.entrada) * 40
                     opacity: Math.min(1, en.entrada)
-                    width: Math.min(parent.width * 0.4, 520)
+                    width: root.energiaPestana === 1 ? Math.min(parent.width * 0.62, 820) : Math.min(parent.width * 0.4, 520)
                     spacing: 6
 
-                    Text {
-                        text: "ENERGÍA"
-                        color: Qt.alpha(root.arena, 0.3)
-                        font { family: root.fuente; pixelSize: 40 * root.esc; weight: Font.Thin; letterSpacing: 12 }
-                        bottomPadding: 22
+                    Item {   // pestañas: Energía | Atajos (← → o clic)
+                        width: parent.width; height: 28 * root.esc * 1.5 + 22
+                        Row {
+                            spacing: 38
+                            Repeater {
+                                model: ["ENERGÍA", "ATAJOS"]
+                                Text {
+                                    required property string modelData
+                                    required property int index
+                                    text: modelData
+                                    color: Qt.alpha(root.arena, root.energiaPestana === index ? 0.85 : 0.25)
+                                    font { family: root.fuente; pixelSize: 30 * root.esc; weight: Font.Thin; letterSpacing: 9 }
+                                    Behavior on color { ColorAnimation { duration: 150 } }
+                                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.energiaPestana = index; root.energiaConfirmar = -1 } }
+                                }
+                            }
+                        }
                     }
                     Repeater {
                         model: root.energiaOpciones
@@ -1644,7 +1689,8 @@ ShellRoot {
                             required property int index
                             readonly property bool sel: root.energiaSel === index
                             readonly property bool pideConfirmar: root.energiaConfirmar === index
-                            width: parent.width; height: 64
+                            visible: root.energiaPestana === 0
+                            width: parent.width; height: visible ? 64 : 0
                             Rectangle {   // marca de la opción elegida
                                 width: 3; height: parent.height - 18; radius: 1.5
                                 anchors.verticalCenter: parent.verticalCenter
@@ -1674,8 +1720,45 @@ ShellRoot {
                             }
                         }
                     }
+                    Flickable {   // pestaña Atajos
+                        id: listaAtajos
+                        visible: root.energiaPestana === 1
+                        width: parent.width
+                        height: visible ? Math.min(contentHeight, en.height * 0.6) : 0
+                        contentHeight: colAtajos.implicitHeight
+                        clip: true
+                        boundsBehavior: Flickable.StopAtBounds
+                        Column {
+                            id: colAtajos
+                            width: parent.width
+                            spacing: 2
+                            Repeater {
+                                model: root.atajosLista
+                                Row {
+                                    required property var modelData
+                                    width: colAtajos.width
+                                    height: 38 * root.esc
+                                    spacing: 18
+                                    Text {
+                                        width: 270 * root.esc; anchors.verticalCenter: parent.verticalCenter
+                                        elide: Text.ElideRight
+                                        text: modelData.k
+                                        color: root.terracota
+                                        font { family: root.fuente; pixelSize: 14 * root.esc; weight: Font.Medium }
+                                    }
+                                    Text {
+                                        width: parent.width - 270 * root.esc - 18; anchors.verticalCenter: parent.verticalCenter
+                                        elide: Text.ElideRight
+                                        text: modelData.d
+                                        color: root.arena; opacity: 0.85
+                                        font { family: root.fuente; pixelSize: 14 * root.esc; weight: Font.Light }
+                                    }
+                                }
+                            }
+                        }
+                    }
                     Text {
-                        text: "↑ ↓ elegir    ENTER aceptar    ESC cerrar"
+                        text: root.energiaPestana === 0 ? "↑ ↓ elegir    ENTER aceptar    ← → pestaña    ESC cerrar" : "↑ ↓ desplazar    ← → pestaña    ESC cerrar"
                         color: Qt.alpha(root.arena, 0.3)
                         font { family: root.fuente; pixelSize: 11 * root.esc; weight: Font.Medium; letterSpacing: 3 }
                         topPadding: 22
