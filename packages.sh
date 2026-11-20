@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Miarch · instala los paquetes (pacman + AUR) y activa los servicios. Se puede ejecutar varias veces.
 set -euo pipefail
 set -E

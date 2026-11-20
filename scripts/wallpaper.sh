@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Miarch - Cambia el wallpaper a uno aleatorio con awww (antes swww) y aplica colores con pywal.
 set -uo pipefail
 

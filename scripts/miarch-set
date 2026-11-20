@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Miarch · aplica un ajuste. Lo usa el panel de Ajustes; también sirve desde terminal.
 #   Hyprland:   anim | blur | escala | teclado | scrollnat | tap | sens | cursor | movimiento
 #   Shell:      barra | texto | contraste | gif

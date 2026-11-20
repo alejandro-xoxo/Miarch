@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Miarch · interfaz de los scripts: logo, barra del avance total, animación por comando, resumen final.
 # Se adapta a donde corre:
 #   nivel 2  terminal moderna (kitty, ssh...) con UTF-8: símbolos, indicador braille, color verdadero
