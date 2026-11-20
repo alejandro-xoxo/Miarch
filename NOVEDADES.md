@@ -3,6 +3,10 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-19.11 · Menú de energía explicado
+Super + Shift + Esc ahora explica qué hace cada opción, las ordena de más a menos útil (Bloquear, Suspender, Apagar, Reiniciar, Cerrar sesión)
+y se puede elegir con su letra (B, S, A, R, C).
+
 ## 2026-11-19.10 · La actualización explica qué trae
 Antes de pedirte confirmar, la ventana de actualización muestra en español qué trae cada novedad y qué partes de tu equipo cambian.
 Verás solo lo que aún no has visto; las novedades se escriben en este archivo (NOVEDADES.md).
