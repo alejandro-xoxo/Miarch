@@ -302,9 +302,10 @@ ShellRoot {
     }
     readonly property var adaptadorBt: Bluetooth.defaultAdapter
 
+    // actualizaciones pendientes = repos oficiales (checkupdates) + AUR (yay -Qua; checkupdates no cuenta AUR)
     Process {
         id: pActualiz
-        command: ["sh", "-c", "if command -v checkupdates >/dev/null; then checkupdates 2>/dev/null | wc -l; else pacman -Qu 2>/dev/null | wc -l; fi"]
+        command: ["sh", "-c", "o=$(if command -v checkupdates >/dev/null; then checkupdates 2>/dev/null | wc -l; else pacman -Qu 2>/dev/null | wc -l; fi); a=0; command -v yay >/dev/null && a=$(timeout 40 yay -Qua 2>/dev/null | wc -l); echo $((o + a))"]
         stdout: StdioCollector { onStreamFinished: root.actualizaciones = parseInt(text.trim()) || 0 }
     }
     Timer { interval: 1200000; running: true; repeat: true; triggeredOnStart: true; onTriggered: pActualiz.running = true }
