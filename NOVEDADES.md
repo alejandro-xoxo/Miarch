@@ -5,7 +5,7 @@ Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentr
 
 ## 2026-11-20.01 · Hermes Desktop, app de Ollama y limpieza
 Al actualizar, Miarch desinstala paquetes que ya no recomienda (ahora, la ventana de Hermes WebUI, que no era la app oficial de Hermes) y la nube avisa si hay alguno pendiente.
-Nuevo: Hermes Desktop (la app oficial) y una app de escritorio para Ollama (Alpaka) se instalan al actualizar.
+Nuevo: Hermes Desktop (la app oficial) se instala al actualizar. Ollama no tiene app oficial para Linux (solo terminal y servicio), así que Miarch no instala clientes de terceros.
 
 ## 2026-11-19.13 · Skill para tu agente de IA
 Si usas Claude Code, Codex o Antigravity, Miarch le instala una skill que le enseña a instalar y configurar cosas en tu sistema
