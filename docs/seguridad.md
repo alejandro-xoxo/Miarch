@@ -43,6 +43,11 @@ El gestor de acceso gráfico corre bajo `greetd` ejecutando una sesión mínima 
 ### Despliegue y Mecanismos de Falla
 
 * **Instalación**: El script `scripts/miarch-greeter-install` instala `greetd`, copia los recursos a `/usr/share/miarch/greeter`, asigna la paleta y fondo en `/var/lib/miarch-greeter`, respalda `/etc/greetd/config.toml` como `config.toml.miarch-bak` y habilita el servicio de `systemd`.
+* **Comprobación de seguridad previa (`scripts/comprobar-greeter`)**: Antes de copiar archivos o alterar el sistema, el instalador ejecuta una suite de verificación que comprueba:
+  1. *Sintaxis de lanzamiento*: Extrae los arrays de comando de `Greetd.launch` en `config/greeter/shell.qml`, los une con espacios como hace greetd y verifica con `bash -n` que `exec <args>` es sintaxis válida (evita bucles de reinicio de sesión causados por comandos con llaves, redirecciones o tuberías complejas no soportadas).
+  2. *Integridad de scripts*: Valida con `sh -n` la sintaxis de `config/greeter/sesion.sh` y `config/greeter/start.sh`.
+  3. *Carga en vacío*: Evalúa `shell.qml` en modo *offscreen* (`QT_QPA_PLATFORM=offscreen MIARCH_GREETER_TEST=1`) garantizando que no existan errores de análisis QML.
+  4. *Parámetros de terminal*: Asegura que `config/greeter/config.toml` configure `vt = 1` y apunte a `/usr/share/miarch/greeter/start.sh`.
 * **Omisión durante instalación**: Si existe el archivo `~/.config/miarch/sin-greeter`, `setup.sh` omite el despliegue del greeter gráfico.
 * **Plan B si el login gráfico falla**: Si el greeter gráfico falla al iniciar en un intervalo de 8 segundos, el sistema recurre automáticamente a la interfaz en modo texto (`agreety`).
 * **Procedimiento de recuperación manual**: Si el usuario no puede acceder a la interfaz gráfica, se puede acceder a una consola virtual y restaurar el inicio estándar de terminal:

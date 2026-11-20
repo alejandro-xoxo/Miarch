@@ -20,9 +20,11 @@ ShellRoot {
     // ── Paleta: la misma del escritorio (copiada a /var/lib/miarch-greeter por wallpaper.sh) ──
     property color arena: "#cfc6b4"
     property color terracota: "#b97b62"
+    property color salvia: "#8c9c88"
     property color fondo: "#12141a"
     Behavior on arena { ColorAnimation { duration: 800 } }
     Behavior on terracota { ColorAnimation { duration: 800 } }
+    Behavior on salvia { ColorAnimation { duration: 800 } }
     Behavior on fondo { ColorAnimation { duration: 800 } }
     FileView {
         path: root.datos + "/colors.json"
@@ -30,6 +32,7 @@ ShellRoot {
             try {
                 const c = JSON.parse(text())
                 root.arena = c.arena; root.terracota = c.terracota; root.fondo = c.fondo
+                if (c.salvia) root.salvia = c.salvia
             } catch (e) {}
         }
     }
@@ -64,6 +67,39 @@ ShellRoot {
         command: ["test", "-x", "/usr/share/miarch/greeter/sesion.sh"]
         onExited: code => root.sesionOk = (code === 0)
     }
+    property bool sonidoOk: false                    // sonido de teclas al iniciar sesión
+    Process {
+        running: !root.prueba
+        command: ["test", "-f", "/usr/share/miarch/greeter/desbloqueo.wav"]
+        onExited: code => root.sonidoOk = (code === 0)
+    }
+    property var lineasLog: []
+    Process {
+        id: pLog
+        command: ["systemctl", "list-units", "--type=service", "--state=running", "--no-legend", "--no-pager", "--plain"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const l = []
+                for (const raw of text.split("\n")) {
+                    const trimmed = raw.trim()
+                    if (!trimmed) continue
+                    const m = trimmed.match(/^(\S+)\s+\S+\s+\S+\s+\S+(?:\s+(.*))?$/)
+                    if (m) {
+                        const u = m[1]
+                        const d = (m[2] || "").trim()
+                        l.push(d.length > 0 ? ("[  OK  ] " + u + " — " + d) : ("[  OK  ] " + u))
+                    }
+                    if (l.length >= 26) break
+                }
+                root.lineasLog = l.length > 0 ? l : ["[  OK  ] sesión iniciada"]
+            }
+        }
+        onExited: code => {
+            if (code !== 0 && root.lineasLog.length === 0) {
+                root.lineasLog = ["[  OK  ] sesión iniciada"]
+            }
+        }
+    }
     property bool accesoOk: false                    // contraseña correcta: el fondo se acerca y se enfoca, y luego arranca la sesión
     property real apertura: 0
     property bool lanzar: false                      // greetd ya está listo para lanzar la sesión
@@ -82,6 +118,7 @@ ShellRoot {
     }
     function fallar(texto) {
         animApertura.stop(); root.accesoOk = false; root.apertura = 0      // si falla tras acertar, el login no se queda bloqueado sin teclado
+        pLog.running = false
         root.verificando = false; root.clave = ""; root.hayError = true
         root.mensaje = texto
         root.sacudir()
@@ -106,6 +143,11 @@ ShellRoot {
     function entrar() {
         if (root.accesoOk) return
         root.accesoOk = true; root.apertura = 0
+        root.lineasLog = ["[  OK  ] sesión iniciada"]
+        pLog.running = true
+        if (!root.prueba && root.sonidoOk) {
+            Quickshell.execDetached(["pw-play", "--volume=0.6", "/usr/share/miarch/greeter/desbloqueo.wav"])
+        }
         animApertura.restart()
     }
     NumberAnimation {
@@ -215,10 +257,10 @@ ShellRoot {
                     }
                 }
                 Column {   // título
-                    visible: root.accesoOk && pantalla.p > 0.3
+                    visible: root.accesoOk && pantalla.p > 0.45
                     anchors.centerIn: parent
                     spacing: pantalla.height * 0.012
-                    opacity: pantalla.suave((pantalla.p - 0.32) / 0.14) * (1 - pantalla.suave((pantalla.p - 0.84) / 0.08))
+                    opacity: pantalla.suave((pantalla.p - 0.46) / 0.14) * (1 - pantalla.suave((pantalla.p - 0.84) / 0.08))
                     Text {
                         id: txtTituloGreeter
                         anchors.horizontalCenter: parent.horizontalCenter
@@ -228,7 +270,7 @@ ShellRoot {
                         text: "MIARCH"
                         color: root.arena
                         readonly property real tam: Math.min(pantalla.height * 0.085, pantalla.width * 0.11)
-                        readonly property real deseado: pantalla.height * (0.012 + 0.03 * pantalla.suave((pantalla.p - 0.32) / 0.5))
+                        readonly property real deseado: pantalla.height * (0.012 + 0.03 * pantalla.suave((pantalla.p - 0.46) / 0.4))
                         readonly property real topeSpacing: Math.max(0, (pantalla.width * 0.8 - 6 * tam * 0.62) / 6)
                         readonly property real espacio: Math.min(deseado, topeSpacing)
                         font { family: root.fuente; pixelSize: txtTituloGreeter.tam; weight: Font.Normal; letterSpacing: txtTituloGreeter.espacio }
@@ -253,7 +295,7 @@ ShellRoot {
                         elide: Text.ElideRight
                         text: "by alejandro-xoxo"
                         color: root.arena
-                        opacity: 0.7 * pantalla.suave((pantalla.p - 0.46) / 0.12)
+                        opacity: 0.7 * pantalla.suave((pantalla.p - 0.56) / 0.12)
                         readonly property real tam: Math.min(pantalla.height * 0.02, pantalla.width * 0.028)
                         readonly property real topeSpacing: Math.max(0, (pantalla.width * 0.8 - text.length * tam * 0.62) / text.length)
                         font { family: root.fuente; pixelSize: txtFirmaGreeter.tam; weight: Font.Normal; letterSpacing: Math.min(5, txtFirmaGreeter.topeSpacing) }
@@ -270,11 +312,49 @@ ShellRoot {
                     }
                 }
 
+                // Log del sistema tecleándose al iniciar sesión, y luego se despeja todo
+                Item {
+                    id: capaLog
+                    visible: root.accesoOk
+                    x: pantalla.width * 0.05; width: pantalla.width * 0.9
+                    anchors.verticalCenter: parent.verticalCenter
+                    height: colLog.implicitHeight
+                    opacity: Math.min(1, root.apertura * 10) * (1 - pantalla.suave((pantalla.p - 0.42) / 0.10))
+                    readonly property int n: root.lineasLog.length
+                    readonly property int visibles: Math.floor(Math.min(1, root.apertura / 0.38) * (n + 1))
+                    Column {
+                        id: colLog
+                        width: parent.width
+                        spacing: pantalla.height * 0.004
+                        Text {
+                            text: "MIARCH  ::  ACCESO CONCEDIDO  ::  CARGANDO SESIÓN"
+                            color: root.salvia
+                            font { family: root.fuente; pixelSize: pantalla.height * 0.02; weight: Font.Medium; letterSpacing: 6 }
+                            bottomPadding: pantalla.height * 0.014
+                        }
+                        Repeater {
+                            model: root.lineasLog
+                            Text {
+                                required property string modelData
+                                required property int index
+                                width: parent.width; elide: Text.ElideRight
+                                visible: index < capaLog.visibles
+                                text: modelData
+                                // la línea más reciente en el acento; las anteriores se apagan hacia arriba
+                                color: index === capaLog.visibles - 1 ? root.terracota : root.arena
+                                opacity: index === capaLog.visibles - 1 ? 1 : 0.35 + 0.4 * (index / Math.max(1, capaLog.n))
+                                font { family: root.fuente; pixelSize: pantalla.height * 0.0165; weight: Font.Light }
+                            }
+                        }
+                    }
+                }
+
                 Column {
                     x: parent.width * 0.05
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.verticalCenterOffset: (1 - pantalla.entrada) * 40
-                    opacity: pantalla.entrada * (1 - Math.min(1, root.apertura * 4))
+                    opacity: pantalla.entrada * (1 - Math.min(1, root.apertura * 6))
+                    visible: opacity > 0
                     spacing: 6
 
                     Text {
@@ -369,7 +449,8 @@ ShellRoot {
                 Row {
                     x: parent.width * 0.05; y: parent.height - height - parent.height * 0.05
                     spacing: 28
-                    opacity: pantalla.entrada * (1 - Math.min(1, root.apertura * 4))
+                    opacity: pantalla.entrada * (1 - Math.min(1, root.apertura * 6))
+                    visible: opacity > 0
                     Repeater {
                         model: [ { t: "REINICIAR", c: "reboot" }, { t: "APAGAR", c: "poweroff" } ]
                         Text {
