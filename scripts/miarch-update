@@ -29,6 +29,7 @@ NOV_MARCA="$HOME/.cache/miarch/novedades-vistas"
 novedades() {
     awk -v marca="$(cat "$NOV_MARCA" 2>/dev/null)" -v max=3 -v ca="${C_ACENTO:-}" -v cr="${C_R:-}" '
         /^## / { id=$2; t=$0; sub(/^## [^ ]+ · /,"",t)
+                 if (id in visto) next; visto[id]=1                      # un id repetido no se muestra dos veces
                  if ((marca=="" || id>marca) && n<max) { n++; printf "      %s▸%s %s\n", ca, cr, t } }'
 }
 ultima_novedad() { grep -m1 '^## ' NOVEDADES.md 2>/dev/null | awk '{print $2}'; }
@@ -81,7 +82,12 @@ UP="@{u}"; git rev-parse -q --verify "$UP" >/dev/null 2>&1 || UP="origin/$RAMA"
 NUEVOS="$(git rev-list --count "HEAD..$UP" 2>/dev/null || echo 0)"
 SUCIO=0; [ -n "$(git status --porcelain --untracked-files=no)" ] && SUCIO=1
 CFG_MARCA="$HOME/.cache/miarch/configs-aplicadas"   # guarda el commit cuyas configuraciones se aplicaron por última vez
-CFG_PENDIENTES=0; [ "$(cat "$CFG_MARCA" 2>/dev/null)" != "$(git rev-parse HEAD)" ] && CFG_PENDIENTES=1
+# Pendientes solo si cambió algo que se instala entre el commit anotado y el actual: un commit de documentación o de
+# novedades no vuelve a marcar nada como pendiente.
+RUTAS_CFG=(config scripts home lib install.sh setup.sh packages.sh skills AGENTS.md)
+MARCA_ANT="$(cat "$CFG_MARCA" 2>/dev/null)"
+CFG_PENDIENTES=1
+if [ -n "$MARCA_ANT" ] && git cat-file -e "$MARCA_ANT^{commit}" 2>/dev/null && git diff --quiet "$MARCA_ANT" HEAD -- "${RUTAS_CFG[@]}"; then CFG_PENDIENTES=0; fi
 PAQ_CAMBIA=0; [ "$NUEVOS" -gt 0 ] && ! git diff --quiet HEAD "$UP" -- packages.sh && PAQ_CAMBIA=1
 
 # un packages.sh antiguo no conoce --faltantes y ejecutaría la instalación completa: solo se pregunta si lo soporta
