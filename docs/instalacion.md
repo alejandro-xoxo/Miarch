@@ -39,6 +39,16 @@ sudo systemctl disable greetd && sudo systemctl enable getty@tty1
 y reinicia: vuelves al inicio de sesión de texto.
 
 ## Actualizar
+**Con clics:** al encender el sistema, Miarch revisa una vez si hay cambios nuevos en GitHub. Si los hay, la **nube de la barra** se pone de color con el número de novedades y sale una notificación. Haz clic en la nube: se abre una ventana que
+1. baja los cambios y te dice cuáles son,
+2. aplica las configuraciones nuevas **conservando tus ajustes** (animaciones, desenfoque, escala, teclado…) **y tu fondo**,
+3. si cambió la lista de paquetes, te pregunta antes de instalarlos (pide tu contraseña),
+4. te pregunta si actualizas también el sistema (`yay -Syu`),
+5. recarga el escritorio.
+
+Clic derecho en la nube: vuelve a aplicar las configuraciones aunque no haya cambios nuevos (`miarch-update --forzar`). Si tienes cambios propios sin guardar en `~/Miarch`, no los pisa. Solo se conservan las 2 copias de seguridad más recientes de lo que se reemplaza.
+
+**Con comandos** (equivale a lo anterior pero más completo):
 ```bash
 cd ~/Miarch && git pull && ./setup.sh
 ```

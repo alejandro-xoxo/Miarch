@@ -110,4 +110,4 @@ Cada tema tiene su propio archivo en [`docs/`](docs/README.md):
 | [Estructura](docs/estructura.md) | Mapa de carpetas del repositorio |
 | [Capturas](docs/capturas.md) | Cómo regenerar las imágenes de este README |
 
-Atajos básicos: `Super + Enter` terminal · `Super + Espacio` lanzador · `Super + Esc` ajustes · `Super + Shift + Esc` apagar y reiniciar · `Super + L` bloquear · `Super + W` cambiar wallpaper.
+Atajos básicos: `Super + Enter` terminal · `Super + Espacio` lanzador · `Super + Esc` ajustes · `Super + Shift + Esc` menú de energía (apagar, reiniciar…) · `Super + L` bloquear · `Super + W` cambiar wallpaper.
