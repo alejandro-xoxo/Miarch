@@ -29,6 +29,7 @@ else
     ui_aviso()  { echo "[!] $*"; };   ui_error() { echo "[ERROR] $*" >&2; }
     ui_ejecutar() { local m="$1"; shift; echo "   ... $m"; "$@"; }
 fi
+declare -F ui_titulo >/dev/null || ui_titulo() { ui_etapa "$*"; }   # librería anterior a ui_titulo
 export MIARCH_UI_SUB=1      # packages.sh e install.sh no repiten el logo ni el resumen
 ui_banner "actualizador"
 
