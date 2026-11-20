@@ -1910,8 +1910,10 @@ ShellRoot {
             { t: "Claude Desktop", d: "La app de Claude, con ventana propia", tipo: "APP", logo: "claude", c: "#c8745a", m: "C", bin: "claude-desktop", cmd: "claude-desktop" } ] },
         { t: "Codex App", d: "La app de ChatGPT con Codex (vista previa)", logo: "openai", c: "#86a595", m: "Cx", items: [
             { t: "Codex App", d: "La app de ChatGPT con Codex (vista previa)", tipo: "APP", logo: "openai", c: "#86a595", m: "Cx", bin: "chatgpt", cmd: "chatgpt" } ] },
-        { t: "Antigravity", d: "La plataforma de agentes de Google (2.0)", logo: "antigravity", c: "#7d9bc0", m: "A", items: [
-            { t: "Antigravity", d: "La plataforma de agentes de Google (2.0)", tipo: "APP", logo: "antigravity", c: "#7d9bc0", m: "A", bin: "antigravity", cmd: "antigravity" } ] },
+        { t: "Antigravity", d: "La app de agentes de Google (2.0)", logo: "antigravity", c: "#7d9bc0", m: "A", items: [
+            { t: "Antigravity", d: "La app de agentes de Google (2.0)", tipo: "APP", logo: "antigravity", c: "#7d9bc0", m: "A", bin: "antigravity", cmd: "antigravity" } ] },
+        { t: "Antigravity IDE", d: "El editor de código de Google con agentes", logo: "antigravity", c: "#7d9bc0", m: "A", items: [
+            { t: "Antigravity IDE", d: "El editor de código de Google con agentes", tipo: "APP", logo: "antigravity", c: "#7d9bc0", m: "A", bin: "antigravity-ide", cmd: "antigravity-ide" } ] },
         { t: "Hermes Desktop", d: "La app oficial de Hermes (Nous Research)", logo: "hermes", c: "#c0a06a", m: "H", items: [
             { t: "Hermes Desktop", d: "La app oficial de Hermes (Nous Research)", tipo: "APP", logo: "hermes", c: "#c0a06a", m: "H", bin: "hermes", cmd: "hermes desktop" } ] }
     ]
@@ -1933,7 +1935,7 @@ ShellRoot {
     function iaAtras() { if (root.iaNivel === 1) { root.iaNivel = 0; root.iaSel = root.iaGrupo } else root.iaAbierto = false }
     Process {
         id: pIa
-        command: ["sh", "-c", "PATH=\"$HOME/.local/bin:$PATH\"; for b in claude-desktop chatgpt antigravity hermes; do command -v $b >/dev/null 2>&1 && echo $b; done"]
+        command: ["sh", "-c", "PATH=\"$HOME/.local/bin:$PATH\"; for b in claude-desktop chatgpt antigravity antigravity-ide hermes; do command -v $b >/dev/null 2>&1 && echo $b; done"]
         stdout: StdioCollector { onStreamFinished: root.iaDisp = text.trim().split("\n") }
     }
     onIaAbiertoChanged: { if (root.iaAbierto) { root.iaNivel = 0; root.iaSel = 0; pIa.running = true } }
