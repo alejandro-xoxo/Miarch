@@ -522,6 +522,8 @@ ShellRoot {
     property string wifiMensaje: ""
     property string redClave: ""                     // red que está pidiendo contraseña
     property string wifiClave: ""                    // lo que se lleva escrito (no se pierde al refrescar)
+    property bool ocultaAbierta: false               // formulario para conectar a una red oculta
+    property string ocultaNombre: ""
     property string _redesJson: ""
     property var btLista: []
     property var btPendiente: null
@@ -553,16 +555,24 @@ ShellRoot {
     Process {
         id: pAccion
         property string accion: ""
+        property string arg: ""
         stdout: StdioCollector {
             onStreamFinished: {
                 root.wifiOcupado = false
                 try {
                     const d = JSON.parse(text)
-                    if (pAccion.accion === "connect") {
+                    if (pAccion.accion === "connect" || pAccion.accion === "connect-hidden") {
                         root.wifiMensaje = d.ok ? "" : (d.msg || "No se pudo conectar")
-                        if (d.ok) root.redClave = ""
+                        if (d.ok) { root.redClave = ""; root.ocultaAbierta = false; root.wifiClave = "" }
+                        // red guardada con la contraseña cambiada: se abre el campo para escribir la nueva
+                        else if (d.pedir_clave) { root.wifiClave = ""; root.redClave = pAccion.arg }
+                    } else if (pAccion.accion === "forget") {
+                        root.wifiMensaje = d.ok ? "Red olvidada" : "No se pudo olvidar la red"
+                        if (d.ok && root.redClave === pAccion.arg) root.redClave = ""
+                    } else if (pAccion.accion === "disconnect") {
+                        root.wifiMensaje = d.ok ? "" : "No se pudo desconectar"
                     }
-                } catch (e) { root.wifiMensaje = "No se pudo conectar" }
+                } catch (e) { root.wifiMensaje = pAccion.accion === "forget" ? "No se pudo olvidar la red" : "No se pudo conectar" }
                 pLista.running = true
             }
         }
@@ -570,9 +580,10 @@ ShellRoot {
     function wifiAccion(accion, arg, clave) {
         if (pAccion.running) return
         pAccion.accion = accion
+        pAccion.arg = arg
         pAccion.environment = { "MIARCH_PASS": clave || "" }
         pAccion.command = arg !== "" ? [root.wifiBin, accion, arg] : [root.wifiBin, accion]
-        if (accion === "connect") { root.wifiOcupado = true; root.wifiMensaje = "" }
+        if (accion === "connect" || accion === "connect-hidden") { root.wifiOcupado = true; root.wifiMensaje = "" }
         pAccion.running = true
     }
     function conectarRed(r, clave) {
@@ -786,7 +797,7 @@ ShellRoot {
                                                 }
                                                 Text {
                                                     x: 44; anchors.verticalCenter: parent.verticalCenter
-                                                    width: parent.width - 110
+                                                    width: parent.width - 44 - (modelData.conectada ? 220 : (modelData.conocida ? 150 : 40))
                                                     elide: Text.ElideRight
                                                     text: modelData.nombre
                                                     color: root.arena
@@ -795,18 +806,42 @@ ShellRoot {
                                                 Text {
                                                     anchors.right: parent.right; anchors.rightMargin: 14
                                                     anchors.verticalCenter: parent.verticalCenter
-                                                    text: modelData.conectada ? "" : (modelData.seguridad !== "open" && !modelData.conocida ? "" : "")
-                                                    color: modelData.conectada ? root.terracota : Qt.alpha(root.arena, 0.5)
+                                                    visible: !modelData.conocida && modelData.seguridad !== "open"
+                                                    text: ""
+                                                    color: Qt.alpha(root.arena, 0.5)
                                                     font { family: root.fuente; pixelSize: 13 * root.esc }
                                                 }
                                                 Text {
-                                                    visible: root.wifiOcupado && root.redClave === "" && false
-                                                    text: ""
+                                                    visible: !modelData.visible
+                                                    anchors.right: botones.left; anchors.rightMargin: 10
+                                                    anchors.verticalCenter: parent.verticalCenter
+                                                    text: "fuera de alcance"
+                                                    color: Qt.alpha(root.arena, 0.4)
+                                                    font { family: root.fuente; pixelSize: 12 * root.esc; weight: Font.Light }
                                                 }
                                                 MouseArea {
                                                     id: filaZona
-                                                    anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                                                    onClicked: { if (modelData.conectada) root.wifiAccion("disconnect", "", ""); else root.conectarRed(modelData, "") }
+                                                    anchors.fill: parent; hoverEnabled: true
+                                                    cursorShape: modelData.visible && !modelData.conectada ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                                    onClicked: { if (modelData.visible && !modelData.conectada) root.conectarRed(modelData, "") }
+                                                }
+                                                // acciones de la red: desconectar (la conectada) y olvidar (las guardadas)
+                                                Row {
+                                                    id: botones
+                                                    anchors.right: parent.right; anchors.rightMargin: 8
+                                                    anchors.verticalCenter: parent.verticalCenter
+                                                    spacing: 6
+                                                    visible: modelData.conectada || modelData.conocida
+                                                    Opcion {
+                                                        visible: modelData.conectada
+                                                        implicitHeight: 30; texto: "Desconectar"
+                                                        onClic: root.wifiAccion("disconnect", "", "")
+                                                    }
+                                                    Opcion {
+                                                        visible: modelData.conocida
+                                                        implicitHeight: 30; texto: "Olvidar"
+                                                        onClic: root.wifiAccion("forget", modelData.nombre, "")
+                                                    }
                                                 }
                                             }
                                             // Contraseña (aparece bajo la red elegida)
@@ -870,6 +905,57 @@ ShellRoot {
                                 color: Qt.alpha(root.arena, 0.6)
                                 font { family: root.fuente; pixelSize: 12 * root.esc; weight: Font.Medium; letterSpacing: 2 }
                                 topPadding: 6
+                            }
+                            Text {
+                                visible: !root.wifiOcupado && root.redClave === "" && root.wifiMensaje !== "" && root.wifiEncendido && !root.ocultaAbierta
+                                text: root.wifiMensaje
+                                color: root.terracota
+                                font { family: root.fuente; pixelSize: 12 * root.esc; weight: Font.Medium; letterSpacing: 2 }
+                                topPadding: 6
+                            }
+                            // Red oculta: no sale en la lista; se conecta escribiendo su nombre (y la contraseña si lleva)
+                            Opcion {
+                                visible: root.wifiEncendido && !root.ocultaAbierta
+                                texto: "Red oculta…"
+                                onClic: { root.ocultaNombre = ""; root.wifiClave = ""; root.redClave = ""; root.wifiMensaje = ""; root.ocultaAbierta = true }
+                            }
+                            Column {
+                                visible: root.wifiEncendido && root.ocultaAbierta
+                                width: parent.width; spacing: 6; topPadding: 6
+                                Rectangle {
+                                    x: 8; width: parent.width - 16; height: 40; radius: 12
+                                    color: Qt.alpha(root.arena, 0.07); border.width: 1; border.color: Qt.alpha(root.arena, 0.25)
+                                    Text { visible: ocNombre.text.length === 0; x: 14; anchors.verticalCenter: parent.verticalCenter; text: "Nombre de la red"
+                                           color: Qt.alpha(root.arena, 0.35); font { family: root.fuente; pixelSize: 14 * root.esc; weight: Font.Light } }
+                                    TextInput { id: ocNombre; x: 14; width: parent.width - 28; anchors.verticalCenter: parent.verticalCenter; clip: true
+                                                color: root.arena; selectionColor: root.terracota; font { family: root.fuente; pixelSize: 15 * root.esc }
+                                                enabled: !root.wifiOcupado; onTextChanged: root.ocultaNombre = text
+                                                Component.onCompleted: forceActiveFocus()
+                                                Keys.onEscapePressed: root.ocultaAbierta = false }
+                                }
+                                Rectangle {
+                                    x: 8; width: parent.width - 16; height: 40; radius: 12
+                                    color: Qt.alpha(root.arena, 0.07); border.width: 1; border.color: Qt.alpha(root.arena, 0.25)
+                                    Text { visible: ocClave.text.length === 0; x: 14; anchors.verticalCenter: parent.verticalCenter; text: "Contraseña (vacía si es abierta)"
+                                           color: Qt.alpha(root.arena, 0.35); font { family: root.fuente; pixelSize: 14 * root.esc; weight: Font.Light } }
+                                    TextInput { id: ocClave; x: 14; width: parent.width - 28; anchors.verticalCenter: parent.verticalCenter; clip: true
+                                                echoMode: TextInput.Password; passwordCharacter: "•"
+                                                color: root.arena; selectionColor: root.terracota; font { family: root.fuente; pixelSize: 15 * root.esc }
+                                                enabled: !root.wifiOcupado; Keys.onEscapePressed: root.ocultaAbierta = false
+                                                onAccepted: if (ocNombre.text.length > 0) root.wifiAccion("connect-hidden", ocNombre.text, ocClave.text) }
+                                }
+                                Row {
+                                    x: 8; spacing: 8
+                                    Opcion { activo: ocNombre.text.length > 0; texto: root.wifiOcupado ? "…" : "Conectar"
+                                             onClic: if (ocNombre.text.length > 0) root.wifiAccion("connect-hidden", ocNombre.text, ocClave.text) }
+                                    Opcion { texto: "Cancelar"; onClic: root.ocultaAbierta = false }
+                                }
+                                Text {
+                                    visible: root.wifiOcupado || root.wifiMensaje !== ""
+                                    x: 12; text: root.wifiOcupado ? "Conectando…" : root.wifiMensaje
+                                    color: root.wifiOcupado ? Qt.alpha(root.arena, 0.6) : root.terracota
+                                    font { family: root.fuente; pixelSize: 12 * root.esc; weight: Font.Medium; letterSpacing: 2 }
+                                }
                             }
                         }
 
@@ -1562,6 +1648,137 @@ ShellRoot {
         function search(texto: string): void { root.lanzadorAbierto = true; root.consultaLanz = texto }
     }
 
+    // ═════════════════ MENÚ DE IA (Super + C) ═════════════════
+    // Herramientas de IA: las de terminal se abren en kitty. Solo se pueden lanzar las que están instaladas.
+    property bool iaAbierto: false
+    property int iaSel: 0
+    property var iaDisp: []
+    readonly property var iaLista: [
+        { t: "Claude Desktop",  d: "La app de Claude",                       bin: "claude-desktop", cmd: "claude-desktop" },
+        { t: "Claude",          d: "Claude Code en la terminal",             bin: "claude",         cmd: "kitty claude" },
+        { t: "Antigravity",     d: "Antigravity (agy) en la terminal",       bin: "agy",            cmd: "kitty agy" },
+        { t: "Codex",           d: "Codex de OpenAI en la terminal",         bin: "codex",          cmd: "kitty codex" },
+        { t: "Hermes Desktop",  d: "La app oficial de Hermes (Nous Research)", bin: "hermes",       cmd: "hermes desktop" },
+        { t: "Ollama",          d: "Modelos locales: lista los instalados en la terminal", bin: "ollama", cmd: "kitty sh -c 'ollama list; echo; echo \"ollama run NOMBRE  para hablar con uno\"; exec zsh'" }
+    ]
+    function iaTiene(i) { return root.iaDisp.indexOf(root.iaLista[i].bin) >= 0 }
+    function iaEjecutar(i) {
+        if (!root.iaTiene(i)) return
+        root.iaAbierto = false
+        Quickshell.execDetached(["sh", "-c", "PATH=\"$HOME/.local/bin:$PATH\"; " + root.iaLista[i].cmd])
+    }
+    Process {
+        id: pIa
+        command: ["sh", "-c", "PATH=\"$HOME/.local/bin:$PATH\"; for b in claude-desktop claude agy codex hermes ollama; do command -v $b >/dev/null 2>&1 && echo $b; done"]
+        stdout: StdioCollector { onStreamFinished: root.iaDisp = text.trim().split("\n") }
+    }
+    onIaAbiertoChanged: { if (root.iaAbierto) { root.iaSel = 0; pIa.running = true } }
+    IpcHandler {
+        target: "ia"
+        function toggle(): void { root.iaAbierto = !root.iaAbierto }
+        function open(): void { root.iaAbierto = true }
+        function close(): void { root.iaAbierto = false }
+    }
+    Variants {
+        model: Quickshell.screens
+        PanelWindow {
+            required property var modelData
+            screen: modelData
+            readonly property bool enEstaPantalla: Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name === modelData.name : modelData === Quickshell.screens[0]
+            visible: root.iaAbierto && enEstaPantalla
+            anchors { top: true; bottom: true; left: true; right: true }
+            color: "transparent"
+            exclusionMode: ExclusionMode.Ignore
+            WlrLayershell.layer: WlrLayer.Overlay
+            WlrLayershell.namespace: "miarch-ia"
+            WlrLayershell.keyboardFocus: visible ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+
+            Item {
+                id: iaVista
+                anchors.fill: parent
+                focus: true
+                property real entrada: 0
+                Connections {
+                    target: root
+                    function onIaAbiertoChanged() { if (root.iaAbierto) { iaVista.entrada = 0; iaVista.entrada = 1; iaVista.forceActiveFocus() } }
+                }
+                Behavior on entrada { NumberAnimation { duration: 600; easing.type: Easing.OutBack; easing.overshoot: 1.4 } }
+                Keys.onPressed: event => {
+                    if (event.key === Qt.Key_Escape) root.iaAbierto = false
+                    else if (event.key === Qt.Key_Down || event.key === Qt.Key_Tab) root.iaSel = Math.min(root.iaSel + 1, root.iaLista.length - 1)
+                    else if (event.key === Qt.Key_Up || event.key === Qt.Key_Backtab) root.iaSel = Math.max(root.iaSel - 1, 0)
+                    else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) root.iaEjecutar(root.iaSel)
+                    else return
+                    event.accepted = true
+                }
+                Rectangle { anchors.fill: parent; color: root.fondo; opacity: Math.min(1, iaVista.entrada) * 0.8 }
+                MouseArea { anchors.fill: parent; onClicked: root.iaAbierto = false }
+
+                Column {
+                    x: parent.width * 0.5 - width / 2
+                    y: parent.height * 0.5 - height / 2 + (1 - iaVista.entrada) * 40
+                    opacity: Math.min(1, iaVista.entrada)
+                    width: Math.min(parent.width * 0.5, 620)
+                    spacing: 6
+                    Text {
+                        text: "IA"
+                        color: Qt.alpha(root.arena, 0.85)
+                        font { family: root.fuente; pixelSize: 30 * root.esc; weight: Font.Thin; letterSpacing: 9 }
+                        bottomPadding: 14
+                    }
+                    Repeater {
+                        model: root.iaLista
+                        Item {
+                            required property var modelData
+                            required property int index
+                            readonly property bool sel: root.iaSel === index
+                            readonly property bool hay: root.iaDisp.indexOf(modelData.bin) >= 0
+                            width: parent.width; height: 62 * root.esc
+                            Rectangle {
+                                width: 3; height: parent.height - 18; radius: 1.5
+                                anchors.verticalCenter: parent.verticalCenter
+                                color: root.terracota
+                                opacity: sel ? 1 : 0
+                                Behavior on opacity { NumberAnimation { duration: 150 } }
+                            }
+                            Column {
+                                x: 26; anchors.verticalCenter: parent.verticalCenter
+                                width: parent.width - 40
+                                spacing: 2
+                                Text {
+                                    text: modelData.t
+                                    color: sel && hay ? root.terracota : root.arena
+                                    opacity: hay ? (sel ? 1 : 0.6) : 0.3
+                                    font { family: root.fuente; pixelSize: 24 * root.esc; weight: Font.Light }
+                                    Behavior on color { ColorAnimation { duration: 150 } }
+                                }
+                                Text {
+                                    width: parent.width; elide: Text.ElideRight
+                                    text: hay ? modelData.d : "no está instalada"
+                                    color: root.arena
+                                    opacity: hay ? 0.5 : 0.3
+                                    font { family: root.fuente; pixelSize: 12 * root.esc; weight: Font.Light }
+                                }
+                            }
+                            MouseArea {
+                                anchors.fill: parent; hoverEnabled: true
+                                cursorShape: hay ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                onEntered: root.iaSel = index
+                                onClicked: root.iaEjecutar(index)
+                            }
+                        }
+                    }
+                    Text {
+                        text: "↑ ↓ elegir    ENTER abrir    ESC cerrar"
+                        color: Qt.alpha(root.arena, 0.3)
+                        font { family: root.fuente; pixelSize: 11 * root.esc; weight: Font.Medium; letterSpacing: 3 }
+                        topPadding: 22
+                    }
+                }
+            }
+        }
+    }
+
     // ═════════════════ MENÚ DE ENERGÍA (Super + Shift + Esc) ═════════════════
     property bool energiaAbierto: false
     property int energiaSel: 0
@@ -1583,7 +1800,7 @@ ShellRoot {
         { k: "Super + .",                 d: "Captura de una zona al portapapeles" },
         { k: "Super + W",                 d: "Cambiar el fondo (y los colores del sistema)" },
         { k: "Super + V",                 d: "Abrir VS Code" },
-        { k: "Super + C",                 d: "Abrir Claude Desktop" },
+        { k: "Super + C",                 d: "Menú de IA: Claude, Antigravity, Codex, Hermes, Ollama" },
         { k: "Super + clic izq. y arrastrar", d: "Mover la ventana" },
         { k: "Super + clic der. y arrastrar", d: "Cambiar el tamaño de la ventana" },
         { k: "Super + rueda del ratón",   d: "Cambiar de escritorio" },

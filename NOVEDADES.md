@@ -3,9 +3,15 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-20.03 · Menú de IA con Super + C
+Super + C abre un menú solo con herramientas de IA: Claude Desktop y Claude en terminal, Antigravity, Codex, Hermes Desktop y Ollama. Las que no tengas instaladas salen apagadas.
+
+## 2026-11-20.02 · Wi-Fi más completo
+En el panel de Wi-Fi ahora puedes desconectar, olvidar redes (también las guardadas que están fuera de alcance), conectar a una red oculta y escribir la contraseña nueva si una red guardada la cambió. Cada acción avisa si falla.
+
 ## 2026-11-20.01 · Hermes Desktop, app de Ollama y limpieza
 Al actualizar, Miarch desinstala paquetes que ya no recomienda (ahora, la ventana de Hermes WebUI, que no era la app oficial de Hermes) y la nube avisa si hay alguno pendiente.
-Nuevo: Hermes Desktop (la app oficial) y una app de escritorio para Ollama (Alpaka) se instalan al actualizar.
+Nuevo: Hermes Desktop (la app oficial) se instala al actualizar. Ollama no tiene app oficial para Linux (solo terminal y servicio), así que Miarch no instala clientes de terceros.
 
 ## 2026-11-19.13 · Skill para tu agente de IA
 Si usas Claude Code, Codex o Antigravity, Miarch le instala una skill que le enseña a instalar y configurar cosas en tu sistema

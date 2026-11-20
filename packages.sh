@@ -61,7 +61,6 @@ AUR_PAQUETES=(
     claude-code
     claude-desktop
     antigravity-cli
-    alpaka-desktop-bin           # app de escritorio para Ollama (Tauri, ligera; no existe una oficial para Linux)
     protonup-qt                  # instala y actualiza Proton-GE con clics (mejor compatibilidad de juegos de Windows)
 )
 
@@ -100,6 +99,7 @@ JUEGOS=(
 OBSOLETOS=(
     hermes-webui-desktop-bin       # era solo una ventana de un servidor WebUI, no la app oficial de Hermes
     hermes-webui-desktop-appimage
+    alpaka-desktop-bin             # cliente de terceros de Ollama: Ollama no tiene app oficial para Linux (solo CLI y servicio)
 )
 ETAPAS=$(( 9 + ${#AUR_PAQUETES[@]} ))
 [ "${1:-}" = "--etapas" ] && { echo "$ETAPAS"; exit 0; }
