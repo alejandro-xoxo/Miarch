@@ -310,7 +310,8 @@ ShellRoot {
     }
     Timer { interval: 1200000; running: true; repeat: true; triggeredOnStart: true; onTriggered: pActualiz.running = true }
 
-    // Cambios nuevos de Miarch en GitHub: se revisan una vez al encender el sistema (y se reintenta si aún no hay internet).
+    // Pendientes de Miarch (lo mismo que revisa miarch-update): commits nuevos en GitHub + configuraciones sin aplicar + paquetes que
+    // faltan. Se revisa una vez al encender el sistema (y se reintenta si aún no hay internet).
     // El clic en la nube abre miarch-update, que los baja y los aplica.
     property int cambiosRepo: 0
     property int _intentosRepo: 0
@@ -320,14 +321,19 @@ ShellRoot {
         command: ["sh", "-c", "d=\"${MIARCH_DIR:-$HOME/Miarch}\"; [ -d \"$d/.git\" ] || { echo 0; exit; }; " +
                   "git -C \"$d\" fetch -q origin 2>/dev/null || { echo x; exit; }; " +
                   "u=$(git -C \"$d\" rev-parse -q --verify '@{u}' 2>/dev/null || echo \"origin/$(git -C \"$d\" rev-parse --abbrev-ref HEAD)\"); " +
-                  "git -C \"$d\" rev-list --count \"HEAD..$u\" 2>/dev/null || echo 0"]
+                  "n=$(git -C \"$d\" rev-list --count \"HEAD..$u\" 2>/dev/null || echo 0); " +
+                  // configuraciones del repo aún sin aplicar en este equipo (miarch-update guarda el commit que aplicó)
+                  "c=0; [ \"$(cat \"$HOME/.cache/miarch/configs-aplicadas\" 2>/dev/null)\" != \"$(git -C \"$d\" rev-parse HEAD 2>/dev/null)\" ] && c=1; " +
+                  // paquetes de Miarch que faltan en este equipo
+                  "f=0; grep -q -- --faltantes \"$d/packages.sh\" 2>/dev/null && f=$(bash \"$d/packages.sh\" --faltantes 2>/dev/null | grep -c .); " +
+                  "echo $((n + c + f))"]
         stdout: StdioCollector {
             onStreamFinished: {
                 const t = text.trim()
                 if (t === "x") { if (root._intentosRepo < 5) tReintentoRepo.restart(); return }   // sin internet todavía
                 const n = parseInt(t) || 0
                 if (n > 0 && root.cambiosRepo === 0)
-                    Quickshell.execDetached(["sh", "-c", "command -v notify-send >/dev/null && notify-send -a Miarch 'Miarch tiene una actualización' 'Haz clic en la nube de la barra para aplicarla.'"])
+                    Quickshell.execDetached(["sh", "-c", "command -v notify-send >/dev/null && notify-send -a Miarch 'Miarch tiene novedades' 'Haz clic en la nube de la barra para revisarlas y aplicarlas.'"])
                 root.cambiosRepo = n
             }
         }
