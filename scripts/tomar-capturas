@@ -17,7 +17,7 @@ W="$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")/Wallpapers"
 FONDO_OSCURO="${FONDO_OSCURO:-$W/a_man_sitting_in_a_chair.png}"
 FONDO_CLARO="${FONDO_CLARO:-$W/a_woman_with_long_hair_wearing_sunglasses.png}"
 
-for c in qs grim hyprctl awww python3; do
+for c in qs grim hyprctl awww python3 notify-send; do
     command -v "$c" >/dev/null || { echo "[ERROR] Falta $c"; exit 1; }
 done
 python3 -I -c "import PIL" 2>/dev/null || { echo "[ERROR] Falta python-pillow"; exit 1; }
@@ -73,6 +73,8 @@ matar_clase() {   # cierra las ventanas de una clase (por PID, nunca por nombre)
 }
 restaurar() {
     player_off
+    qs -c miarch ipc call ia close >/dev/null 2>&1 || true
+    qs -c miarch ipc call notif cerrar >/dev/null 2>&1 || true
     qs -p "$REPO/config/greeter" kill >/dev/null 2>&1
     [ -n "$ORIG_WALL" ] && [ -f "$ORIG_WALL" ] && { "$HOME/.local/bin/wallpaper.sh" "$ORIG_WALL" >/dev/null 2>&1; sleep 3; }
     qs_restart A=1
@@ -103,6 +105,15 @@ for pg in apariencia accesibilidad energia; do
     qs -c miarch ipc call settings page "$pg"; sleep 3; shot "ajustes-$pg"
 done
 qs -c miarch ipc call settings close; sleep 1
+
+# Menú de IA
+qs -c miarch ipc call ia open; sleep 2.5; shot menu-ia; qs -c miarch ipc call ia close; sleep 1
+
+# Notificación de ejemplo
+notify-send -a "Miarch" "Actualizaciones disponibles" "Hay 3 paquetes listos para actualizar en el sistema."; sleep 1.5; shot notificaciones; qs -c miarch ipc call notif cerrar >/dev/null 2>&1 || true; sleep 1
+
+# Barra de volumen (OSD)
+esperar_calma; qs -c miarch ipc call osd mostrar 60 "60%" 0; sleep 0.3; shot volumen rapido; sleep 1.5
 
 setfondo "$FONDO_CLARO"
 shot escritorio-claro
