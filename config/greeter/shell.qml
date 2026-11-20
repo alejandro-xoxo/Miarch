@@ -102,7 +102,7 @@ ShellRoot {
     }
     NumberAnimation {
         id: animApertura
-        target: root; property: "apertura"; from: 0; to: 1; duration: 3600
+        target: root; property: "apertura"; from: 0; to: 1; duration: 5600
         onFinished: {
             if (root.prueba) { Qt.quit(); return }
             // shell de login: así se carga tu entorno (~/.zprofile, PATH) como en un inicio normal
@@ -145,7 +145,7 @@ ShellRoot {
                 Component.onCompleted: { forceActiveFocus(); entrada = 1 }
                 property real entrada: 0
                 Behavior on entrada { NumberAnimation { duration: 1500; easing.type: Easing.OutQuint } }
-                // Secuencia de cine (3,6 s): p = progreso 0..1
+                // Secuencia de cine (5,6 s): p = progreso 0..1
                 readonly property real p: root.apertura
                 function suave(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x) }
                 readonly property real abre: suave((p - 0.80) / 0.20)             // llega el fondo nítido
@@ -211,7 +211,7 @@ ShellRoot {
                         anchors.horizontalCenter: parent.horizontalCenter
                         text: "MIARCH"
                         color: root.arena
-                        font { family: root.fuente; pixelSize: pantalla.height * 0.085; weight: Font.Thin
+                        font { family: root.fuente; pixelSize: pantalla.height * 0.085; weight: Font.Normal
                                letterSpacing: pantalla.height * (0.012 + 0.03 * pantalla.suave((pantalla.p - 0.32) / 0.5)) }
                     }
                     Text {
@@ -227,7 +227,7 @@ ShellRoot {
                         text: "by alejandro-xoxo"
                         color: root.arena
                         opacity: 0.7 * pantalla.suave((pantalla.p - 0.46) / 0.12)
-                        font { family: root.fuente; pixelSize: pantalla.height * 0.02; weight: Font.Light; letterSpacing: 5 }
+                        font { family: root.fuente; pixelSize: pantalla.height * 0.02; weight: Font.Normal; letterSpacing: 5 }
                     }
                 }
                 Item {   // destello anamórfico
@@ -239,7 +239,7 @@ ShellRoot {
                         x: (parent.width - width) / 2; y: parent.height / 2 - height / 2
                         gradient: Gradient { orientation: Gradient.Vertical
                             GradientStop { position: 0; color: "transparent" }
-                            GradientStop { position: 0.5; color: Qt.alpha("#ffe9c8", 0.22) }
+                            GradientStop { position: 0.5; color: Qt.alpha("#ffe9c8", 0.10) }
                             GradientStop { position: 1; color: "transparent" } }
                     }
                     Rectangle {
@@ -255,7 +255,7 @@ ShellRoot {
                     anchors.fill: parent
                     color: "#fff3e0"
                     visible: opacity > 0
-                    opacity: 0.62 * pantalla.suave((pantalla.p - 0.76) / 0.12) * (1 - pantalla.suave((pantalla.p - 0.90) / 0.10))
+                    opacity: 0.22 * pantalla.suave((pantalla.p - 0.76) / 0.12) * (1 - pantalla.suave((pantalla.p - 0.90) / 0.10))
                 }
                 Repeater {   // barras de cine
                     model: [ true, false ]
