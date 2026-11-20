@@ -536,6 +536,91 @@ ShellRoot {
     property string btMensaje: ""
     readonly property string wifiBin: Quickshell.env("HOME") + "/.local/bin/miarch-wifi"
 
+    // ---- Pantallas (vía miarch-pantallas) ----
+    readonly property string pantallasBin: Quickshell.env("HOME") + "/.local/bin/miarch-pantallas"
+    property var pantallasLista: []
+    property string pantallaSeleccionada: ""
+    property string pantallasMensaje: ""
+    property bool pantallasOcupado: false
+    property string _pantallasJson: ""
+
+    Process {
+        id: pPantallasLista
+        command: [root.pantallasBin, "list"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const d = JSON.parse(text)
+                    if (d.ok && d.monitores) {
+                        const j = JSON.stringify(d.monitores)
+                        if (j !== root._pantallasJson) {
+                            root._pantallasJson = j
+                            root.pantallasLista = d.monitores
+                            let princ = d.monitores.find(m => m.es_principal)
+                            if (root.pantallaSeleccionada === "" || !d.monitores.some(m => m.nombre === root.pantallaSeleccionada)) {
+                                root.pantallaSeleccionada = princ ? princ.nombre : (d.monitores.length > 0 ? d.monitores[0].nombre : "")
+                            }
+                        }
+                    }
+                } catch (e) {}
+            }
+        }
+    }
+
+    Process {
+        id: pPantallasAccion
+        property string accion: ""
+        stdout: StdioCollector {
+            onStreamFinished: {
+                root.pantallasOcupado = false
+                try {
+                    const d = JSON.parse(text)
+                    root.pantallasMensaje = d.msg || (d.ok ? "Operación completada" : "Error al aplicar cambio")
+                } catch (e) {
+                    root.pantallasMensaje = "Error al ejecutar la acción"
+                }
+                pPantallasLista.running = true
+            }
+        }
+    }
+
+    function pantallasAccion(accion, arg1, arg2) {
+        if (pPantallasAccion.running) return
+        root.pantallasOcupado = true
+        root.pantallasMensaje = ""
+        pPantallasAccion.accion = accion
+        let cmd = [root.pantallasBin, accion]
+        if (arg1 !== undefined && arg1 !== "") cmd.push(arg1)
+        if (arg2 !== undefined && arg2 !== "") cmd.push(arg2)
+        pPantallasAccion.command = cmd
+        pPantallasAccion.running = true
+    }
+
+    Timer {
+        id: tPantallasRefresco
+        interval: 3500; repeat: true; triggeredOnStart: true
+        running: root.ajustesAbierto && root.ajustesPagina === "pantallas"
+        onTriggered: {
+            if (!pPantallasLista.running && !pPantallasAccion.running) pPantallasLista.running = true
+        }
+    }
+
+    // Identificar pantallas
+    property bool pantallasIdentificando: false
+    Timer {
+        id: tIdentificarPantallas
+        interval: 3000
+        repeat: false
+        onTriggered: root.pantallasIdentificando = false
+    }
+    IpcHandler {
+        target: "pantallas"
+        function identificar(): void {
+            root.pantallasIdentificando = true
+            tIdentificarPantallas.restart()
+        }
+    }
+
     function abrirConexiones(modo) {
         if (root.conexionesAbierto && root.conexionesModo === modo) { root.conexionesAbierto = false; return }
         root.conexionesModo = modo
@@ -1260,6 +1345,7 @@ ShellRoot {
         if (!pInfo.running) pInfo.running = true
         if (!pMonitores.running) pMonitores.running = true
         if (!pFondos.running) pFondos.running = true
+        if (!pPantallasLista.running && !pPantallasAccion.running) pPantallasLista.running = true
     }
 
     // Audio: hay que "seguir" los nodos para poder leer su volumen
@@ -1358,6 +1444,7 @@ ShellRoot {
                                 model: [
                                     { id: "red",           t: "Red",              i: "" },
                                     { id: "sonido",        t: "Sonido",           i: "" },
+                                    { id: "pantallas",     t: "Pantallas",        i: "󰍹" },
                                     { id: "pantalla",      t: "Pantalla",         i: "" },
                                     { id: "apariencia",    t: "Apariencia",       i: "" },
                                     { id: "entrada",       t: "Teclado y ratón",  i: "" },
@@ -1483,6 +1570,182 @@ ShellRoot {
                                     encendido: Pipewire.defaultAudioSource && Pipewire.defaultAudioSource.audio ? !Pipewire.defaultAudioSource.audio.muted : true
                                     onAlternar: if (Pipewire.defaultAudioSource && Pipewire.defaultAudioSource.audio) Pipewire.defaultAudioSource.audio.muted = !Pipewire.defaultAudioSource.audio.muted
                                 }
+                            }
+                        }
+
+                        // ═══ PANTALLAS ═══
+                        Pagina {
+                            visible: root.ajustesPagina === "pantallas"
+                            Titulo { texto: "Pantallas" }
+
+                            Rectangle {
+                                id: areaDibujo
+                                width: parent.width
+                                height: 210
+                                radius: 16
+                                color: Qt.alpha(root.arena, 0.04)
+                                border.width: 1
+                                border.color: Qt.alpha(root.arena, 0.1)
+
+                                readonly property var mons: root.pantallasLista
+                                readonly property real totalAnchoLog: {
+                                    let s = 0
+                                    for (let i = 0; i < mons.length; i++) s += (mons[i].ancho_logico || 1920)
+                                    return Math.max(1, s)
+                                }
+                                readonly property real maxAltoLog: {
+                                    let m = 0
+                                    for (let i = 0; i < mons.length; i++) m = Math.max(m, (mons[i].alto_logico || 1080))
+                                    return Math.max(1, m)
+                                }
+                                readonly property real factorEscala: {
+                                    let dispW = areaDibujo.width - 48 - Math.max(0, mons.length - 1) * 16
+                                    let dispH = areaDibujo.height - 48
+                                    return Math.min(dispW / totalAnchoLog, dispH / maxAltoLog)
+                                }
+
+                                Row {
+                                    anchors.centerIn: parent
+                                    spacing: 16
+
+                                    Repeater {
+                                        model: areaDibujo.mons
+                                        Rectangle {
+                                            required property var modelData
+                                            readonly property bool seleccionado: root.pantallaSeleccionada === modelData.nombre
+                                            readonly property real wLog: modelData.ancho_logico || 1920
+                                            readonly property real hLog: modelData.alto_logico || 1080
+
+                                            width: Math.max(150, Math.round(wLog * areaDibujo.factorEscala))
+                                            height: Math.max(90, Math.round(hLog * areaDibujo.factorEscala))
+                                            radius: 12
+                                            color: seleccionado ? Qt.alpha(root.terracota, 0.16) : (mza.containsMouse ? Qt.alpha(root.arena, 0.1) : Qt.alpha(root.arena, 0.05))
+                                            border.width: seleccionado ? 2 : 1
+                                            border.color: seleccionado ? root.terracota : Qt.alpha(root.arena, 0.25)
+
+                                            Behavior on color { ColorAnimation { duration: 150 } }
+
+                                            Column {
+                                                anchors.centerIn: parent
+                                                spacing: 4
+                                                width: parent.width - 16
+
+                                                Row {
+                                                    anchors.horizontalCenter: parent.horizontalCenter
+                                                    spacing: 6
+
+                                                    Text {
+                                                        text: modelData.nombre || ""
+                                                        color: root.arena
+                                                        font { family: root.fuente; pixelSize: 14 * root.esc; weight: Font.Bold }
+                                                    }
+
+                                                    Rectangle {
+                                                        visible: !!modelData.es_principal
+                                                        anchors.verticalCenter: parent.verticalCenter
+                                                        width: txtPrinc.implicitWidth + 10
+                                                        height: 18
+                                                        radius: 9
+                                                        color: root.terracota
+                                                        Text {
+                                                            id: txtPrinc
+                                                            anchors.centerIn: parent
+                                                            text: "Principal"
+                                                            color: root.fondo
+                                                            font { family: root.fuente; pixelSize: 10 * root.esc; weight: Font.Bold }
+                                                        }
+                                                    }
+                                                }
+
+                                                Text {
+                                                    anchors.horizontalCenter: parent.horizontalCenter
+                                                    width: parent.width
+                                                    horizontalAlignment: Text.AlignHCenter
+                                                    elide: Text.ElideRight
+                                                    text: modelData.marca_modelo || ""
+                                                    color: Qt.alpha(root.arena, 0.75)
+                                                    font { family: root.fuente; pixelSize: 11 * root.esc }
+                                                }
+
+                                                Text {
+                                                    anchors.horizontalCenter: parent.horizontalCenter
+                                                    text: (modelData.resolucion || "") + (modelData.escala && modelData.escala !== 1 ? (" (" + Math.round(wLog) + "×" + Math.round(hLog) + ")") : "")
+                                                    color: Qt.alpha(root.arena, 0.5)
+                                                    font { family: root.fuente; pixelSize: 11 * root.esc }
+                                                }
+                                            }
+
+                                            MouseArea {
+                                                id: mza
+                                                anchors.fill: parent
+                                                hoverEnabled: true
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: root.pantallaSeleccionada = modelData.nombre
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Text {
+                                    visible: areaDibujo.mons.length === 0
+                                    anchors.centerIn: parent
+                                    text: "Cargando pantallas…"
+                                    color: Qt.alpha(root.arena, 0.4)
+                                    font { family: root.fuente; pixelSize: 13 * root.esc }
+                                }
+                            }
+
+                            Row {
+                                spacing: 12
+                                readonly property var monSel: {
+                                    for (let i = 0; i < root.pantallasLista.length; i++) {
+                                        if (root.pantallasLista[i].nombre === root.pantallaSeleccionada) return root.pantallasLista[i]
+                                    }
+                                    return null
+                                }
+
+                                Opcion {
+                                    texto: "Intercambiar de lado"
+                                    opacity: root.pantallasLista.length >= 2 && !root.pantallasOcupado ? 1.0 : 0.4
+                                    onClic: {
+                                        if (root.pantallasLista.length >= 2 && !root.pantallasOcupado) {
+                                            root.pantallasAccion("swap")
+                                        }
+                                    }
+                                }
+
+                                Opcion {
+                                    texto: "Hacer principal"
+                                    opacity: root.pantallaSeleccionada !== "" && monSel && !monSel.es_principal && !root.pantallasOcupado ? 1.0 : 0.4
+                                    onClic: {
+                                        if (root.pantallaSeleccionada !== "" && !root.pantallasOcupado) {
+                                            root.pantallasAccion("principal", root.pantallaSeleccionada)
+                                        }
+                                    }
+                                }
+
+                                Opcion {
+                                    texto: "Identificar pantallas"
+                                    opacity: !root.pantallasOcupado ? 1.0 : 0.4
+                                    onClic: {
+                                        if (!root.pantallasOcupado) {
+                                            root.pantallasAccion("identificar")
+                                        }
+                                    }
+                                }
+                            }
+
+                            Text {
+                                text: "Si tus pantallas están al revés, pulsa Intercambiar de lado."
+                                color: Qt.alpha(root.arena, 0.6)
+                                font { family: root.fuente; pixelSize: 12 * root.esc }
+                            }
+
+                            Text {
+                                visible: root.pantallasMensaje !== ""
+                                text: root.pantallasMensaje
+                                color: root.terracota
+                                font { family: root.fuente; pixelSize: 12 * root.esc; weight: Font.Medium }
                             }
                         }
 
@@ -2007,6 +2270,54 @@ ShellRoot {
                                 color: Qt.alpha(root.terracota, hovN.hovered ? 0.8 : 0.45)
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    // ── Ventana para identificar pantallas ──
+    Variants {
+        model: Quickshell.screens
+
+        PanelWindow {
+            required property var modelData
+            screen: modelData
+            visible: root.pantallasIdentificando
+            anchors { top: true; bottom: true; left: true; right: true }
+            color: "transparent"
+            mask: Region {}
+            exclusionMode: ExclusionMode.Ignore
+            WlrLayershell.layer: WlrLayer.Overlay
+            WlrLayershell.namespace: "miarch-identificar-pantallas"
+            WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+
+            Rectangle {
+                anchors.centerIn: parent
+                width: Math.max(340, colId.implicitWidth + 80)
+                height: 140
+                radius: 20
+                color: Qt.alpha(root.fondo, 0.92)
+                border.width: 2
+                border.color: root.terracota
+
+                Column {
+                    id: colId
+                    anchors.centerIn: parent
+                    spacing: 8
+
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: modelData.name || ""
+                        color: root.arena
+                        font { family: root.fuente; pixelSize: 36 * root.esc; weight: Font.Bold }
+                    }
+
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: (modelData.width && modelData.height) ? (modelData.width + "×" + modelData.height) : ""
+                        color: Qt.alpha(root.arena, 0.7)
+                        font { family: root.fuente; pixelSize: 18 * root.esc }
                     }
                 }
             }
