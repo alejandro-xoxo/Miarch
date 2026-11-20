@@ -3,6 +3,9 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-20.18 · Aplicaciones Electron y XWayland nítidas
+Las aplicaciones de Electron y Chromium (VS Code, Claude Desktop, ChatGPT, Antigravity) ya no se ven borrosas ni pixeladas en pantallas con escala: ahora corren en Wayland nativo con flags dedicados y las que usen XWayland aprovechan el escalado nítido con `force_zero_scaling`.
+
 ## 2026-11-20.17 · Steam y juegos opcionales
 Steam y las herramientas de juego ahora son opcionales: al instalar con `setup.sh` se pregunta si se desean instalar, y en cualquier momento se pueden omitir con `touch ~/.config/miarch/sin-juegos`, evitando la instalación de Steam, multilib y controladores adicionales.
 

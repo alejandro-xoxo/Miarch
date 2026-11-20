@@ -166,7 +166,25 @@ copy_config "$CONFIG_DIR/kitty"             "$HOME/.config/kitty"
 copy_config "$CONFIG_DIR/nvim"              "$HOME/.config/nvim"
 copy_config "$CONFIG_DIR/quickshell/miarch" "$HOME/.config/quickshell/miarch"
 copy_config "$DOTFILES_DIR/home/.zshrc"     "$HOME/.zshrc"
-install -Dm644 "$CONFIG_DIR/chrome/chrome-flags.conf" "$HOME/.config/chrome-flags.conf"
+
+# Flags para Chrome y aplicaciones Electron (Wayland nativo, texto nítido en pantallas con escala)
+# Si el usuario modificó algún archivo a mano, se hace copia de seguridad para no perder sus cambios
+copy_flags() {
+    local src="$1" dest="$2"
+    [ -f "$src" ] || { ui_aviso "$src no existe, se omite"; return 0; }
+    if [ -f "$dest" ]; then
+        if ! cmp -s "$src" "$dest"; then
+            backup "$dest"
+            install -Dm644 "$src" "$dest"
+        fi
+    else
+        install -Dm644 "$src" "$dest"
+    fi
+}
+copy_flags "$CONFIG_DIR/chrome/chrome-flags.conf"                 "$HOME/.config/chrome-flags.conf"
+copy_flags "$CONFIG_DIR/vscode/code-flags.conf"                   "$HOME/.config/code-flags.conf"
+copy_flags "$CONFIG_DIR/claude-desktop/claude-desktop-flags.conf" "$HOME/.config/claude-desktop-flags.conf"
+copy_flags "$CONFIG_DIR/electron/electron-flags.conf"             "$HOME/.config/electron-flags.conf"
 
 # =========================
 # VS CODE: la terminal necesita la fuente con íconos (sin ella el prompt y el logo se deforman)
