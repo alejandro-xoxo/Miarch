@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Miarch · copia las configuraciones y scripts del repo a tu $HOME. Se puede ejecutar varias veces.
 set -euo pipefail
 set -E

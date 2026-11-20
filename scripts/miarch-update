@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Miarch · actualizador semiautomático. Lo abre el botón de actualizaciones (la nube) de la barra.
 #   1. REVISA primero, sin descargar ni instalar nada: cambios nuevos de Miarch en GitHub, paquetes de Miarch que
 #      faltan en este equipo y actualizaciones del sistema (repos oficiales y AUR).

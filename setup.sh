@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Miarch · instalación completa desde un Arch mínimo: paquetes + configuraciones.
 # Uso:  ./setup.sh      (usuario normal con sudo; pide la contraseña una sola vez)
 set -euo pipefail

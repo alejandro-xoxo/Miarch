@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: Apache-2.0
 -- Miarch · Hyprland mínimo, SOLO para la pantalla de inicio de sesión (greetd).
 -- Arranca Quickshell con el greeter y, cuando este termina, cierra Hyprland para que greetd abra tu sesión.
 hl.monitor({ output = "", mode = "preferred", position = "auto", scale = "auto" })
