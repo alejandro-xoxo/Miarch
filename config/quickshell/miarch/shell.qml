@@ -2693,6 +2693,14 @@ ShellRoot {
                         opacity: 0.85
                         font { family: root.fuente; pixelSize: candado.height * 0.016; weight: Font.Medium; letterSpacing: 9 }
                     }
+                    Text {   // firma: aparece un poco después del título
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        topPadding: candado.height * 0.03
+                        text: "by alejandro-xoxo"
+                        color: root.arena
+                        opacity: 0.7 * candado.suave((candado.p - 0.56) / 0.12)
+                        font { family: root.fuente; pixelSize: candado.height * 0.02; weight: Font.Light; letterSpacing: 5 }
+                    }
                 }
                 // Destello anamórfico: una línea de luz horizontal que cruza la pantalla en el golpe del sonido
                 Item {
