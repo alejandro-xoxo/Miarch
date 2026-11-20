@@ -172,7 +172,14 @@ si "Se va a: $(unir "${PLAN[@]}"). ¿Continuar? (pide tu contraseña si hace fal
 # etapas reales = las tareas elegidas (la barra del total muestra solo lo que de verdad se hará)
 UI_ACTUAL=0
 UI_TOTAL=$(( HACER_MIARCH * 2 + HACER_PAQ + HACER_SIS + HACER_GREET ))
-{ [ "$HACER_PAQ" = 1 ] || [ "$HACER_SIS" = 1 ] || [ "$HACER_GREET" = 1 ]; } && { sudo -v || { ui_error "Sin permiso de administrador: no se instala nada."; fin 1; }; }
+if [ "$HACER_PAQ" = 1 ] || [ "$HACER_SIS" = 1 ] || [ "$HACER_GREET" = 1 ]; then
+    sudo -v || { ui_error "Sin permiso de administrador: no se instala nada."; fin 1; }
+    # La contraseña de sudo caduca a los pocos minutos y compilar apps tarda más: se renueva mientras dure la actualización.
+    # Sin esto, un paso posterior se quedaría esperando la contraseña, invisible bajo el indicador de progreso.
+    ( while true; do sudo -n true 2>/dev/null; sleep 45; kill -0 "$$" 2>/dev/null || exit; done ) &
+    SUDO_KEEPALIVE=$!
+    trap 'kill "$SUDO_KEEPALIVE" 2>/dev/null' EXIT
+fi
 
 # =====================================================================================================
 # 2) HACER solo lo que hace falta

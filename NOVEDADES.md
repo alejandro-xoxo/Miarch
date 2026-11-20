@@ -3,6 +3,9 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-20.13 · Actualizador más robusto
+El actualizador ya no se llena de avisos cuando un instalador (como el de Hermes) imprime caracteres raros, mantiene viva la contraseña de administrador mientras compila apps largas y corta el instalador de Hermes si pasa media hora sin terminar. También se cerró un fallo del bloqueo: si te autenticabas y se volvía a bloquear durante la animación, se podía desbloquear sin contraseña.
+
 ## 2026-11-20.12 · Barra de volumen sencilla
 El volumen ya no usa una notificación (se quedaba pegada): ahora sale una barra pequeña abajo, sin animación, que se actualiza al pulsar y se va sola al segundo.
 

@@ -288,7 +288,7 @@ if [ -x "$HOME/.local/bin/hermes" ] || command -v hermes >/dev/null 2>&1; then
 else
     HERMES_SH="$(mktemp -d)/install.sh"
     if curl -fsSL --max-time 60 -o "$HERMES_SH" https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh; then
-        ui_ejecutar "Instalando Hermes Desktop (compila la app: tarda)" bash "$HERMES_SH" --non-interactive --include-desktop \
+        ui_ejecutar "Instalando Hermes Desktop (compila la app: tarda)" timeout 1800 bash "$HERMES_SH" --non-interactive --include-desktop \
             || ui_aviso "No se pudo instalar Hermes Desktop. Reintenta con:  curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash -s -- --include-desktop"
     else
         ui_aviso "No se pudo descargar el instalador de Hermes (¿sin internet?). Se reintentará al actualizar."
