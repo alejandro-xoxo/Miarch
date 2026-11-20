@@ -1563,12 +1563,12 @@ ShellRoot {
     property int energiaSel: 0
     property int energiaConfirmar: -1
     readonly property var energiaOpciones: [
-        { t: "Bloquear",      g: "", c: false, l: "b", d: "Bloquea la pantalla; pide la contraseña para volver", cmd: ["qs", "-c", "miarch", "ipc", "call", "lock", "lock"] },
+        { t: "Bloquear",      g: "", c: false, cmd: ["qs", "-c", "miarch", "ipc", "call", "lock", "lock"] },
         // al suspender se bloquea primero: al despertar pide la contraseña
-        { t: "Suspender",     g: "", c: false, l: "s", d: "Duerme el equipo; al despertar pide la contraseña", cmd: ["sh", "-c", "qs -c miarch ipc call lock lock; sleep 1; systemctl suspend"] },
-        { t: "Apagar",        g: "", c: true, l: "a", d: "Cierra todo y apaga el equipo",  cmd: ["systemctl", "poweroff"] },
-        { t: "Reiniciar",     g: "", c: true, l: "r", d: "Cierra todo y vuelve a encender el equipo",  cmd: ["systemctl", "reboot"] },
-        { t: "Cerrar sesión", g: "", c: true, l: "c", d: "Cierra el escritorio y todas las apps",  cmd: ["hyprctl", "dispatch", "hl.dsp.exit()"] }
+        { t: "Suspender",     g: "", c: false, cmd: ["sh", "-c", "qs -c miarch ipc call lock lock; sleep 1; systemctl suspend"] },
+        { t: "Cerrar sesión", g: "", c: true,  cmd: ["hyprctl", "dispatch", "hl.dsp.exit()"] },
+        { t: "Reiniciar",     g: "", c: true,  cmd: ["systemctl", "reboot"] },
+        { t: "Apagar",        g: "", c: true,  cmd: ["systemctl", "poweroff"] }
     ]
     // las opciones que cierran todo piden una segunda pulsación (Enter o clic) para confirmar
     function energiaEjecutar(i) {
@@ -1616,8 +1616,6 @@ ShellRoot {
                     else if (event.key === Qt.Key_Down || event.key === Qt.Key_Tab) { root.energiaSel = Math.min(root.energiaSel + 1, root.energiaOpciones.length - 1); root.energiaConfirmar = -1 }
                     else if (event.key === Qt.Key_Up || event.key === Qt.Key_Backtab) { root.energiaSel = Math.max(root.energiaSel - 1, 0); root.energiaConfirmar = -1 }
                     else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) root.energiaEjecutar(root.energiaSel)
-                    else if (event.text.length === 1 && root.energiaOpciones.some(o => o.l === event.text.toLowerCase()))
-                        root.energiaEjecutar(root.energiaOpciones.findIndex(o => o.l === event.text.toLowerCase()))
                     else return
                     event.accepted = true
                 }
@@ -1646,7 +1644,7 @@ ShellRoot {
                             required property int index
                             readonly property bool sel: root.energiaSel === index
                             readonly property bool pideConfirmar: root.energiaConfirmar === index
-                            width: parent.width; height: 76 * root.esc
+                            width: parent.width; height: 64
                             Rectangle {   // marca de la opción elegida
                                 width: 3; height: parent.height - 18; radius: 1.5
                                 anchors.verticalCenter: parent.verticalCenter
@@ -1662,34 +1660,12 @@ ShellRoot {
                                 font { family: root.fuente; pixelSize: 26 * root.esc }
                                 Behavior on color { ColorAnimation { duration: 150 } }
                             }
-                            Column {
+                            Text {
                                 x: 78; anchors.verticalCenter: parent.verticalCenter
-                                width: parent.width - 78 - 60
-                                spacing: 4
-                                Text {
-                                    text: modelData.t
-                                    color: root.arena
-                                    opacity: sel ? 1 : 0.55
-                                    font { family: root.fuente; pixelSize: 28 * root.esc; weight: Font.Light }
-                                }
-                                Text {   // qué hace; al pedir confirmación se convierte en el aviso
-                                    width: parent.width; elide: Text.ElideRight
-                                    text: pideConfirmar ? "¿SEGURO?   ENTER PARA CONFIRMAR" : modelData.d
-                                    color: pideConfirmar ? root.terracota : Qt.alpha(root.arena, sel ? 0.65 : 0.4)
-                                    font { family: root.fuente; pixelSize: 12 * root.esc; weight: pideConfirmar ? Font.Medium : Font.Light; letterSpacing: pideConfirmar ? 3 : 0 }
-                                }
-                            }
-                            Rectangle {   // letra para elegir la opción directamente
-                                anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
-                                width: 28 * root.esc; height: width; radius: 7
-                                color: "transparent"
-                                border.width: 1; border.color: Qt.alpha(sel ? root.terracota : root.arena, sel ? 0.8 : 0.25)
-                                Text {
-                                    anchors.centerIn: parent
-                                    text: modelData.l.toUpperCase()
-                                    color: sel ? root.terracota : Qt.alpha(root.arena, 0.5)
-                                    font { family: root.fuente; pixelSize: 13 * root.esc; weight: Font.Medium }
-                                }
+                                text: pideConfirmar ? "¿SEGURO?   ENTER PARA CONFIRMAR" : modelData.t
+                                color: pideConfirmar ? root.terracota : root.arena
+                                opacity: sel ? 1 : 0.5
+                                font { family: root.fuente; pixelSize: (pideConfirmar ? 18 : 30) * root.esc; weight: pideConfirmar ? Font.Medium : Font.Light; letterSpacing: pideConfirmar ? 4 : 0 }
                             }
                             MouseArea {
                                 anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
@@ -1699,7 +1675,7 @@ ShellRoot {
                         }
                     }
                     Text {
-                        text: "↑ ↓ o la letra    ENTER aceptar    ESC cerrar"
+                        text: "↑ ↓ elegir    ENTER aceptar    ESC cerrar"
                         color: Qt.alpha(root.arena, 0.3)
                         font { family: root.fuente; pixelSize: 11 * root.esc; weight: Font.Medium; letterSpacing: 3 }
                         topPadding: 22
