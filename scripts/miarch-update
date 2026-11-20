@@ -91,8 +91,9 @@ if [ -n "$MARCA_ANT" ] && git cat-file -e "$MARCA_ANT^{commit}" 2>/dev/null && g
 PAQ_CAMBIA=0; [ "$NUEVOS" -gt 0 ] && ! git diff --quiet HEAD "$UP" -- packages.sh && PAQ_CAMBIA=1
 
 # un packages.sh antiguo no conoce --faltantes y ejecutaría la instalación completa: solo se pregunta si lo soporta
-FALTAN=()
+FALTAN=(); SOBRAN=()
 grep -q -- '--faltantes' ./packages.sh 2>/dev/null && mapfile -t FALTAN < <(bash ./packages.sh --faltantes 2>/dev/null)
+grep -q -- '--sobran' ./packages.sh 2>/dev/null && mapfile -t SOBRAN < <(bash ./packages.sh --sobran 2>/dev/null)
 ui_info "Consultando las actualizaciones del sistema..."
 mapfile -t SIS_OFI < <(command -v checkupdates >/dev/null && checkupdates 2>/dev/null)
 mapfile -t SIS_AUR < <(command -v yay >/dev/null && timeout 40 yay -Qua 2>/dev/null)
@@ -123,6 +124,7 @@ if [ "$CFG_PENDIENTES" = 1 ] && [ "$NUEVOS" -eq 0 ]; then
         [ "${#AREAS[@]}" -gt 0 ] && ui_info "Cambia en tu equipo: $(unir "${AREAS[@]}")"
     fi
 fi
+[ "${#SOBRAN[@]}" -gt 0 ] && ui_info "Se quitará lo que Miarch ya no usa: $(unir "${SOBRAN[@]}")"
 if [ "${#FALTAN[@]}" -gt 0 ]; then
     ui_info "Paquetes de Miarch que faltan en este equipo (${#FALTAN[@]}): $(unir "${FALTAN[@]}")"
 elif [ "$PAQ_CAMBIA" = 1 ]; then
@@ -141,7 +143,7 @@ fi
 # qué se haría
 HACER_MIARCH=0; { [ "$NUEVOS" -gt 0 ] && [ "$SUCIO" = 0 ]; } && HACER_MIARCH=1
 { [ "$FORZAR" = 1 ] || [ "$CFG_PENDIENTES" = 1 ]; } && HACER_MIARCH=1
-HACER_PAQ=0; { [ "${#FALTAN[@]}" -gt 0 ] || [ "$PAQ_CAMBIA" = 1 ]; } && HACER_PAQ=1
+HACER_PAQ=0; { [ "${#FALTAN[@]}" -gt 0 ] || [ "${#SOBRAN[@]}" -gt 0 ] || [ "$PAQ_CAMBIA" = 1 ]; } && HACER_PAQ=1
 HACER_SIS=0; [ "$N_SIS" -gt 0 ] && HACER_SIS=1
 if [ "$HACER_MIARCH$HACER_PAQ$HACER_SIS" = "000" ]; then
     echo
@@ -212,9 +214,10 @@ fi
 
 if [ "$HACER_PAQ" = 1 ]; then
     # la lista pudo cambiar con la descarga: se vuelve a mirar qué falta de verdad
-    FALTAN=()
+    FALTAN=(); SOBRAN=()
     grep -q -- '--faltantes' ./packages.sh 2>/dev/null && mapfile -t FALTAN < <(bash ./packages.sh --faltantes 2>/dev/null)
-    if [ "${#FALTAN[@]}" -gt 0 ]; then
+    grep -q -- '--sobran' ./packages.sh 2>/dev/null && mapfile -t SOBRAN < <(bash ./packages.sh --sobran 2>/dev/null)
+    if [ "${#FALTAN[@]}" -gt 0 ] || [ "${#SOBRAN[@]}" -gt 0 ]; then
         ui_etapa "Instalando ${#FALTAN[@]} $(plural "${#FALTAN[@]}" 'paquete que faltaba' 'paquetes que faltaban'): $(unir "${FALTAN[@]}")"
         MIARCH_UI_COMPACTO=1 bash ./packages.sh || ui_aviso "packages.sh terminó con errores (arriba). Se volverá a ofrecer la próxima vez."
     else
