@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Miarch · toma las capturas del README en docs/screenshots (reducidas a 1280 px, JPEG).
 # Úsalo DENTRO de Hyprland con el escritorio miarch en marcha. Tarda ~2 minutos y al terminar
 # deja todo como estaba (fondo, escritorio y escritorio de trabajo).

@@ -242,7 +242,5 @@ Atajos básicos: `Super + Enter` terminal · `Super + Espacio` lanzador · `Supe
 
 ## 📄 Licencia
 
-Este proyecto está bajo la licencia Apache-2.0. Consulta los archivos [LICENSE](LICENSE) y [NOTICE](NOTICE) para más detalles.
-
-Los logotipos y marcas comerciales de terceros (incluidos Anthropic, OpenAI, Google, Nous Research y Ollama) son propiedad de sus respectivos dueños y no están cubiertos por esta licencia.
+Este proyecto está bajo la licencia GPL-3.0-or-later (consulta los archivos [LICENSE](LICENSE) y [NOTICE](NOTICE)): puedes usarlo, estudiarlo, modificarlo y compartirlo libremente. Si distribuyes una versión modificada, debe seguir siendo código abierto bajo esta misma licencia, proporcionando el código fuente y conservando el aviso de copyright y el nombre del autor. Los logotipos y marcas comerciales de terceros (incluidos Anthropic, OpenAI, Google, Nous Research y Ollama) son propiedad de sus respectivos dueños y no están cubiertos por esta licencia.
 

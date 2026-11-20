@@ -1,9 +1,10 @@
 Miarch
 Copyright 2026 alejandro-xoxo
 
-This product includes software developed by alejandro-xoxo.
+Este proyecto se distribuye bajo la GNU General Public License v3.0 o posterior (ver LICENSE).
 
-This license applies to all versions of the project, including those published before the LICENSE file existed.
+Las copias del proyecto obtenidas antes de este cambio de licencia (publicadas bajo Apache License 2.0) siguen bajo esa licencia; las copias obtenidas después, incluida la versión v1.0.1 actual, se distribuyen bajo GPL-3.0-or-later.
 
-This product includes icons from LobeHub Icons (https://github.com/lobehub/lobe-icons) for config/quickshell/miarch/icons/,
-licensed under the MIT License.
+Este producto incluye iconos de LobeHub Icons (https://github.com/lobehub/lobe-icons) para config/quickshell/miarch/icons/, bajo licencia MIT.
+
+Los logotipos y marcas comerciales de terceros (incluidos Anthropic, OpenAI, Google, Nous Research y Ollama) son marcas de sus respectivos dueños y no quedan cubiertos por esta licencia.
