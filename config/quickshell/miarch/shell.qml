@@ -113,7 +113,7 @@ ShellRoot {
                 // Todo el bloque entra deslizando con rebote
                 property real entrada: 0
                 Component.onCompleted: entrada = 1
-                Behavior on entrada { NumberAnimation { duration: 1400; easing.type: Easing.OutBack; easing.overshoot: 1.4 } }
+                Behavior on entrada { NumberAnimation { duration: 1400; easing.type: Easing.OutQuint } }
 
                 Column {
                     id: bloque
@@ -1973,7 +1973,7 @@ ShellRoot {
                     target: root
                     function onIaAbiertoChanged() { if (root.iaAbierto) { iaVista.entrada = 0; iaVista.entrada = 1; iaVista.forceActiveFocus() } }
                 }
-                Behavior on entrada { NumberAnimation { duration: 600; easing.type: Easing.OutBack; easing.overshoot: 1.4 } }
+                Behavior on entrada { NumberAnimation { duration: 750; easing.type: Easing.OutQuint } }
                 Keys.onPressed: event => {
                     if (event.key === Qt.Key_Escape || event.key === Qt.Key_Left || event.key === Qt.Key_Backspace) {
                         if (event.key === Qt.Key_Escape || root.iaNivel === 1) root.iaAtras()
@@ -2174,7 +2174,7 @@ ShellRoot {
                     target: root
                     function onEnergiaAbiertoChanged() { if (root.energiaAbierto) { en.entrada = 0; en.entrada = 1; en.forceActiveFocus() } }
                 }
-                Behavior on entrada { NumberAnimation { duration: 600; easing.type: Easing.OutBack; easing.overshoot: 1.4 } }
+                Behavior on entrada { NumberAnimation { duration: 750; easing.type: Easing.OutQuint } }
 
                 Keys.onPressed: event => {
                     if (event.key === Qt.Key_Escape) { if (root.energiaConfirmar >= 0) root.energiaConfirmar = -1; else root.energiaAbierto = false }
@@ -2334,7 +2334,7 @@ ShellRoot {
                     }
                     function onConsultaLanzChanged() { if (campo.text !== root.consultaLanz) campo.text = root.consultaLanz }
                 }
-                Behavior on entrada { NumberAnimation { duration: 700; easing.type: Easing.OutBack; easing.overshoot: 1.6 } }
+                Behavior on entrada { NumberAnimation { duration: 700; easing.type: Easing.OutQuint } }
 
                 // velo del color del fondo; clic fuera = cerrar
                 Rectangle {
@@ -2382,7 +2382,7 @@ ShellRoot {
                         height: 2; radius: 1
                         color: root.terracota
                         width: parent.width * Math.min(1, 0.12 + campo.text.length * 0.07)
-                        Behavior on width { NumberAnimation { duration: 450; easing.type: Easing.OutBack; easing.overshoot: 1.4 } }
+                        Behavior on width { NumberAnimation { duration: 450; easing.type: Easing.OutQuint } }
                         Behavior on color { ColorAnimation { duration: 800 } }
                     }
                     Item { width: 1; height: 8 }
@@ -2397,7 +2397,7 @@ ShellRoot {
                             color: root.terracota
                             y: lz.seleccion * 58 + 12
                             visible: lz.resultados.length > 0
-                            Behavior on y { NumberAnimation { duration: 380; easing.type: Easing.OutBack; easing.overshoot: 1.8 } }
+                            Behavior on y { NumberAnimation { duration: 380; easing.type: Easing.OutQuint } }
                             Behavior on color { ColorAnimation { duration: 800 } }
                         }
                         Repeater {
@@ -2409,7 +2409,7 @@ ShellRoot {
                                 visible: app !== null
                                 y: index * 58; width: parent.width; height: 58
                                 x: sel ? 14 : 0
-                                Behavior on x { NumberAnimation { duration: 380; easing.type: Easing.OutBack; easing.overshoot: 2 } }
+                                Behavior on x { NumberAnimation { duration: 380; easing.type: Easing.OutQuint } }
 
                                 readonly property string rutaIcono: app ? Quickshell.iconPath(app.icon, true) : ""
                                 IconImage {
@@ -2552,10 +2552,10 @@ ShellRoot {
 
                 property real entrada: 0
                 Component.onCompleted: { forceActiveFocus(); entrada = 1 }
-                Behavior on entrada { NumberAnimation { duration: 1200; easing.type: Easing.OutBack; easing.overshoot: 1.3 } }
+                Behavior on entrada { NumberAnimation { duration: 1500; easing.type: Easing.OutQuint } }
 
                 // 0 durante el log y 0→1 cuando la pantalla se despeja (último 38 % de la secuencia)
-                readonly property real abre: Math.max(0, Math.min(1, (root.apertura - 0.62) / 0.38))
+                readonly property real abre: { const x = Math.max(0, Math.min(1, (root.apertura - 0.55) / 0.45)); return x * x * (3 - 2 * x) }   // suavizada
 
                 Keys.onPressed: event => {
                     if (root.verificando || root.accesoOk) return
@@ -2580,87 +2580,19 @@ ShellRoot {
                     anchors.fill: parent
                     source: imgFondo
                     blurEnabled: true; blurMax: 64; blur: 1.0
+                    opacity: 1 - candado.abre; scale: 1 + candado.abre * 0.10
                     autoPaddingEnabled: false
                 }
-                Rectangle { anchors.fill: parent; color: root.fondo; opacity: 0.58 }
-
-                // Marcos de esquina (estilo panel de control): al abrir se alejan y salen de la pantalla
-                Repeater {
-                    model: [ { sx: -1, sy: -1 }, { sx: 1, sy: -1 }, { sx: -1, sy: 1 }, { sx: 1, sy: 1 } ]
-                    Item {
-                        required property var modelData
-                        readonly property real m: candado.height * 0.04 - candado.abre * candado.height * 0.08
-                        readonly property real brazo: candado.height * 0.045
-                        x: modelData.sx < 0 ? m : candado.width - m - brazo
-                        y: modelData.sy < 0 ? m : candado.height - m - brazo
-                        width: brazo; height: brazo
-                        opacity: Math.min(1, candado.entrada) * 0.45 * (1 - candado.abre)
-                        Rectangle { y: modelData.sy < 0 ? 0 : parent.height - 1; width: parent.width; height: 1; color: root.arena }
-                        Rectangle { x: modelData.sx < 0 ? 0 : parent.width - 1; width: 1; height: parent.height; color: root.arena }
-                    }
-                }
-                Text {
-                    x: candado.height * 0.04 + candado.height * 0.012
-                    y: candado.height - candado.height * 0.04 - candado.height * 0.045 - implicitHeight - candado.height * 0.01
-                    opacity: Math.min(1, candado.entrada) * 0.5 * (1 - candado.abre)
-                    text: "MIARCH  ·  SESIÓN BLOQUEADA"
-                    color: root.arena
-                    font { family: root.fuente; pixelSize: candado.height * 0.013; weight: Font.Medium; letterSpacing: 5 }
-                }
-
-                // ── Animación de desbloqueo ──
-                // 1) Mientras sale el log: barrido de escaneo de arriba abajo, dos pasadas
-                Rectangle {
-                    visible: root.accesoOk && root.apertura < 0.62
-                    width: parent.width; height: 2
-                    y: candado.height * ((root.apertura / 0.62 * 2) % 1)
-                    gradient: Gradient { orientation: Gradient.Vertical
-                        GradientStop { position: 0; color: "transparent" }
-                        GradientStop { position: 0.5; color: Qt.alpha(root.terracota, 0.55) }
-                        GradientStop { position: 1; color: "transparent" } }
-                }
-                // 2) Apertura: el fondo nítido se abre como una franja desde el centro (con dos líneas en sus bordes)
-                Item {
-                    id: franja
+                Rectangle { anchors.fill: parent; color: root.fondo; opacity: 0.58 * (1 - candado.abre) }
+                // Al desbloquear el fondo se acerca y se enfoca, como si entraras en él: llega a escala 1, igual que el escritorio
+                Image {
+                    anchors.fill: parent
+                    source: imgFondo.source
+                    fillMode: Image.PreserveAspectCrop
+                    asynchronous: true
                     visible: candado.abre > 0
-                    width: parent.width
-                    height: candado.height * Math.pow(candado.abre, 0.8)
-                    anchors.verticalCenter: parent.verticalCenter
-                    clip: true
-                    Image {
-                        x: 0; y: -(candado.height - franja.height) / 2
-                        width: candado.width; height: candado.height
-                        source: imgFondo.source
-                        fillMode: Image.PreserveAspectCrop
-                        asynchronous: true
-                    }
-                    Rectangle { anchors.fill: parent; color: root.fondo; opacity: 0.12 * (1 - candado.abre) }
-                }
-                Repeater {
-                    model: [ -1, 1 ]
-                    Rectangle {
-                        required property int modelData
-                        visible: candado.abre > 0 && candado.abre < 1
-                        width: parent.width * Math.min(1, candado.abre * 5); height: 1
-                        x: (parent.width - width) / 2
-                        y: candado.height / 2 + modelData * franja.height / 2
-                        color: root.terracota
-                        opacity: 0.9 * (1 - candado.abre)
-                    }
-                }
-                // 3) Ondas de choque desde el centro, al ritmo del golpe del sonido
-                Repeater {
-                    model: [ 1.0, 0.82 ]
-                    Rectangle {
-                        required property real modelData
-                        readonly property real p: Math.pow(candado.abre, modelData)
-                        visible: candado.abre > 0 && candado.abre < 1
-                        width: candado.height * (0.08 + 1.9 * p); height: width; radius: width / 2
-                        x: (candado.width - width) / 2; y: (candado.height - height) / 2
-                        color: "transparent"
-                        border.width: 2; border.color: root.terracota
-                        opacity: 0.55 * (1 - p)
-                    }
+                    opacity: candado.abre
+                    scale: 1.18 - 0.18 * (1 - Math.pow(1 - candado.abre, 3))
                 }
 
                 // Música (solo si hay un reproductor): tarjeta grande a la derecha del reloj
@@ -2824,28 +2756,7 @@ ShellRoot {
                         font { family: root.fuente; pixelSize: Math.round(candado.height * 0.024); weight: Font.Medium; letterSpacing: 6 }
                         leftPadding: 6
                     }
-                    Item {   // regla con marcas y un destello que la recorre despacio
-                        id: regla
-                        width: candado.width * 0.34; height: candado.height * 0.03
-                        Rectangle { y: parent.height / 2; width: parent.width; height: 1; color: Qt.alpha(root.arena, 0.2) }
-                        Repeater {
-                            model: Math.floor(regla.width / 14)
-                            Rectangle {
-                                required property int index
-                                x: index * 14; y: parent.height / 2 - (index % 5 === 0 ? 5 : 2); width: 1; height: index % 5 === 0 ? 5 : 2
-                                color: Qt.alpha(root.arena, index % 5 === 0 ? 0.4 : 0.22)
-                            }
-                        }
-                        Rectangle {
-                            id: destello
-                            y: parent.height / 2 - 1; width: 70; height: 2; radius: 1
-                            gradient: Gradient { orientation: Gradient.Horizontal
-                                GradientStop { position: 0; color: "transparent" }
-                                GradientStop { position: 1; color: root.terracota } }
-                            NumberAnimation on x { from: -70; to: regla.width; duration: 4200; loops: Animation.Infinite; running: sesion.locked && !root.accesoOk }
-                        }
-                    }
-                    Item { width: 1; height: candado.height * 0.03 }
+                    Item { width: 1; height: candado.height * 0.05 }
                     Row {
                         spacing: candado.height * 0.045
                         leftPadding: 4
@@ -2855,10 +2766,10 @@ ShellRoot {
                     }
                     Item { width: 1; height: candado.height * 0.07 }
 
-                    // Contraseña: línea fina con celdas que aparecen al teclear y un cursor que parpadea
+                    // Contraseña: puntos que aparecen con rebote
                     Item {
                         id: zonaClave
-                        width: candado.width * 0.4; height: candado.height * 0.1
+                        width: candado.width * 0.4; height: candado.height * 0.08
                         property real temblor: 0
                         Connections {
                             target: root
@@ -2874,64 +2785,26 @@ ShellRoot {
                         }
                         Column {
                             x: zonaClave.temblor
-                            width: parent.width
-                            spacing: 12
-                            Row {   // estado: rombo + texto
-                                spacing: 10
-                                leftPadding: 2
-                                Rectangle {
-                                    width: 6; height: 6; rotation: 45
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    color: root.accesoOk ? root.salvia : (root.errorClave ? "#b8665f" : root.terracota)
-                                    SequentialAnimation on opacity {
-                                        running: sesion.locked && !root.accesoOk && !root.errorClave && !root.verificando
-                                        loops: Animation.Infinite
-                                        NumberAnimation { to: 0.25; duration: 900 }
-                                        NumberAnimation { to: 1; duration: 900 }
-                                    }
-                                }
-                                Text {
-                                    text: root.accesoOk ? "ACCESO CONCEDIDO" : root.verificando ? "VERIFICANDO…" : root.errorClave ? "ACCESO DENEGADO" : "AUTENTICACIÓN"
-                                    color: root.accesoOk ? root.salvia : (root.errorClave ? "#b8665f" : Qt.alpha(root.arena, 0.55))
-                                    font { family: root.fuente; pixelSize: candado.height * 0.016; weight: Font.Medium; letterSpacing: 5 }
-                                }
+                            spacing: 14
+                            Text {
+                                text: root.verificando ? "VERIFICANDO…" : root.errorClave ? "CONTRASEÑA INCORRECTA" : (root.clave.length ? "" : "ESCRIBE TU CONTRASEÑA")
+                                color: root.errorClave ? root.terracota : Qt.alpha(root.arena, 0.55)
+                                font { family: root.fuente; pixelSize: candado.height * 0.018; weight: Font.Medium; letterSpacing: 5 }
+                                leftPadding: 4
+                                height: root.clave.length ? 0 : implicitHeight
                             }
-                            Item {   // celdas de lo que llevas escrito
-                                width: parent.width; height: candado.height * 0.034
-                                Row {
-                                    spacing: 7
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    leftPadding: 2
-                                    Repeater {
-                                        model: root.clave.length
-                                        Rectangle {
-                                            width: 3; height: candado.height * 0.026; radius: 1.5
-                                            color: root.errorClave ? "#b8665f" : root.arena
-                                            opacity: 0; scale: 0.4
-                                            Component.onCompleted: { opacity = 1; scale = 1 }
-                                            Behavior on opacity { NumberAnimation { duration: 180 } }
-                                            Behavior on scale { NumberAnimation { duration: 260; easing.type: Easing.OutBack; easing.overshoot: 2.5 } }
-                                        }
+                            Row {
+                                spacing: 12
+                                leftPadding: 4
+                                Repeater {
+                                    model: root.clave.length
+                                    Rectangle {
+                                        width: candado.height * 0.016; height: width; radius: width / 2
+                                        color: root.errorClave ? root.terracota : root.arena
+                                        scale: 0
+                                        Component.onCompleted: scale = 1
+                                        Behavior on scale { NumberAnimation { duration: 320; easing.type: Easing.OutBack; easing.overshoot: 2.5 } }
                                     }
-                                    Rectangle {   // cursor
-                                        visible: !root.accesoOk && !root.verificando
-                                        width: 3; height: candado.height * 0.026; color: root.terracota
-                                        SequentialAnimation on opacity {
-                                            running: sesion.locked && !root.accesoOk
-                                            loops: Animation.Infinite
-                                            NumberAnimation { to: 0.1; duration: 550 }
-                                            NumberAnimation { to: 1; duration: 550 }
-                                        }
-                                    }
-                                }
-                            }
-                            Rectangle {   // línea base que se llena con lo escrito, y del todo al acertar
-                                width: parent.width; height: 1; color: Qt.alpha(root.arena, 0.22)
-                                Rectangle {
-                                    height: 1
-                                    width: root.accesoOk ? parent.width : Math.min(parent.width, root.clave.length * 10)
-                                    color: root.errorClave ? "#b8665f" : (root.accesoOk ? root.salvia : root.terracota)
-                                    Behavior on width { NumberAnimation { duration: root.accesoOk ? 450 : 150; easing.type: Easing.OutCubic } }
                                 }
                             }
                         }

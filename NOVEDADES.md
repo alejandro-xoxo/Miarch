@@ -9,8 +9,8 @@ Al actualizar (y en una instalación nueva), Miarch instala la pantalla de inici
 ## 2026-11-20.09 · Sonido al subir y bajar el volumen
 Las teclas de volumen ahora hacen un pitido corto y muestran una barra de volumen que se actualiza sin apilarse. En silencio no suena.
 
-## 2026-11-20.08 · Pantalla de bloqueo más futurista, con sonido
-La pantalla de bloqueo gana marcos de esquina, una regla con un destello que la recorre y una contraseña en celdas con cursor ("AUTENTICACIÓN", "ACCESO CONCEDIDO" o "ACCESO DENEGADO"). Al acertar suena un sonido épico (subida de tensión, golpe grave y acorde con eco), mientras un barrido de escaneo recorre la pantalla y el log real del sistema se teclea; después el fondo nítido se abre como una franja desde el centro, con ondas de choque, antes de entrar al escritorio (unos 2,3 segundos).
+## 2026-11-20.08 · Entrar a Miarch como si cruzaras una puerta
+Al desbloquear suena un sonido épico (subida de tensión, golpe grave y acorde con eco) mientras se teclea el log real del sistema; después el fondo se acerca y se enfoca hasta quedar igual que tu escritorio. La pantalla de inicio de sesión hace lo mismo al entrar. Las animaciones grandes ya no rebotan: usan curvas suaves.
 
 ## 2026-11-20.06 · Notificaciones nuevas y menú de IA solo con apps
 Las notificaciones ahora las dibuja el propio escritorio: salen deslizándose arriba a la derecha, con el estilo de los paneles, icono, nombre de la app, barra de progreso (volumen, brillo), botones de acción y una cuenta atrás que se pausa si pones el ratón encima. Las críticas se marcan en rojo mate y no se van solas. Clic cierra una, clic derecho las cierra todas. Miarch quita `dunst`, que ya no hace falta.

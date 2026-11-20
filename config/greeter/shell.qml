@@ -57,6 +57,9 @@ ShellRoot {
     property string mensaje: ""
     property bool listoParaClave: root.prueba     // en real, true cuando greetd pide la contraseña
     signal sacudir()
+    property bool accesoOk: false                    // contraseña correcta: el fondo se acerca y se enfoca, y luego arranca la sesión
+    property real apertura: 0
+    property bool lanzar: false                      // greetd ya está listo para lanzar la sesión
 
     function iniciarSesion() {
         root.clave = ""; root.hayError = false; root.verificando = false
@@ -83,7 +86,7 @@ ShellRoot {
         root.hayError = false; root.mensaje = ""
         if (root.prueba) {
             root.verificando = true
-            if (c === "prueba") { root.mensaje = "Acceso concedido (modo de prueba)"; cierre.restart() }
+            if (c === "prueba") { root.mensaje = "Acceso concedido (modo de prueba)"; root.entrar() }
             else root.fallar("CONTRASEÑA INCORRECTA")
             return
         }
@@ -91,6 +94,21 @@ ShellRoot {
         Greetd.respond(c)
     }
 
+    // Entrada: al acertar, el fondo se acerca y se enfoca (llega a escala 1, igual que el escritorio) y entonces arranca la sesión
+    function entrar() {
+        if (root.accesoOk) return
+        root.accesoOk = true; root.apertura = 0
+        animApertura.restart()
+    }
+    NumberAnimation {
+        id: animApertura
+        target: root; property: "apertura"; from: 0; to: 1; duration: 1900; easing.type: Easing.InOutSine
+        onFinished: {
+            if (root.prueba) { Qt.quit(); return }
+            // shell de login: así se carga tu entorno (~/.zprofile, PATH) como en un inicio normal
+            Greetd.launch(["zsh", "-lc", "exec start-hyprland"], [], true)
+        }
+    }
     Timer { id: reintento; interval: 1300; onTriggered: { if (!root.prueba) Greetd.cancelSession(); root.iniciarSesion() } }
     Timer { id: cierre; interval: 1400; onTriggered: Qt.quit() }
     Timer { running: root.prueba; interval: 14000; onTriggered: Qt.quit() }   // seguro: el modo de prueba se cierra solo
@@ -102,10 +120,7 @@ ShellRoot {
             else { root.mensaje = message; Greetd.respond("") }
         }
         function onAuthFailure(message) { root.fallar("CONTRASEÑA INCORRECTA") }
-        function onReadyToLaunch() {
-            // shell de login: así se carga tu entorno (~/.zprofile, PATH) como en un inicio normal
-            Greetd.launch(["zsh", "-lc", "exec start-hyprland"], [], true)
-        }
+        function onReadyToLaunch() { root.entrar() }
         function onError(error, message) { root.fallar(message || "ERROR DE INICIO DE SESIÓN") }
     }
 
@@ -129,12 +144,13 @@ ShellRoot {
                 focus: true
                 Component.onCompleted: { forceActiveFocus(); entrada = 1 }
                 property real entrada: 0
-                Behavior on entrada { NumberAnimation { duration: 1100; easing.type: Easing.OutCubic } }
+                Behavior on entrada { NumberAnimation { duration: 1500; easing.type: Easing.OutQuint } }
+                readonly property real abre: { const x = root.apertura; return x * x * (3 - 2 * x) }   // suavizada
 
                 Keys.onPressed: event => {
                     if (event.key === Qt.Key_Escape) { if (root.prueba) Qt.quit(); else root.clave = ""; return }
                     if (event.key === Qt.Key_Tab) { root.cambiarUsuario(1); return }
-                    if (root.verificando) return
+                    if (root.verificando || root.accesoOk) return
                     if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) { root.enviar(); return }
                     if (event.key === Qt.Key_Backspace) root.clave = root.clave.slice(0, -1)
                     else if (event.text.length > 0 && event.text.charCodeAt(0) >= 32) root.clave += event.text
@@ -157,14 +173,24 @@ ShellRoot {
                     visible: img.status === Image.Ready
                     blurEnabled: true; blurMax: 64; blur: 1.0
                     autoPaddingEnabled: false
+                    opacity: 1 - pantalla.abre; scale: 1 + pantalla.abre * 0.10
                 }
-                Rectangle { anchors.fill: parent; color: root.fondo; opacity: img.status === Image.Ready ? 0.58 : 0 }
+                Rectangle { anchors.fill: parent; color: root.fondo; opacity: (img.status === Image.Ready ? 0.58 : 0) * (1 - pantalla.abre) }
+                Image {   // el fondo nítido llega desde más cerca y se asienta en escala 1
+                    anchors.fill: parent
+                    source: img.source
+                    fillMode: Image.PreserveAspectCrop
+                    asynchronous: true
+                    visible: pantalla.abre > 0
+                    opacity: pantalla.abre
+                    scale: 1.18 - 0.18 * (1 - Math.pow(1 - pantalla.abre, 3))
+                }
 
                 Column {
                     x: parent.width * 0.05
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.verticalCenterOffset: (1 - pantalla.entrada) * 40
-                    opacity: pantalla.entrada
+                    opacity: pantalla.entrada * (1 - Math.min(1, root.apertura * 4))
                     spacing: 6
 
                     Text {
@@ -229,7 +255,7 @@ ShellRoot {
                             x: zonaClave.temblor
                             spacing: 14
                             Text {
-                                text: root.verificando ? "VERIFICANDO…"
+                                text: root.accesoOk ? "ACCESO CONCEDIDO" : root.verificando ? "VERIFICANDO…"
                                     : root.mensaje !== "" ? root.mensaje
                                     : (!root.listoParaClave ? "ESPERANDO…" : (root.clave.length ? "" : "ESCRIBE TU CONTRASEÑA"))
                                 color: root.hayError ? root.terracota : Qt.alpha(root.arena, 0.55)
@@ -259,7 +285,7 @@ ShellRoot {
                 Row {
                     x: parent.width * 0.05; y: parent.height - height - parent.height * 0.05
                     spacing: 28
-                    opacity: pantalla.entrada
+                    opacity: pantalla.entrada * (1 - Math.min(1, root.apertura * 4))
                     Repeater {
                         model: [ { t: "REINICIAR", c: "reboot" }, { t: "APAGAR", c: "poweroff" } ]
                         Text {
