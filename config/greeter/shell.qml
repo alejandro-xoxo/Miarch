@@ -255,12 +255,6 @@ ShellRoot {
                             GradientStop { position: 1; color: "transparent" } }
                     }
                 }
-                Rectangle {   // luz
-                    anchors.fill: parent
-                    color: "#fff3e0"
-                    visible: opacity > 0
-                    opacity: 0.22 * pantalla.suave((pantalla.p - 0.76) / 0.12) * (1 - pantalla.suave((pantalla.p - 0.90) / 0.10))
-                }
                 Repeater {   // barras de cine
                     model: [ true, false ]
                     Rectangle {

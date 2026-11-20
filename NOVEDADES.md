@@ -3,6 +3,9 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-20.25 · Entrada sin luz blanca y sin la tarjeta de música encima
+Al desbloquear o iniciar sesión se elimina el resplandor blanco que cubría la pantalla, y la tarjeta de música ahora se desvanece de inmediato para no tapar la animación de entrada.
+
 ## 2026-11-20.24 · Emparejamiento Bluetooth robusto
 El panel de Bluetooth ya no deja colgado al servicio ni falla al emparejar dispositivos nuevos: ahora utiliza el script mediador `miarch-bluetooth` con un agente de BlueZ propio (`NoInputNoOutput`), asegurando y conectando el periférico en un solo flujo. Solo se permite un emparejamiento simultáneo, muestra "Emparejando…" mientras dura el proceso, cancela limpiamente si pasan 30 segundos sin respuesta y activa el modo emparejable del adaptador al abrir el panel.
 
