@@ -3,6 +3,9 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-20.24 · Emparejamiento Bluetooth robusto
+El panel de Bluetooth ya no deja colgado al servicio ni falla al emparejar dispositivos nuevos: ahora utiliza el script mediador `miarch-bluetooth` con un agente de BlueZ propio (`NoInputNoOutput`), asegurando y conectando el periférico en un solo flujo. Solo se permite un emparejamiento simultáneo, muestra "Emparejando…" mientras dura el proceso, cancela limpiamente si pasan 30 segundos sin respuesta y activa el modo emparejable del adaptador al abrir el panel.
+
 ## 2026-11-20.23 · Licencia GPL 3.0
 El proyecto pasa a distribuirse bajo la licencia GPL-3.0-or-later. El código sigue siendo completamente abierto para usar y modificar, y las versiones derivadas que se distribuyan deberán mantenerse abiertas bajo esta misma licencia, con el código fuente disponible y conservando el aviso de autoría original.
 

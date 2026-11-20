@@ -15,6 +15,7 @@ flowchart TD
         UPD["scripts/miarch-update"]
         VOL["scripts/miarch-volumen"]
         WIFI["scripts/miarch-wifi"]
+        BT["scripts/miarch-bluetooth"]
         SET["scripts/miarch-set"]
         COL["scripts/miarch-colors"]
         WALL["scripts/wallpaper.sh"]
@@ -25,6 +26,7 @@ flowchart TD
     subgraph System["Servicios y Sistema"]
         WP["WirePlumber (wpctl)"]
         IWD["iwd (iwctl)"]
+        BLUEZ["bluez (bluetoothctl)"]
         GREETD["greetd"]
         AWWW["awww"]
     end
@@ -33,6 +35,8 @@ flowchart TD
     VOL --> WP
     QS -->|JSON IPC| WIFI
     WIFI --> IWD
+    QS -->|JSON IPC| BT
+    BT --> BLUEZ
     QS --> SET
     QS --> INFO
     Bar --> UPD
@@ -54,6 +58,7 @@ flowchart TD
 | `scripts/miarch-colors` | Generación y extracción de paleta de colores mate a partir del fondo de pantalla. Exporta configuraciones a Quickshell (`~/.cache/miarch/colors.json`), kitty, kdeglobals, qt6ct y el greeter (`/var/lib/miarch-greeter`). | `miarch-colors <ruta_imagen>` | `scripts/wallpaper.sh`, `install.sh` y `scripts/miarch-fetch`. |
 | `scripts/miarch-set` | Aplica modificaciones a las variables de configuración del panel y del entorno de escritorio en tiempo de ejecución. | `miarch-set <ajuste> <valor>` (ajustes: `anim`, `blur`, `escala`, `teclado`, `scrollnat`, `tap`, `sens`, `cursor`, `movimiento`, `barra`, `texto`, `contraste`, `gif`, `perfil`, `brillo`) | Panel de Ajustes de Quickshell (Super+Esc) o terminal. |
 | `scripts/miarch-wifi` | Puente entre la interfaz de usuario y el demonio `iwd` (`iwctl`) para gestión de redes inalámbricas con salida en formato JSON. Manejo de contraseñas mediante variable `MIARCH_PASS` y asignación por PTY. | `miarch-wifi <list\|scan\|connect\|connect-hidden\|disconnect\|forget\|power>` | Paneles de conexión de Quickshell. |
+| `scripts/miarch-bluetooth` | Mediador para emparejamiento Bluetooth seguro mediante `bluetoothctl` con agente `NoInputNoOutput`, registro de confianza y conexión automática. Salida estructurada en JSON y registro rotado en `~/.cache/miarch/bluetooth.log`. | `miarch-bluetooth pair <MAC>` | Paneles de conexión de Quickshell. |
 | `scripts/miarch-volumen` | Control de nivel de audio mediante `wpctl`. Reproduce el sonido temático de freedesktop (límite de 110 ms) y emite señal OSD a Quickshell (`qs ipc call osd mostrar`) durante 1.2 segundos. | `miarch-volumen <up\|down\|mute>` | Atajos de teclado en Hyprland (llamado por ruta absoluta `~/.local/bin/miarch-volumen`). |
 | `scripts/miarch-info` | Recopila telemetría y especificaciones de hardware en formato estructurado JSON. | `miarch-info` | Vista del sistema en el panel de configuración de Quickshell. |
 | `scripts/miarch-fetch` | Muestra resumen del sistema mediante `fastfetch`, redimensionando y ajustando la salida al ancho disponible de la ventana de terminal. | `miarch-fetch` | `home/.zshrc` (al abrir una terminal) o a mano. |
