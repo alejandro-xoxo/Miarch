@@ -145,3 +145,4 @@ Revisar el archivo de registro con:
 ```bash
 cat ~/.cache/miarch/instalacion.log
 ```
+- **Hermes Desktop:** Ante cortes de red, comprueba conectividad hasta 4 veces y reintenta la instalación hasta 3 veces antes de posponerla a la próxima actualización.
