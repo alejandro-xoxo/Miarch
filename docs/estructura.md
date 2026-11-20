@@ -26,6 +26,7 @@ Miarch/
 │   ├── miarch-greeter-install
 │   ├── miarch-info
 │   ├── miarch-modo-juego
+│   ├── miarch-pantallas
 │   ├── miarch-set
 │   ├── miarch-steam
 │   ├── miarch-update
@@ -77,7 +78,7 @@ flowchart TD
     ApplyPhase --> GreeterInstall
 
     Hyprland["config/hypr/hyprland.lua"] --> Quickshell["config/quickshell/miarch/shell.qml"]
-    Quickshell --> HelperScripts["scripts/ (miarch-set, miarch-wifi, miarch-bluetooth, miarch-volumen, miarch-info)"]
+    Quickshell --> HelperScripts["scripts/ (miarch-set, miarch-pantallas, miarch-wifi, miarch-bluetooth, miarch-volumen, miarch-info)"]
     
     Wallpaper["scripts/wallpaper.sh"] --> Colors["scripts/miarch-colors"]
     Colors --> CacheColors["~/.cache/miarch/colors.json"]

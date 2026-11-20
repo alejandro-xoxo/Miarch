@@ -29,6 +29,7 @@ Es una copia gestionada por Miarch: se refresca al actualizar, así que no la ed
 | Quieres cambiar | Dónde |
 |---|---|
 | Animaciones, desenfoque, escala, teclado, ratón, cursor, tamaño de texto, contraste, fondos animados, perfil de energía | El panel de **Ajustes** (`Super + Esc`), o `miarch-set`. Se conservan al actualizar |
+| Posición y orden de los monitores | El panel de **Ajustes** (página "Pantallas") o `~/.config/miarch/pantallas.lua`. Guarda una tabla Lua con las coordenadas `{ x = ..., y = ... }` de cada salida y sobrevive a todas las actualizaciones sin modificarse |
 | Un atajo nuevo o una regla de ventana | `personal/hyprland.lua` (usa `SUPER` tal cual) y `hyprctl reload` |
 | La terminal | `personal/kitty.conf` |
 | Alias o variables del shell | `personal/zshrc` |
