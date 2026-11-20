@@ -1551,6 +1551,133 @@ ShellRoot {
         function search(texto: string): void { root.lanzadorAbierto = true; root.consultaLanz = texto }
     }
 
+    // ═════════════════ MENÚ DE ENERGÍA (Super + Shift + Esc) ═════════════════
+    property bool energiaAbierto: false
+    property int energiaSel: 0
+    property int energiaConfirmar: -1
+    readonly property var energiaOpciones: [
+        { t: "Bloquear",      g: "", c: false, cmd: ["qs", "-c", "miarch", "ipc", "call", "lock", "lock"] },
+        // al suspender se bloquea primero: al despertar pide la contraseña
+        { t: "Suspender",     g: "", c: false, cmd: ["sh", "-c", "qs -c miarch ipc call lock lock; sleep 1; systemctl suspend"] },
+        { t: "Cerrar sesión", g: "", c: true,  cmd: ["hyprctl", "dispatch", "hl.dsp.exit()"] },
+        { t: "Reiniciar",     g: "", c: true,  cmd: ["systemctl", "reboot"] },
+        { t: "Apagar",        g: "", c: true,  cmd: ["systemctl", "poweroff"] }
+    ]
+    // las opciones que cierran todo piden una segunda pulsación (Enter o clic) para confirmar
+    function energiaEjecutar(i) {
+        const o = root.energiaOpciones[i]
+        if (o.c && root.energiaConfirmar !== i) { root.energiaSel = i; root.energiaConfirmar = i; return }
+        root.energiaAbierto = false
+        Quickshell.execDetached(o.cmd)
+    }
+    onEnergiaAbiertoChanged: { root.energiaSel = 0; root.energiaConfirmar = -1 }
+    IpcHandler {
+        target: "power"
+        function toggle(): void { root.energiaAbierto = !root.energiaAbierto }
+        function open(): void { root.energiaAbierto = true }
+        function close(): void { root.energiaAbierto = false }
+    }
+
+    Variants {
+        model: Quickshell.screens
+
+        PanelWindow {
+            required property var modelData
+            screen: modelData
+            readonly property bool enEstaPantalla: Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name === modelData.name : modelData === Quickshell.screens[0]
+            visible: root.energiaAbierto && enEstaPantalla
+            anchors { top: true; bottom: true; left: true; right: true }
+            color: "transparent"
+            exclusionMode: ExclusionMode.Ignore
+            WlrLayershell.layer: WlrLayer.Overlay
+            WlrLayershell.namespace: "miarch-energia"
+            WlrLayershell.keyboardFocus: visible ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+
+            Item {
+                id: en
+                anchors.fill: parent
+                focus: true
+                property real entrada: 0
+                Connections {
+                    target: root
+                    function onEnergiaAbiertoChanged() { if (root.energiaAbierto) { en.entrada = 0; en.entrada = 1; en.forceActiveFocus() } }
+                }
+                Behavior on entrada { NumberAnimation { duration: 600; easing.type: Easing.OutBack; easing.overshoot: 1.4 } }
+
+                Keys.onPressed: event => {
+                    if (event.key === Qt.Key_Escape) { if (root.energiaConfirmar >= 0) root.energiaConfirmar = -1; else root.energiaAbierto = false }
+                    else if (event.key === Qt.Key_Down || event.key === Qt.Key_Tab) { root.energiaSel = Math.min(root.energiaSel + 1, root.energiaOpciones.length - 1); root.energiaConfirmar = -1 }
+                    else if (event.key === Qt.Key_Up || event.key === Qt.Key_Backtab) { root.energiaSel = Math.max(root.energiaSel - 1, 0); root.energiaConfirmar = -1 }
+                    else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) root.energiaEjecutar(root.energiaSel)
+                    else return
+                    event.accepted = true
+                }
+
+                // velo del color del fondo; clic fuera = cerrar
+                Rectangle { anchors.fill: parent; color: root.fondo; opacity: Math.min(1, en.entrada) * 0.8 }
+                MouseArea { anchors.fill: parent; onClicked: root.energiaAbierto = false }
+
+                Column {
+                    x: parent.width * 0.5 - width / 2
+                    y: parent.height * 0.5 - height / 2 + (1 - en.entrada) * 40
+                    opacity: Math.min(1, en.entrada)
+                    width: Math.min(parent.width * 0.4, 520)
+                    spacing: 6
+
+                    Text {
+                        text: "ENERGÍA"
+                        color: Qt.alpha(root.arena, 0.3)
+                        font { family: root.fuente; pixelSize: 40 * root.esc; weight: Font.Thin; letterSpacing: 12 }
+                        bottomPadding: 22
+                    }
+                    Repeater {
+                        model: root.energiaOpciones
+                        Item {
+                            required property var modelData
+                            required property int index
+                            readonly property bool sel: root.energiaSel === index
+                            readonly property bool pideConfirmar: root.energiaConfirmar === index
+                            width: parent.width; height: 64
+                            Rectangle {   // marca de la opción elegida
+                                width: 3; height: parent.height - 18; radius: 1.5
+                                anchors.verticalCenter: parent.verticalCenter
+                                color: root.terracota
+                                opacity: sel ? 1 : 0
+                                Behavior on opacity { NumberAnimation { duration: 150 } }
+                            }
+                            Text {
+                                x: 26; anchors.verticalCenter: parent.verticalCenter
+                                text: modelData.g
+                                color: sel ? root.terracota : root.arena
+                                opacity: sel ? 1 : 0.5
+                                font { family: root.fuente; pixelSize: 26 * root.esc }
+                                Behavior on color { ColorAnimation { duration: 150 } }
+                            }
+                            Text {
+                                x: 78; anchors.verticalCenter: parent.verticalCenter
+                                text: pideConfirmar ? "¿SEGURO?   ENTER PARA CONFIRMAR" : modelData.t
+                                color: pideConfirmar ? root.terracota : root.arena
+                                opacity: sel ? 1 : 0.5
+                                font { family: root.fuente; pixelSize: (pideConfirmar ? 18 : 30) * root.esc; weight: pideConfirmar ? Font.Medium : Font.Light; letterSpacing: pideConfirmar ? 4 : 0 }
+                            }
+                            MouseArea {
+                                anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                                onEntered: { if (root.energiaSel !== index) { root.energiaSel = index; root.energiaConfirmar = -1 } }
+                                onClicked: root.energiaEjecutar(index)
+                            }
+                        }
+                    }
+                    Text {
+                        text: "↑ ↓ elegir    ENTER aceptar    ESC cerrar"
+                        color: Qt.alpha(root.arena, 0.3)
+                        font { family: root.fuente; pixelSize: 11 * root.esc; weight: Font.Medium; letterSpacing: 3 }
+                        topPadding: 22
+                    }
+                }
+            }
+        }
+    }
+
     Variants {
         model: Quickshell.screens
 
