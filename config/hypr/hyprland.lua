@@ -505,3 +505,14 @@ hl.window_rule({
     move  = "20 monitor_h-120",
     float = true,
 })
+
+-----------------------------------------------------------------------------
+---- TUS CAMBIOS PERSONALES (no los borra ninguna actualización) ----
+-- Si existe ~/.config/miarch/personal/hyprland.lua se carga aquí, al final: puedes añadir atajos, reglas, variables...
+-- (usa "SUPER" tal cual, no la variable mainMod). Un error de ese archivo sale en: hyprctl configerrors
+-----------------------------------------------------------------------------
+do
+    local personal = os.getenv("HOME") .. "/.config/miarch/personal/hyprland.lua"
+    local f = io.open(personal, "r")
+    if f then f:close(); dofile(personal) end
+end

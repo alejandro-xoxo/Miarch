@@ -110,7 +110,43 @@ for v in gtk-3.0 gtk-4.0; do
         printf '[Settings]\ngtk-application-prefer-dark-theme=1\n' > "$HOME/.config/$v/settings.ini"
     fi
 done
+# los ajustes del panel (animaciones, blur, escala, teclado...) viven en variables de este archivo: se conservan al reaplicar
+AJUSTES_HYPR="$(grep -E '^local (ESCALA|KB|NATURAL|TAP|SENS|CURSOR|MOVIMIENTO|ANIM|BLUR)[[:space:]]*=' "$HOME/.config/hypr/hyprland.lua" 2>/dev/null || true)"
 copy_config "$CONFIG_DIR/hypr"              "$HOME/.config/hypr"
+if [ -n "$AJUSTES_HYPR" ] && [ -f "$HOME/.config/hypr/hyprland.lua" ]; then
+    AJUSTES_HYPR="$AJUSTES_HYPR" python3 -I - "$HOME/.config/hypr/hyprland.lua" <<'PY'
+import os, re, sys
+ruta = sys.argv[1]
+txt = open(ruta, encoding="utf-8").read()
+for ln in os.environ["AJUSTES_HYPR"].splitlines():
+    nombre = re.match(r"local (\w+)", ln).group(1)
+    valor = re.match(r"local \w+\s*=\s*(\"[^\"]*\")", ln)
+    if valor:
+        txt = re.sub(r'(?m)^(local %s\s*=\s*)"[^"]*"' % nombre, lambda m: m.group(1) + valor.group(1), txt)
+open(ruta, "w", encoding="utf-8").write(txt)
+PY
+fi
+# carpeta de cambios personales (fuera de las que se reemplazan): solo se crea lo que falte, nunca se pisa nada
+PERSONAL="$HOME/.config/miarch/personal"
+mkdir -p "$PERSONAL"
+[ -f "$PERSONAL/hyprland.lua" ] || cat > "$PERSONAL/hyprland.lua" <<'EJ'
+-- Tus cambios personales de Hyprland. Se cargan al final de hyprland.lua y NO los borra ninguna actualización.
+-- Usa "SUPER" tal cual. Recarga con: hyprctl reload   · Errores: hyprctl configerrors
+-- Ejemplos (quita los -- del principio para activarlos):
+-- hl.bind("SUPER + G", hl.dsp.exec_cmd("steam"))                        -- un atajo propio: Super+G abre Steam
+-- hl.window_rule({ name = "mi-regla", match = { class = "^mpv$" }, float = true })   -- que mpv abra flotante
+EJ
+[ -f "$PERSONAL/kitty.conf" ] || cat > "$PERSONAL/kitty.conf" <<'EJ'
+# Tus cambios personales de la terminal kitty. Se cargan al final y NO los borra ninguna actualización.
+# Ejemplos (quita el # del principio):
+# font_size 13
+# background_opacity 0.9
+EJ
+[ -f "$PERSONAL/zshrc" ] || cat > "$PERSONAL/zshrc" <<'EJ'
+# Tus cambios personales de Zsh (alias, variables). Se cargan al final y NO los borra ninguna actualización.
+# Ejemplos (quita el # del principio):
+# alias gs="git status"
+EJ
 copy_config "$CONFIG_DIR/kitty"             "$HOME/.config/kitty"
 copy_config "$CONFIG_DIR/nvim"              "$HOME/.config/nvim"
 copy_config "$CONFIG_DIR/quickshell/miarch" "$HOME/.config/quickshell/miarch"

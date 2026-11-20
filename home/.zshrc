@@ -87,3 +87,6 @@ TRAPWINCH() {
 
 # Asegurar que ~/.local/bin esté en el PATH
 export PATH="$HOME/.local/bin:$PATH"
+
+# tus cambios personales (alias, variables...): los conserva cualquier actualización
+[[ -r "$HOME/.config/miarch/personal/zshrc" ]] && source "$HOME/.config/miarch/personal/zshrc"
