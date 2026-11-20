@@ -61,7 +61,7 @@ AUR_PAQUETES=(
     claude-code
     claude-desktop
     antigravity-cli
-    hermes-webui-desktop-bin     # ventana de escritorio de Hermes WebUI (necesita un servidor hermes-webui local o remoto)
+    alpaka-desktop-bin           # app de escritorio para Ollama (Tauri, ligera; no existe una oficial para Linux)
     protonup-qt                  # instala y actualiza Proton-GE con clics (mejor compatibilidad de juegos de Windows)
 )
 
@@ -96,11 +96,22 @@ JUEGOS=(
 )
 
 # setup.sh pregunta cuántas etapas tiene este script para dibujar la barra del total
-ETAPAS=$(( 7 + ${#AUR_PAQUETES[@]} ))
+# Paquetes que Miarch instaló antes y ya no usa: se quitan en cada equipo al actualizar (solo si están instalados)
+OBSOLETOS=(
+    hermes-webui-desktop-bin       # era solo una ventana de un servidor WebUI, no la app oficial de Hermes
+    hermes-webui-desktop-appimage
+)
+ETAPAS=$(( 9 + ${#AUR_PAQUETES[@]} ))
 [ "${1:-}" = "--etapas" ] && { echo "$ETAPAS"; exit 0; }
 # miarch-update pregunta qué paquetes de esta lista aún no están instalados (no instala ni cambia nada)
 if [ "${1:-}" = "--faltantes" ]; then
     for paquete in "${PAQUETES[@]}" "${JUEGOS[@]}" "${AUR_PAQUETES[@]}"; do pacman -Q "$paquete" >/dev/null 2>&1 || echo "$paquete"; done
+    [ -x "$HOME/.local/bin/hermes" ] || command -v hermes >/dev/null 2>&1 || echo "hermes-desktop"
+    exit 0
+fi
+# miarch-update y la nube preguntan qué paquetes obsoletos siguen instalados (no cambia nada)
+if [ "${1:-}" = "--sobran" ]; then
+    for paquete in "${OBSOLETOS[@]}"; do pacman -Q "$paquete" >/dev/null 2>&1 && echo "$paquete"; done
     exit 0
 fi
 
@@ -249,6 +260,13 @@ fi
 
 # Nota de seguridad: --noconfirm instala sin que veas el PKGBUILD de cada paquete.
 # Si prefieres revisarlos, quita --noconfirm (yay te los mostrará uno por uno).
+ui_etapa "Quitando paquetes que Miarch ya no usa"
+mapfile -t SOBRAN < <(for p in "${OBSOLETOS[@]}"; do pacman -Q "$p" >/dev/null 2>&1 && echo "$p"; done)
+if [ "${#SOBRAN[@]}" -gt 0 ]; then
+    ui_ejecutar "Quitando ${SOBRAN[*]}" sudo pacman -Rns --noconfirm "${SOBRAN[@]}" || ui_aviso "No se pudo quitar: ${SOBRAN[*]}"
+else
+    ui_ok "No hay paquetes obsoletos"
+fi
 AUR_FALLIDOS=()
 for paquete in "${AUR_PAQUETES[@]}"; do
     ui_etapa "Instalando $paquete (AUR)"
@@ -257,6 +275,23 @@ done
 if [ "${#AUR_FALLIDOS[@]}" -gt 0 ]; then
     ui_aviso "No se pudieron instalar estos paquetes de AUR: ${AUR_FALLIDOS[*]}"
     ui_info "Reintenta uno con:  yay -S ${AUR_FALLIDOS[0]}   (te mostrará el error completo)"
+fi
+
+# =========================
+# HERMES DESKTOP (app oficial de Nous Research; no está en AUR, se instala con su script, en ~/.hermes)
+# =========================
+ui_etapa "Hermes Desktop (app oficial)"
+if [ -x "$HOME/.local/bin/hermes" ] || command -v hermes >/dev/null 2>&1; then
+    ui_ok "Hermes ya está instalado"
+else
+    HERMES_SH="$(mktemp -d)/install.sh"
+    if curl -fsSL --max-time 60 -o "$HERMES_SH" https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh; then
+        ui_ejecutar "Instalando Hermes Desktop (compila la app: tarda)" bash "$HERMES_SH" --non-interactive --include-desktop \
+            || ui_aviso "No se pudo instalar Hermes Desktop. Reintenta con:  curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash -s -- --include-desktop"
+    else
+        ui_aviso "No se pudo descargar el instalador de Hermes (¿sin internet?). Se reintentará al actualizar."
+    fi
+    rm -rf "$(dirname "$HERMES_SH")"
 fi
 
 # =========================

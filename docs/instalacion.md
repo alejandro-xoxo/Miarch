@@ -65,7 +65,7 @@ cd ~/Miarch && git pull && ./setup.sh
 
 `git pull` solo baja los archivos. Los **paquetes nuevos** los instala `packages.sh` y las **configuraciones** las copia `install.sh`; `setup.sh` ejecuta los dos (pide `sudo` una vez). Si solo cambiaron configuraciones, basta `./install.sh`. Si agregaron un paquete (por ejemplo Hermes) y no te aparece, es porque falta ejecutar `packages.sh`.
 
-Para instalar un solo paquete de AUR sin repetir todo: `yay -S hermes-webui-desktop-bin`.
+Para instalar un solo paquete de AUR sin repetir todo: `yay -S claude-code`.
 
 ## Seguridad
 - **pacman:** repositorios firmados de Arch.
