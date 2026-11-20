@@ -3,6 +3,9 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-20.20 · Apps Electron nítidas de inmediato en Wayland
+ChatGPT (Codex App), Claude Desktop y Antigravity ahora se lanzan nítidas sobre Wayland nativo sin depender de reiniciar sesión: el menú de IA (Super + C) y las sobrescrituras de lanzadores (.desktop) para el menú de apps (Super + Espacio) pasan explícitamente `--ozone-platform=wayland --enable-wayland-ime`. Si ya tenías alguna abierta, solo ciérrala y vuelve a abrirla.
+
 ## 2026-11-20.19 · Reintentos y tolerancia a cortes de red en Hermes Desktop
 La instalación de Hermes Desktop en `packages.sh` ahora aguanta cortes temporales de red: antes de lanzar el instalador comprueba la conectividad con el servidor de assets (hasta 4 intentos con espera de 15 s) y reintenta la instalación hasta 3 veces (con pausas de 20 s), avisando y posponiendo el reintento para la siguiente actualización sin romper el proceso.
 
