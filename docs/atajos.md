@@ -14,7 +14,7 @@
 | `Super + W` | Cambiar wallpaper (y los colores) |
 | `Super + B` | Navegador (Chrome) |
 | `Super + V` | VS Code |
-| `Super + C` | Menú de IA: Claude Desktop y CLI, Antigravity, Codex, Hermes Desktop, Ollama |
+| `Super + C` | Menú de IA: apps de escritorio (Claude Desktop, Codex App, Antigravity, Hermes Desktop) |
 | `Super + E` | Archivos (Dolphin) |
 | `Super + F` | Ventana flotante |
 | `Super + P` · `Super + J` | Pseudo-mosaico · cambiar la división |
