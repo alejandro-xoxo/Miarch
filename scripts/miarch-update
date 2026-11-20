@@ -3,7 +3,7 @@
 #   1. Busca cambios nuevos de Miarch en GitHub y los baja.
 #   2. Aplica las configuraciones y scripts nuevos, conservando tus ajustes (animaciones, blur, escala, teclado...) y tu fondo.
 #   3. Si hay paquetes nuevos, pregunta antes de instalarlos (pide contraseña).
-#   4. Pregunta si actualizas también el sistema (yay -Syu).
+#   4. Pregunta si actualizas también el sistema (yay -Syu, sin más preguntas).
 #   5. Recarga Hyprland y el escritorio.
 # Uso: miarch-update [--forzar]    (--forzar vuelve a aplicar las configuraciones aunque no haya cambios nuevos)
 set -uo pipefail
@@ -18,6 +18,8 @@ si()    { local r; read -rp "$1 [S/n] " r; [[ -z "$r" || "$r" =~ ^[sSyY] ]]; }
 
 [ -d "$REPO/.git" ] || { echo "[ERROR] No encuentro el repositorio de Miarch en $REPO (¿lo clonaste en otra carpeta? usa MIARCH_DIR=carpeta)"; fin 1; }
 cd "$REPO"
+# animación y registro de los pasos largos (si falta, se ejecuta sin animación)
+[ -f "$REPO/lib/ui.sh" ] && source "$REPO/lib/ui.sh"
 
 paso "==> Buscando cambios de Miarch..."
 git fetch -q origin 2>/dev/null || { echo "[ERROR] No hay conexión con GitHub. Revisa el Wi-Fi y vuelve a intentarlo."; fin 1; }
@@ -82,8 +84,17 @@ fi
 
 # --- sistema ---
 paso "==> Actualizaciones del sistema"
-if command -v yay >/dev/null && si "¿Actualizar también el sistema (yay -Syu)?"; then
-    yay -Syu
+if command -v yay >/dev/null && si "¿Actualizar también el sistema (yay -Syu)? Es automático, no hace más preguntas"; then
+    # --noconfirm: sin preguntas técnicas (antes yay se quedaba esperando "Paquetes a excluir" y parecía colgado)
+    if sudo -v; then
+        if declare -F ui_ejecutar >/dev/null; then
+            ui_ejecutar "Actualizando el sistema (yay -Syu)" yay -Syu --noconfirm || echo "[!] La actualización del sistema falló (arriba están las últimas líneas)."
+        else
+            yay -Syu --noconfirm || echo "[!] La actualización del sistema falló."
+        fi
+    else
+        echo "[!] Sin permiso de administrador: se omite la actualización del sistema."
+    fi
 fi
 
 # --- recargar ---
