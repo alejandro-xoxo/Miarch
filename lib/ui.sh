@@ -31,17 +31,24 @@ elif ! locale charmap 2>/dev/null | grep -qi 'utf-\?8'; then UI_NIVEL=0
 elif [ "${TERM:-}" = "linux" ]; then UI_NIVEL=1
 else UI_NIVEL=2; fi
 
-# ---- colores (mate: acento oliva, sin neón) ----
-C_ACENTO=""; C_OK=""; C_ERR=""; C_AVISO=""; C_TENUE=""; C_NEG=""; C_R=""
+# ---- colores: la paleta del portafolio de alejandro-xoxo (morado, lavanda y pasteles sobre azul marino) ----
+#   acento #6f65d6 · lavanda #C4B5FD · correcto menta #A7F3D0 · aviso rosa #FBCFE8 · error rosa fuerte · texto tenue #8892A6
+C_ACENTO=""; C_LAVANDA=""; C_OK=""; C_ERR=""; C_AVISO=""; C_TENUE=""; C_NEG=""; C_R=""
 if [ "$UI_TTY" = 1 ] && [ -z "${NO_COLOR:-}" ] && [ "${TERM:-dumb}" != "dumb" ]; then
     C_R=$'\033[0m'; C_NEG=$'\033[1m'
     case "${COLORTERM:-}:${TERM:-}" in
-        truecolor:*|24bit:*|*:*-direct) C_ACENTO=$'\033[38;2;177;189;109m'; C_OK=$'\033[38;2;126;163;132m'; C_ERR=$'\033[38;2;173;129;132m'; C_AVISO=$'\033[38;2;194;175;139m'; C_TENUE=$'\033[38;2;131;133;122m'
-                       UI_DEGRADE=(113,120,78 130,139,87 146,157,95 161,173,102 172,184,107 177,189,109) ;;
-        *:*256color*)  C_ACENTO=$'\033[38;5;143m'; C_OK=$'\033[38;5;108m'; C_ERR=$'\033[38;5;174m'; C_AVISO=$'\033[38;5;180m'; C_TENUE=$'\033[38;5;245m'
-                       UI_DEGRADE=(101 101 107 107 143 143) ;;
-        *)             C_ACENTO=$'\033[32m'; C_OK=$'\033[32m'; C_ERR=$'\033[31m'; C_AVISO=$'\033[33m'; C_TENUE=$'\033[2m'
-                       UI_DEGRADE=(32 32 32 32 32 32) ;;
+        truecolor:*|24bit:*|*:*-direct)
+            C_ACENTO=$'\033[38;2;111;101;214m'; C_LAVANDA=$'\033[38;2;196;181;253m'; C_OK=$'\033[38;2;167;243;208m'
+            C_ERR=$'\033[38;2;232;128;159m'; C_AVISO=$'\033[38;2;251;207;232m'; C_TENUE=$'\033[38;2;136;146;166m'
+            UI_DEGRADE=(55,48,165 76,70,182 111,101,214 143,130,232 171,157,244 196,181,253) ;;
+        *:*256color*)
+            C_ACENTO=$'\033[38;5;98m'; C_LAVANDA=$'\033[38;5;183m'; C_OK=$'\033[38;5;122m'
+            C_ERR=$'\033[38;5;174m'; C_AVISO=$'\033[38;5;218m'; C_TENUE=$'\033[38;5;103m'
+            UI_DEGRADE=(54 61 98 98 141 183) ;;
+        *)
+            C_ACENTO=$'\033[35m'; C_LAVANDA=$'\033[1;35m'; C_OK=$'\033[32m'
+            C_ERR=$'\033[31m'; C_AVISO=$'\033[33m'; C_TENUE=$'\033[2m'
+            UI_DEGRADE=(35 35 35 35 35 35) ;;
     esac
 fi
 
@@ -88,14 +95,14 @@ ui_banner() {
         if [ -n "$C_ACENTO" ]; then
             case "${COLORTERM:-}" in
                 truecolor|24bit) esc=$'\033[38;2;'"${col//,/;}"'m' ;;
-                *) case "${TERM:-}" in *256color*) esc=$'\033[38;5;'"$col"'m' ;; *) esc=$'\033[32m' ;; esac ;;
+                *) case "${TERM:-}" in *256color*) esc=$'\033[38;5;'"$col"'m' ;; *) esc=$'\033[35m' ;; esac ;;
             esac
         fi
         printf '  %s%s%s\n' "$esc" "${logo[$i]}" "$C_R"
         sleep 0.06
     done
     printf '\n  %s%s%s\n' "$C_TENUE" "Arch Linux + Hyprland   ·   ${ver:-instalador}${sub:+   ·   $sub}" "$C_R"
-    printf '  %s%salejandro-xoxo / Miarch%s   %sgithub.com/alejandro-xoxo/Miarch%s\n\n' "$C_ACENTO" "$C_NEG" "$C_R" "$C_TENUE" "$C_R"
+    printf '  %s%salejandro-xoxo / Miarch%s   %sgithub.com/alejandro-xoxo/Miarch%s\n\n' "$C_LAVANDA" "$C_NEG" "$C_R" "$C_TENUE" "$C_R"
 }
 
 # ---- barra del total ----
