@@ -110,7 +110,66 @@ for v in gtk-3.0 gtk-4.0; do
         printf '[Settings]\ngtk-application-prefer-dark-theme=1\n' > "$HOME/.config/$v/settings.ini"
     fi
 done
+# los ajustes del panel (animaciones, blur, escala, teclado...) viven en variables de este archivo: se conservan al reaplicar
+AJUSTES_HYPR="$(grep -E '^local (ESCALA|KB|NATURAL|TAP|SENS|CURSOR|MOVIMIENTO|ANIM|BLUR)[[:space:]]*=' "$HOME/.config/hypr/hyprland.lua" 2>/dev/null || true)"
 copy_config "$CONFIG_DIR/hypr"              "$HOME/.config/hypr"
+if [ -n "$AJUSTES_HYPR" ] && [ -f "$HOME/.config/hypr/hyprland.lua" ]; then
+    AJUSTES_HYPR="$AJUSTES_HYPR" python3 -I - "$HOME/.config/hypr/hyprland.lua" <<'PY'
+import os, re, sys
+ruta = sys.argv[1]
+txt = open(ruta, encoding="utf-8").read()
+for ln in os.environ["AJUSTES_HYPR"].splitlines():
+    nombre = re.match(r"local (\w+)", ln).group(1)
+    valor = re.match(r"local \w+\s*=\s*(\"[^\"]*\")", ln)
+    if valor:
+        txt = re.sub(r'(?m)^(local %s\s*=\s*)"[^"]*"' % nombre, lambda m: m.group(1) + valor.group(1), txt)
+open(ruta, "w", encoding="utf-8").write(txt)
+PY
+fi
+# carpeta de cambios personales (fuera de las que se reemplazan): solo se crea lo que falte, nunca se pisa nada
+PERSONAL="$HOME/.config/miarch/personal"
+mkdir -p "$PERSONAL"
+[ -f "$PERSONAL/hyprland.lua" ] || cat > "$PERSONAL/hyprland.lua" <<'EJ'
+-- Tus cambios personales de Hyprland. Se cargan al final de hyprland.lua y NO los borra ninguna actualización.
+-- Usa "SUPER" tal cual. Recarga con: hyprctl reload   · Errores: hyprctl configerrors
+-- Ejemplos (quita los -- del principio para activarlos):
+-- hl.bind("SUPER + G", hl.dsp.exec_cmd("steam"))                        -- un atajo propio: Super+G abre Steam
+-- hl.window_rule({ name = "mi-regla", match = { class = "^mpv$" }, float = true })   -- que mpv abra flotante
+EJ
+[ -f "$PERSONAL/kitty.conf" ] || cat > "$PERSONAL/kitty.conf" <<'EJ'
+# Tus cambios personales de la terminal kitty. Se cargan al final y NO los borra ninguna actualización.
+# Ejemplos (quita el # del principio):
+# font_size 13
+# background_opacity 0.9
+EJ
+# skill para agentes de IA (Claude Code): enseña al agente a instalar y configurar cosas en este sistema de la mejor forma.
+# Solo se instala si el agente existe en este equipo. Es una copia gestionada por Miarch: se refresca en cada instalación
+# (sin copias de seguridad: dentro de ~/.claude/skills una copia extra se leería como una skill repetida).
+if [ -d "$HOME/.claude" ] && [ -d "$DOTFILES_DIR/skills/instalar-configurar" ]; then
+    mkdir -p "$HOME/.claude/skills"
+    rm -rf "$HOME/.claude/skills/instalar-configurar"
+    cp -r "$DOTFILES_DIR/skills/instalar-configurar" "$HOME/.claude/skills/instalar-configurar"
+fi
+# skill para agentes de IA: enseña al agente a instalar y configurar cosas en este sistema de la mejor forma.
+# Sigue el estándar abierto "Agent Skills" (una carpeta con SKILL.md), así que sirve igual en todos: solo cambia la carpeta.
+# Se copia a la de cada agente que exista en este equipo (por su comando o por su carpeta). Es una copia gestionada por Miarch:
+# se refresca en cada instalación y sin copias de seguridad, porque dentro de una carpeta de skills una copia extra se leería
+# como una skill repetida.
+if [ -d "$DOTFILES_DIR/skills/instalar-configurar" ]; then
+    for agente in "claude:$HOME/.claude/skills" "codex:$HOME/.codex/skills" "agy:$HOME/.gemini/config/skills"; do
+        cmd="${agente%%:*}"; destino="${agente#*:}"
+        if command -v "$cmd" &>/dev/null || [ -d "$(dirname "$destino")" ]; then
+            mkdir -p "$destino"
+            rm -rf "$destino/instalar-configurar"
+            cp -r "$DOTFILES_DIR/skills/instalar-configurar" "$destino/instalar-configurar"
+        fi
+    done
+fi
+[ -f "$PERSONAL/zshrc" ] || cat > "$PERSONAL/zshrc" <<'EJ'
+# Tus cambios personales de Zsh (alias, variables). Se cargan al final y NO los borra ninguna actualización.
+# Ejemplos (quita el # del principio):
+# alias gs="git status"
+EJ
 copy_config "$CONFIG_DIR/kitty"             "$HOME/.config/kitty"
 copy_config "$CONFIG_DIR/nvim"              "$HOME/.config/nvim"
 copy_config "$CONFIG_DIR/quickshell/miarch" "$HOME/.config/quickshell/miarch"
