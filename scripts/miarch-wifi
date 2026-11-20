@@ -41,7 +41,14 @@ def ejecutar_con_clave(cmd, clave, esperar=b"Passphrase:", limite=40):
                 break
             buf += datos
             if not enviada and esperar in buf:
-                os.write(fd, clave.encode() + b"\n")
+                # iwctl aborta ("Operation aborted") si la clave llega de golpe, antes de que su lector de línea
+                # esté listo: se escribe tecla a tecla, con pausas, como la teclearía una persona
+                time.sleep(0.4)
+                for c in clave.encode():
+                    os.write(fd, bytes([c]))
+                    time.sleep(0.03)
+                time.sleep(0.3)
+                os.write(fd, b"\r")
                 enviada, buf = True, b""           # descarta lo anterior, incluido cualquier eco
     finally:
         os.close(fd)
