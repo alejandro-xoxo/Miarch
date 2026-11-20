@@ -12,12 +12,12 @@ if command -v awww &>/dev/null; then
 elif command -v swww &>/dev/null; then
     WW=swww
 else
-    echo "❌ No se encontró awww ni swww. Instálalo con: sudo pacman -S swww"
+    echo "[ERROR] No se encontró awww ni swww. Instálalo con: sudo pacman -S swww"
     exit 1
 fi
 
 if [ -z "${WAYLAND_DISPLAY:-}" ]; then
-    echo "⚠️  No hay sesión Wayland activa; el wallpaper se aplicará al iniciar Hyprland."
+    echo "[!] No hay sesión Wayland activa; el wallpaper se aplicará al iniciar Hyprland."
     exit 0
 fi
 
@@ -25,7 +25,7 @@ fi
 # ASEGURAR QUE EL DAEMON ESTÉ CORRIENDO
 # ======================
 if ! "$WW" query &>/dev/null; then
-    echo "⏳ Iniciando ${WW}-daemon..."
+    echo "==> Iniciando ${WW}-daemon..."
     setsid -f "${WW}-daemon" --format xrgb &>/dev/null
     for _ in {1..20}; do
         "$WW" query &>/dev/null && break
@@ -34,7 +34,7 @@ if ! "$WW" query &>/dev/null; then
 fi
 
 if ! "$WW" query &>/dev/null; then
-    echo "❌ No se pudo iniciar ${WW}-daemon"
+    echo "[ERROR] No se pudo iniciar ${WW}-daemon"
     exit 1
 fi
 
@@ -47,7 +47,7 @@ if [ -z "$WALL" ]; then  # (si solo hay una imagen, se queda con ella)
     WALL="$(cat "$HOME/.cache/miarch-wallpaper" 2>/dev/null)"
 fi
 if [ -z "$WALL" ]; then
-    echo "❌ No hay imágenes en $WALLPAPERS_DIR"
+    echo "[ERROR] No hay imágenes en $WALLPAPERS_DIR"
     exit 1
 fi
 
@@ -56,7 +56,7 @@ if [ -n "${1:-}" ] && [ -f "$1" ]; then WALL="$1"; fi
 
 # Fondos animados (GIF): cuestan MUCHA fluidez (cada fotograma obliga a repintar la pantalla y recalcular
 # el desenfoque detrás de las ventanas). Por defecto un GIF se muestra como imagen fija (su primer fotograma);
-# se activa en Ajustes → Apariencia → Fondos animados.
+# se activa en Ajustes -> Apariencia -> Fondos animados.
 IMG="$WALL"
 case "${WALL,,}" in
     *.gif)
@@ -74,7 +74,7 @@ im = Image.open(sys.argv[1]); im.seek(0); im.convert('RGB').save(sys.argv[2])" "
         fi ;;
 esac
 
-echo "🖼️  Aplicando wallpaper: $(basename "$WALL")$([ "$IMG" != "$WALL" ] && echo " (fijo)")"
+echo "==> Aplicando wallpaper: $(basename "$WALL")$([ "$IMG" != "$WALL" ] && echo " (fijo)")"
 "$WW" img "$IMG" \
     --transition-type grow \
     --transition-pos 0.5,0.5 \
@@ -87,7 +87,7 @@ mkdir -p "$HOME/.cache"
 printf '%s\n' "$WALL" > "$HOME/.cache/miarch-wallpaper"
 # Ruta completa: Hyprland no incluye ~/.local/bin en el PATH al lanzar atajos
 if [ -x "$HOME/.local/bin/miarch-colors" ]; then
-    "$HOME/.local/bin/miarch-colors" "$WALL" >/dev/null || echo "⚠️  miarch-colors falló"
+    "$HOME/.local/bin/miarch-colors" "$WALL" >/dev/null || echo "[!] miarch-colors falló"
 fi
 
 # Fondo y colores para la pantalla de inicio de sesión (si está instalada: /var/lib/miarch-greeter)
@@ -104,8 +104,8 @@ if command -v wal &>/dev/null; then
         if [ -f "$HOME/.cache/wal/colors-waybar.css" ] && [ -d "$HOME/.config/waybar" ]; then
             cp "$HOME/.cache/wal/colors-waybar.css" "$HOME/.config/waybar/colors.css"
         fi
-        echo "🎨 Colores aplicados"
+        echo "==> Colores aplicados"
     else
-        echo "⚠️  pywal falló al generar colores"
+        echo "[!] pywal falló al generar colores"
     fi
 fi

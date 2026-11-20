@@ -18,11 +18,11 @@ FONDO_OSCURO="${FONDO_OSCURO:-$W/a_man_sitting_in_a_chair.png}"
 FONDO_CLARO="${FONDO_CLARO:-$W/a_woman_with_long_hair_wearing_sunglasses.png}"
 
 for c in qs grim hyprctl awww python3; do
-    command -v "$c" >/dev/null || { echo "❌ Falta $c"; exit 1; }
+    command -v "$c" >/dev/null || { echo "[ERROR] Falta $c"; exit 1; }
 done
-python3 -I -c "import PIL" 2>/dev/null || { echo "❌ Falta python-pillow"; exit 1; }
-[ -f "$FONDO_OSCURO" ] && [ -f "$FONDO_CLARO" ] || { echo "❌ No encuentro los fondos de prueba en $W"; exit 1; }
-[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] || { echo "❌ Ejecútalo dentro de Hyprland."; exit 1; }
+python3 -I -c "import PIL" 2>/dev/null || { echo "[ERROR] Falta python-pillow"; exit 1; }
+[ -f "$FONDO_OSCURO" ] && [ -f "$FONDO_CLARO" ] || { echo "[ERROR] No encuentro los fondos de prueba en $W"; exit 1; }
+[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] || { echo "[ERROR] Ejecútalo dentro de Hyprland."; exit 1; }
 
 M="$(hyprctl monitors -j | python3 -c "import json,sys;print(next(m['name'] for m in json.load(sys.stdin) if m['focused']))")"
 ORIG_WS="$(hyprctl activeworkspace -j | python3 -c "import json,sys;print(json.load(sys.stdin)['id'])")"
@@ -41,28 +41,28 @@ esperar_calma() {   # los anillos de CPU salen en la captura: espera (máx. 90 s
         uso=$(( 100 * ( (t1-t0) - (i1-i0) ) / (t1-t0) ))
         [ "$uso" -le 18 ] && return 0
     done
-    echo "  ⚠️  el equipo no se calmó (CPU ${uso}%): cierra lo que consuma y repite si quieres anillos bajos"
+    echo "  [!] el equipo no se calmó (CPU ${uso}%): cierra lo que consuma y repite si quieres anillos bajos"
 }
 ir_demo() {   # vuelve al escritorio de demo y espera a estar de verdad ahí
     for _ in 1 2 3 4; do
         hyprctl dispatch "hl.dsp.focus({ workspace = $WS_DEMO })" >/dev/null 2>&1; sleep 0.7
         [ "$(hyprctl activeworkspace -j | python3 -c "import json,sys;print(json.load(sys.stdin)['id'])")" = "$WS_DEMO" ] && return 0
     done
-    echo "❌ No puedo volver al escritorio $WS_DEMO."; exit 1
+    echo "[ERROR] No puedo volver al escritorio $WS_DEMO."; exit 1
 }
 shot() {   # nunca fotografía otro escritorio: si cambiaste de escritorio durante la toma, aborta
     local ws; ws="$(hyprctl activeworkspace -j | python3 -c "import json,sys;print(json.load(sys.stdin)['id'])")"
-    [ "$ws" = "$WS_DEMO" ] || { echo "❌ Estás en el escritorio $ws, no en el $WS_DEMO: aborto para no fotografiar tu trabajo. No cambies de escritorio mientras se toman."; exit 1; }
+    [ "$ws" = "$WS_DEMO" ] || { echo "[ERROR] Estás en el escritorio $ws, no en el $WS_DEMO: aborto para no fotografiar tu trabajo. No cambies de escritorio mientras se toman."; exit 1; }
     [ "${2:-}" = rapido ] || esperar_calma
-    grim -o "$M" "$TMP/$1.png" && echo "  📸 $1"
+    grim -o "$M" "$TMP/$1.png" && echo "  ==> $1"
 }
 setfondo() {   # aplica un fondo y comprueba que de verdad quedó puesto
     for i in 1 2 3; do
         "$HOME/.local/bin/wallpaper.sh" "$1" >/dev/null 2>&1; sleep 5.5
         awww query 2>/dev/null | grep -q "$(basename "$1")" && return 0
-        echo "  ↻ reintento $i para $(basename "$1")"
+        echo "  reintento $i para $(basename "$1")"
     done
-    echo "  ⚠️  no se pudo aplicar $(basename "$1")"
+    echo "  [!] no se pudo aplicar $(basename "$1")"
 }
 PLAYER_PID=""
 player_on()  { [ -n "${PLAYER_FALSO:-}" ] || return 0; player_off; (setsid $PLAYER_FALSO >/dev/null 2>&1 & echo $! >"$TMP/player.pid"); sleep 2.5; PLAYER_PID="$(cat "$TMP/player.pid" 2>/dev/null)"; }
@@ -78,7 +78,7 @@ restaurar() {
     qs_restart A=1
     hyprctl dispatch "hl.dsp.focus({ workspace = $ORIG_WS })" >/dev/null 2>&1
     rm -rf "$TMP"
-    echo "✔ Restaurado (escritorio $ORIG_WS)"
+    echo "[OK] Restaurado (escritorio $ORIG_WS)"
 }
 trap restaurar EXIT
 
@@ -86,7 +86,7 @@ echo "Monitor: $M · escritorio de trabajo: $ORIG_WS"
 qs_restart MIARCH_DEMO=1
 hyprctl dispatch "hl.dsp.focus({ workspace = $WS_DEMO })" >/dev/null 2>&1; sleep 1.5
 [ "$(hyprctl workspaces -j | python3 -c "import json,sys;print(sum(w['windows'] for w in json.load(sys.stdin) if w['id']==$WS_DEMO))")" = "0" ] \
-    || { echo "❌ El escritorio $WS_DEMO tiene ventanas abiertas: ciérralas o cambia WS_DEMO."; exit 1; }
+    || { echo "[ERROR] El escritorio $WS_DEMO tiene ventanas abiertas: ciérralas o cambia WS_DEMO."; exit 1; }
 
 setfondo "$FONDO_OSCURO"
 player_on
@@ -126,5 +126,5 @@ for f in sorted(glob.glob(tmp + "/*.png")):
     im.thumbnail((1280, 1280))
     destino = os.path.join(out, os.path.basename(f)[:-4] + ".jpg")
     im.save(destino, "JPEG", quality=82, optimize=True)
-    print("  💾", os.path.relpath(destino), f"{os.path.getsize(destino)//1024} KB")
+    print("  ==> ", os.path.relpath(destino), f"{os.path.getsize(destino)//1024} KB")
 PY
