@@ -183,7 +183,8 @@ configurar_docker_ollama() {
     if [ "${raiz_gb:-0}" -lt 100 ] && [ "$(findmnt -n -o SOURCE --target /home)" != "$(findmnt -n -o SOURCE --target /)" ]; then
         ui_info "La raíz tiene ${raiz_gb} GB: Docker y Ollama guardarán sus datos en $datos (partición /home)."
         sudo install -d -m 755 "$datos"
-        if [ ! -s /etc/docker/daemon.json ] && [ -z "$(ls -A /var/lib/docker 2>/dev/null)" ]; then
+        # solo root puede listar /var/lib/docker: sin sudo siempre parecía vacío y se escondían los datos existentes
+        if [ ! -s /etc/docker/daemon.json ] && [ -z "$(sudo ls -A /var/lib/docker 2>/dev/null)" ]; then
             sudo install -d -m 711 "$datos/docker"
             sudo install -d -m 755 /etc/docker   # el paquete docker no crea esta carpeta
             printf '{\n  "data-root": "%s/docker"\n}\n' "$datos" | sudo tee /etc/docker/daemon.json >/dev/null
@@ -193,7 +194,8 @@ configurar_docker_ollama() {
         if getent passwd ollama >/dev/null; then
             sudo install -d -o ollama -g ollama -m 755 "$datos/ollama"
             sudo install -d /etc/systemd/system/ollama.service.d
-            printf '[Service]\nEnvironment="OLLAMA_MODELS=%s/ollama"\n' "$datos" \
+            # el servicio trae ProtectHome=yes (/home invisible): se pasa a solo lectura y se abre únicamente la carpeta de modelos
+            printf '[Service]\nEnvironment="OLLAMA_MODELS=%s/ollama"\nProtectHome=read-only\nReadWritePaths=%s/ollama\n' "$datos" "$datos" \
                 | sudo tee /etc/systemd/system/ollama.service.d/miarch-modelos.conf >/dev/null
             sudo systemctl daemon-reload
         else

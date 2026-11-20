@@ -94,6 +94,8 @@ GREETER_PEND=0
 if [ ! -e "$HOME/.config/miarch/sin-greeter" ]; then
     [ "$(systemctl is-enabled greetd 2>/dev/null)" = "enabled" ] || GREETER_PEND=1
     [ "$GREETER_PEND" = 0 ] && [ -n "$MARCA_ANT" ] && ! git diff --quiet "$MARCA_ANT" "${UP:-HEAD}" -- config/greeter 2>/dev/null && GREETER_PEND=1
+    # y si el instalador sabe compararse con lo instalado (sirve aunque no haya marca), se le pregunta también
+    [ "$GREETER_PEND" = 0 ] && grep -q -- '--pendiente' ./scripts/miarch-greeter-install 2>/dev/null && bash ./scripts/miarch-greeter-install --pendiente && GREETER_PEND=1
 fi
 PAQ_CAMBIA=0; [ "$NUEVOS" -gt 0 ] && ! git diff --quiet HEAD "$UP" -- packages.sh && PAQ_CAMBIA=1
 
@@ -150,7 +152,8 @@ fi
 
 # qué se haría
 HACER_MIARCH=0; { [ "$NUEVOS" -gt 0 ] && [ "$SUCIO" = 0 ]; } && HACER_MIARCH=1
-{ [ "$FORZAR" = 1 ] || [ "$CFG_PENDIENTES" = 1 ]; } && HACER_MIARCH=1
+# con cambios sin guardar y cambios nuevos por descargar no se intenta nada: antes se intentaba el pull y fallaba con un mensaje confuso
+if [ "$FORZAR" = 1 ] || { [ "$CFG_PENDIENTES" = 1 ] && ! { [ "$NUEVOS" -gt 0 ] && [ "$SUCIO" = 1 ]; }; }; then HACER_MIARCH=1; fi
 HACER_PAQ=0; { [ "${#FALTAN[@]}" -gt 0 ] || [ "${#SOBRAN[@]}" -gt 0 ] || [ "$PAQ_CAMBIA" = 1 ]; } && HACER_PAQ=1
 HACER_SIS=0; [ "$N_SIS" -gt 0 ] && HACER_SIS=1
 HACER_GREET=$GREETER_PEND
@@ -220,13 +223,7 @@ open(ruta, "w", encoding="utf-8").write(txt)
 PY
         ui_ok "Tus ajustes (animaciones, blur, escala, teclado...) se conservaron"
     fi
-    if [ -z "${MIARCH_SIN_REINICIO:-}" ]; then
-        hyprctl reload >/dev/null 2>&1 || true
-        qs kill -c miarch >/dev/null 2>&1; sleep 1
-        # Quickshell queda vivo mucho tiempo y lanza el siguiente actualizador: no debe heredar las variables de ESTA ejecución
-        (env -u MIARCH_UI_INICIO -u MIARCH_UI_TOTAL -u MIARCH_UI_ACTUAL -u MIARCH_UI_SUB -u MIARCH_UI_COMPACTO -u MIARCH_SUDO_VIVO -u MIARCH_STATS setsid qs -c miarch >/dev/null 2>&1 &)
-        ui_ok "Hyprland y el escritorio recargados"
-    fi
+    RECARGAR=1      # se recarga al final, cuando ya están instalados los paquetes nuevos (Quickshell o Hyprland pueden haberse actualizado)
 fi
 
 if [ "$HACER_PAQ" = 1 ]; then
@@ -235,7 +232,11 @@ if [ "$HACER_PAQ" = 1 ]; then
     grep -q -- '--faltantes' ./packages.sh 2>/dev/null && mapfile -t FALTAN < <(bash ./packages.sh --faltantes 2>/dev/null)
     grep -q -- '--sobran' ./packages.sh 2>/dev/null && mapfile -t SOBRAN < <(bash ./packages.sh --sobran 2>/dev/null)
     if [ "${#FALTAN[@]}" -gt 0 ] || [ "${#SOBRAN[@]}" -gt 0 ]; then
-        ui_etapa "Instalando ${#FALTAN[@]} $(plural "${#FALTAN[@]}" 'paquete que faltaba' 'paquetes que faltaban'): $(unir "${FALTAN[@]}")"
+        if [ "${#FALTAN[@]}" -gt 0 ]; then
+            ui_etapa "Instalando ${#FALTAN[@]} $(plural "${#FALTAN[@]}" 'paquete que faltaba' 'paquetes que faltaban'): $(unir "${FALTAN[@]}")"
+        else
+            ui_etapa "Quitando lo que Miarch ya no usa: $(unir "${SOBRAN[@]}")"
+        fi
         MIARCH_UI_COMPACTO=1 bash ./packages.sh || ui_aviso "packages.sh terminó con errores (arriba). Se volverá a ofrecer la próxima vez."
     else
         ui_etapa "Revisando los paquetes de Miarch"
@@ -256,6 +257,14 @@ fi
 if [ "$HACER_SIS" = 1 ]; then
     ui_etapa "Actualizando $N_SIS $(plural "$N_SIS" paquete paquetes) del sistema"
     ui_ejecutar "Actualizando el sistema (yay -Syu)" yay -Syu --noconfirm || ui_aviso "La actualización del sistema falló (arriba están las últimas líneas)."
+fi
+
+if [ "${RECARGAR:-0}" = 1 ] && [ -z "${MIARCH_SIN_REINICIO:-}" ]; then
+    hyprctl reload >/dev/null 2>&1 || true
+    qs kill -c miarch >/dev/null 2>&1; sleep 1
+    # Quickshell queda vivo mucho tiempo y lanza el siguiente actualizador: no debe heredar las variables de ESTA ejecución
+    (env -u MIARCH_UI_INICIO -u MIARCH_UI_TOTAL -u MIARCH_UI_ACTUAL -u MIARCH_UI_SUB -u MIARCH_UI_COMPACTO -u MIARCH_SUDO_VIVO -u MIARCH_STATS setsid qs -c miarch >/dev/null 2>&1 &)
+    ui_ok "Hyprland y el escritorio recargados"
 fi
 
 ui_resumen "Actualización completa"
