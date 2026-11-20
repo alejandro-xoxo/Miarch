@@ -3,6 +3,9 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-20.23 · Licencia GPL 3.0
+El proyecto pasa a distribuirse bajo la licencia GPL-3.0-or-later. El código sigue siendo completamente abierto para usar y modificar, y las versiones derivadas que se distribuyan deberán mantenerse abiertas bajo esta misma licencia, con el código fuente disponible y conservando el aviso de autoría original.
+
 ## 2026-11-20.22 · Licencia Apache 2.0 y avisos de copyright
 El repositorio se publica bajo licencia Apache-2.0: se incluye el archivo `NOTICE` con derechos de autor y atribución a componentes de terceros (iconos de LobeHub), identificadores SPDX en los scripts y configuraciones del sistema, y la sección de licencia en el README clarificando los términos y la titularidad de marcas registradas.
 
