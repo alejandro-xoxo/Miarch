@@ -39,12 +39,13 @@ sudo pacman -S --needed --noconfirm git && git clone https://github.com/alejandr
 ```
 
 El script `setup.sh` realiza las siguientes acciones:
-1. Comprueba la conexión a Internet.
-2. Solicita la contraseña de `sudo` una única vez y la mantiene activa en segundo plano durante todo el proceso.
-3. Instala `git` y el metapaquete `base-devel`.
-4. Ejecuta `packages.sh` para la provisión de software de repositorios oficiales y AUR.
-5. Ejecuta `install.sh` para el despliegue de configuraciones, scripts y enlaces de usuario.
-6. Instala y habilita la pantalla de acceso gráfico (`greetd` con interfaz Quickshell), salvo que exista el archivo de exclusión `~/.config/miarch/sin-greeter`.
+1. Si se ejecuta en terminal y no se ha decidido antes (`~/.config/miarch/juegos-decidido`), pregunta si se desea instalar Steam y las herramientas de juego; al responder "n" crea la marca `~/.config/miarch/sin-juegos`.
+2. Comprueba la conexión a Internet.
+3. Solicita la contraseña de `sudo` una única vez y la mantiene activa en segundo plano durante todo el proceso.
+4. Instala `git` y el metapaquete `base-devel`.
+5. Ejecuta `packages.sh` para la provisión de software de repositorios oficiales y AUR (omitiendo juegos si existe `sin-juegos`).
+6. Ejecuta `install.sh` para el despliegue de configuraciones, scripts y enlaces de usuario.
+7. Instala y habilita la pantalla de acceso gráfico (`greetd` con interfaz Quickshell), salvo que exista el archivo de exclusión `~/.config/miarch/sin-greeter`.
 
 La duración estimada es de aproximadamente 30 minutos debido a la compilación local de `quickshell-git`. Al finalizar, reinicie el equipo con `sudo reboot`.
 
@@ -57,17 +58,23 @@ La duración estimada es de aproximadamente 30 minutos debido a la compilación 
 
 ```mermaid
 flowchart TD
-    A["Inicio: setup.sh"] --> B{"Comprobación de Internet"}
-    B -- "Sin conexión" --> C["Error y salida"]
-    B -- "Conectado" --> D["Validar sudo y mantener sesión activa"]
-    D --> E["Instalar git y base-devel"]
-    E --> F["Ejecutar packages.sh"]
-    F --> G["Ejecutar install.sh"]
-    G --> H{"¿Existe ~/.config/miarch/sin-greeter?"}
-    H -- "No" --> I["Ejecutar scripts/miarch-greeter-install"]
-    H -- "Sí" --> J["Omitir pantalla gráfica"]
-    I --> K["Fin del despliegue: requiere reinicio"]
-    J --> K
+    A["Inicio: setup.sh"] --> B{"¿Terminal y sin decisión previa de juegos?"}
+    B -- "Sí" --> B1{"Pregunta: ¿Instalar Steam y juegos? [S/n]"}
+    B1 -- "No (n)" --> B2["Crear sin-juegos y juegos-decidido"]
+    B1 -- "Sí (S)" --> B3["Crear juegos-decidido"]
+    B -- "No" --> C{"Comprobación de Internet"}
+    B2 --> C
+    B3 --> C
+    C -- "Sin conexión" --> D["Error y salida"]
+    C -- "Conectado" --> E["Validar sudo y mantener sesión activa"]
+    E --> F["Instalar git y base-devel"]
+    F --> G["Ejecutar packages.sh (respeta sin-juegos)"]
+    G --> H["Ejecutar install.sh"]
+    H --> I{"¿Existe ~/.config/miarch/sin-greeter?"}
+    I -- "No" --> J["Ejecutar scripts/miarch-greeter-install"]
+    I -- "Sí" --> K["Omitir pantalla gráfica"]
+    J --> L["Fin del despliegue: requiere reinicio"]
+    K --> L
 ```
 
 La interfaz durante la ejecución (gestionada por `lib/ui.sh`) ofrece una barra de progreso general, animación de tiempo transcurrido por tarea y un resumen consolidado con las duraciones parciales. Todo el detalle técnico se registra en `~/.cache/miarch/instalacion.log`.
@@ -93,7 +100,7 @@ Parámetros de consulta disponibles en `packages.sh`:
 
 Componentes instalados:
 - **AUR vía yay:** `quickshell-git`, `google-chrome`, `visual-studio-code-bin`, `claude-code`, `claude-desktop`, `antigravity-cli`, `antigravity`, `openai-chatgpt`, `protonup-qt`.
-- **Ecosistema Gaming:** Habilitación del repositorio multilib, selección del controlador Vulkan según el fabricante de la GPU, Steam, GameMode, MangoHud, Gamescope, `zram` (si no existe partición o archivo de intercambio swap) y compatibilidad con `ntsync`.
+- **Ecosistema Gaming (opcional):** Salvo que exista `~/.config/miarch/sin-juegos`, incluye habilitación del repositorio multilib, selección del controlador Vulkan según el fabricante de la GPU, Steam, GameMode, MangoHud, Gamescope, `zram` (si no existe partición o archivo de intercambio swap) y compatibilidad con `ntsync`. Si existe la marca, este bloque y sus consultas en `--faltantes` se omiten por completo.
 - **Servicios de virtualización e IA:**
   - Docker y Ollama: la ruta de almacenamiento se migra a `/home/.datos-pesados` únicamente si la partición raíz `/` tiene un tamaño inferior a 100 GB y `/home` reside en una partición separada.
   - Hermes Desktop: instalado en `~/.hermes` mediante su script oficial de instalación (tiempo límite de espera: 30 minutos).
