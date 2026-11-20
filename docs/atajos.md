@@ -9,7 +9,8 @@
 | `Super + Shift + Espacio` | rofi (lanzador de respaldo) |
 | `Super + Shift + Q` | Cerrar ventana |
 | `Super + L` | Bloquear pantalla |
-| `Super + ,` | Ajustes del equipo |
+| `Super + Esc` | Ajustes del equipo |
+| `Super + Shift + Esc` | Apagar, reiniciar, suspender y cerrar sesión (piden confirmar con una segunda pulsación) |
 | `Super + W` | Cambiar wallpaper (y los colores) |
 | `Super + B` | Navegador (Chrome) |
 | `Super + V` · `Super + C` | VS Code · Claude Desktop |

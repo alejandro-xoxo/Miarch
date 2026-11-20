@@ -67,7 +67,7 @@ Búsqueda instantánea, entiende abreviaturas (`gcr` → Google Chrome) y ordena
 
 ![Lanzador](docs/screenshots/lanzador.jpg)
 
-### Ajustes del equipo (`Super + ,`)
+### Ajustes del equipo (`Super + Esc`)
 Un panel con clics para todo: red, sonido, pantalla, apariencia (fondos, animaciones, desenfoque), teclado y ratón, accesibilidad (tamaño de texto y cursor, alto contraste, reducir movimiento), energía y datos del sistema.
 
 | Apariencia | Accesibilidad | Energía |
@@ -110,4 +110,4 @@ Cada tema tiene su propio archivo en [`docs/`](docs/README.md):
 | [Estructura](docs/estructura.md) | Mapa de carpetas del repositorio |
 | [Capturas](docs/capturas.md) | Cómo regenerar las imágenes de este README |
 
-Atajos básicos: `Super + Enter` terminal · `Super + Espacio` lanzador · `Super + ,` ajustes · `Super + L` bloquear · `Super + W` cambiar wallpaper.
+Atajos básicos: `Super + Enter` terminal · `Super + Espacio` lanzador · `Super + Esc` ajustes · `Super + Shift + Esc` apagar y reiniciar · `Super + L` bloquear · `Super + W` cambiar wallpaper.
