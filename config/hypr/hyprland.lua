@@ -71,7 +71,6 @@ hl.on("hyprland.start", function ()
     hl.exec_cmd("awww-daemon --format xrgb")
     hl.exec_cmd("sleep 1.5 && ~/.local/bin/wallpaper.sh")
     hl.exec_cmd("qs -c miarch")   -- escritorio + pantalla de bloqueo (Quickshell)
-    hl.exec_cmd("dunst")
 end)
 
 

@@ -21,7 +21,6 @@ PAQUETES=(
     # Escritorio (Hyprland + utilidades; la barra, el lanzador y los paneles son Quickshell)
     hyprland xdg-desktop-portal-hyprland xdg-desktop-portal-gtk polkit   # el portal gtk avisa a Chrome y a las apps de que el sistema es oscuro
     awww                      # fondos animados (antes se llamaba swww)
-    dunst                     # notificaciones
     rofi                      # lanzador de respaldo (Super+Shift+Espacio)
     grim slurp wl-clipboard   # capturas y portapapeles
     brightnessctl playerctl xdg-user-dirs
@@ -61,6 +60,7 @@ AUR_PAQUETES=(
     claude-code
     claude-desktop
     antigravity-cli
+    antigravity                  # app de escritorio de Antigravity 2.0 (Google; se descarga de sus servidores)
     openai-chatgpt               # app de escritorio de ChatGPT con Codex (vista previa oficial de OpenAI; reempaqueta su .deb, ~350 MB)
     protonup-qt                  # instala y actualiza Proton-GE con clics (mejor compatibilidad de juegos de Windows)
 )
@@ -100,6 +100,7 @@ JUEGOS=(
 OBSOLETOS=(
     hermes-webui-desktop-bin       # era solo una ventana de un servidor WebUI, no la app oficial de Hermes
     hermes-webui-desktop-appimage
+    dunst                          # las notificaciones ahora las dibuja Quickshell; dunst competiría por el servicio
     alpaka-desktop-bin             # cliente de terceros de Ollama: Ollama no tiene app oficial para Linux (solo CLI y servicio)
 )
 ETAPAS=$(( 9 + ${#AUR_PAQUETES[@]} ))
