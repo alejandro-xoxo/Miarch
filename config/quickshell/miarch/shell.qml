@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 // Miarch · escritorio propio con Quickshell
 // v1: sin barra. Reloj grande + anillos de datos sobre el wallpaper. Colores mate.
 import Quickshell
@@ -333,7 +334,9 @@ ShellRoot {
                   "s=0; grep -q -- --sobran \"$d/packages.sh\" 2>/dev/null && s=$(bash \"$d/packages.sh\" --sobran 2>/dev/null | grep -c .); " +
                   // pantalla de inicio de sesión de Miarch (greetd) aún sin instalar, salvo que se haya rechazado
                   "g=0; [ -e \"$HOME/.config/miarch/sin-greeter\" ] || [ \"$(systemctl is-enabled greetd 2>/dev/null)\" = enabled ] || g=1; " +
-                  "echo $((n + c + f + s + g))"]
+                  // aviso si el repositorio se mudó a otro remoto
+                  "mu=0; git -C \"$d\" cat-file -e \"$u:MUDANZA\" 2>/dev/null && mu=1; " +
+                  "echo $((n + c + f + s + g + mu))"]
         stdout: StdioCollector {
             onStreamFinished: {
                 const t = text.trim()
@@ -1976,11 +1979,11 @@ ShellRoot {
     property var iaDisp: []
     readonly property var iaGrupos: [
         { t: "Claude Desktop", d: "La app de Claude, con ventana propia", logo: "claude", c: "#c8745a", m: "C", items: [
-            { t: "Claude Desktop", d: "La app de Claude, con ventana propia", tipo: "APP", logo: "claude", c: "#c8745a", m: "C", bin: "claude-desktop", cmd: "claude-desktop" } ] },
+            { t: "Claude Desktop", d: "La app de Claude, con ventana propia", tipo: "APP", logo: "claude", c: "#c8745a", m: "C", bin: "claude-desktop", cmd: "claude-desktop --ozone-platform=wayland --enable-wayland-ime" } ] },
         { t: "Codex App", d: "La app de ChatGPT con Codex (vista previa)", logo: "openai", c: "#86a595", m: "Cx", items: [
-            { t: "Codex App", d: "La app de ChatGPT con Codex (vista previa)", tipo: "APP", logo: "openai", c: "#86a595", m: "Cx", bin: "chatgpt", cmd: "chatgpt" } ] },
+            { t: "Codex App", d: "La app de ChatGPT con Codex (vista previa)", tipo: "APP", logo: "openai", c: "#86a595", m: "Cx", bin: "chatgpt", cmd: "chatgpt --ozone-platform=wayland --enable-wayland-ime" } ] },
         { t: "Antigravity", d: "La app de agentes de Google (2.0)", logo: "antigravity", c: "#7d9bc0", m: "A", items: [
-            { t: "Antigravity", d: "La app de agentes de Google (2.0)", tipo: "APP", logo: "antigravity", c: "#7d9bc0", m: "A", bin: "antigravity", cmd: "antigravity" } ] },
+            { t: "Antigravity", d: "La app de agentes de Google (2.0)", tipo: "APP", logo: "antigravity", c: "#7d9bc0", m: "A", bin: "antigravity", cmd: "antigravity --ozone-platform=wayland --enable-wayland-ime" } ] },
         { t: "Hermes Desktop", d: "La app oficial de Hermes (Nous Research)", logo: "hermes", c: "#c0a06a", m: "H", items: [
             { t: "Hermes Desktop", d: "La app oficial de Hermes (Nous Research)", tipo: "APP", logo: "hermes", c: "#c0a06a", m: "H", bin: "hermes", cmd: "hermes desktop" } ] }
     ]

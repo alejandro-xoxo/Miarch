@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Miarch · quita de Chrome el tema de color propio del perfil (por ejemplo un color rojo que sobre fondo oscuro se ve marrón)
 # y deja que Chrome siga el tema oscuro del sistema.
 # Uso:  miarch-chrome-tema              (todos los perfiles de ~/.config/google-chrome)

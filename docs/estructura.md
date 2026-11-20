@@ -10,6 +10,8 @@ Este documento describe la organización del repositorio Miarch, la función de 
 Miarch/
 ├── AGENTS.md
 ├── CLAUDE.md
+├── LICENSE
+├── NOTICE
 ├── NOVEDADES.md
 ├── setup.sh
 ├── packages.sh
@@ -147,5 +149,6 @@ flowchart TD
 | Directorio / Archivo | Función |
 | :--- | :--- |
 | `docs/` | Documentación técnica y registros de especificación del proyecto. |
+| `LICENSE` / `NOTICE` | Licencia de código abierto Apache-2.0 y avisos de derechos de autor y atribución a terceros. |
 | `NOVEDADES.md` | Historial de versiones y cambios del sistema consumido por `miarch-update` para mostrar un resumen de novedades no vistas al usuario previo a la confirmación. |
 | `wallpapers/` | Fondos de pantalla incluidos; de ellos `miarch-colors` saca la paleta. |

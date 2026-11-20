@@ -52,3 +52,4 @@ font_size 13
 | Archivo | Efecto |
 |---|---|
 | `~/.config/miarch/sin-greeter` | Miarch no instala ni actualiza la pantalla de inicio de sesión gráfica; entras por la terminal. Se crea con `mkdir -p ~/.config/miarch && touch ~/.config/miarch/sin-greeter`. |
+| `~/.config/miarch/sin-juegos` | Miarch no instala Steam, controladores Vulkan de 32 bits, multilib ni herramientas de juego (GameMode, MangoHud, Gamescope). En una instalación interactiva, `setup.sh` pregunta si quieres instalarlos; también se crea con `mkdir -p ~/.config/miarch && touch ~/.config/miarch/sin-juegos`. |

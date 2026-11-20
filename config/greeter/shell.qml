@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 // Miarch · pantalla de inicio de sesión (greetd + Quickshell)
 // Mismo estilo que el bloqueo: wallpaper desenfocado, reloj grande, contraseña con puntos.
 // Modo de prueba (no toca el sistema):  MIARCH_GREETER_TEST=1 MIARCH_GREETER_DATA=<carpeta> qs -p <esta carpeta>
@@ -107,7 +108,9 @@ ShellRoot {
         onFinished: {
             if (root.prueba) { Qt.quit(); return }
             // shell de login: así se carga tu entorno (~/.zprofile, PATH) como en un inicio normal
-            Greetd.launch(["zsh", "-lc", "exec start-hyprland"], [], true)
+            // La consola de texto entre el login y el escritorio sale limpia: se borra, se oculta el cursor y la salida de
+            // start-hyprland va a un registro en vez de pintarse en pantalla.
+            Greetd.launch(["sh", "-c", "{ printf '\\033[2J\\033[H\\033[?25l' > /dev/tty; } 2>/dev/null; mkdir -p \"$HOME/.cache/miarch\"; exec zsh -lc 'exec start-hyprland' >> \"$HOME/.cache/miarch/sesion.log\" 2>&1"], [], true)
         }
     }
     Timer { id: reintento; interval: 1300; onTriggered: { if (!root.prueba) Greetd.cancelSession(); root.iniciarSesion() } }

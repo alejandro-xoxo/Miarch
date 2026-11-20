@@ -148,6 +148,16 @@ Google Chrome actúa como navegador web predeterminado del sistema, configurado 
 - Ejecución nativa sobre el protocolo Wayland.
 - Aceleración de decodificación y renderizado de vídeo por hardware mediante VA-API.
 
+## Apps Electron nítidas
+
+Para garantizar que aplicaciones basadas en Electron y Chromium (como VS Code, Claude Desktop, ChatGPT, Antigravity o Hermes Desktop) se visualicen nítidas en monitores con escala:
+- **Backend nativo en Wayland**: En `config/hypr/hyprland.lua` se define la variable de entorno `ELECTRON_OZONE_PLATFORM_HINT=wayland`, haciendo que los binarios modernos de Electron utilicen Wayland sin pasar por XWayland.
+- **Archivos de flags dedicados**: `config/vscode/code-flags.conf`, `config/claude-desktop/claude-desktop-flags.conf` y `config/electron/electron-flags.conf` configuran `--ozone-platform=wayland`, `--enable-features=WaylandWindowDecorations,UseOzonePlatform` y `--enable-wayland-ime`, desplegados a `~/.config/` por `install.sh`.
+- **Lanzadores y menú de IA**: En `config/quickshell/miarch/shell.qml` (menú de IA, `Super + C`) y en las sobrescrituras de lanzadores `.desktop` de usuario (`config/applications/`, desplegados a `~/.local/share/applications/` por `install.sh` para ChatGPT, Claude Desktop y Antigravity) se pasan explícitamente `--ozone-platform=wayland --enable-wayland-ime` en sus comandos de ejecución (`Exec=`), garantizando su apertura nítida en Wayland nativo tanto desde el menú como desde el lanzador de aplicaciones (`Super + Espacio`) sin depender de reiniciar sesión.
+- **Escalado XWayland sin borrosidad**: En el bloque `xwayland` de Hyprland se fija `force_zero_scaling = true`, evitando que las aplicaciones que aún requieran XWayland sean escaladas borrosamente por el compositor.
+
+Las aplicaciones Electron que ya estuviesen abiertas deben cerrarse y volver a abrirse para que arranquen con los nuevos parámetros y se vean nítidas.
+
 ## Componentes Heredados (`config/waybar/`)
 
 El directorio `config/waybar/` almacena la configuración de la barra de estado previa a la migración a Quickshell. Se mantiene dentro del repositorio únicamente como referencia histórica y no participa en la ejecución del entorno.

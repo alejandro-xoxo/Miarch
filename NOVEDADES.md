@@ -3,6 +3,28 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-20.22 · Licencia Apache 2.0 y avisos de copyright
+El repositorio se publica bajo licencia Apache-2.0: se incluye el archivo `NOTICE` con derechos de autor y atribución a componentes de terceros (iconos de LobeHub), identificadores SPDX en los scripts y configuraciones del sistema, y la sección de licencia en el README clarificando los términos y la titularidad de marcas registradas.
+
+
+## 2026-11-20.21 · Migración automática ante mudanza de repositorio
+El actualizador ahora detecta si el proyecto se trasladó a un nuevo repositorio mediante un archivo `MUDANZA` en el remoto. Si existe, avisa con la nueva dirección, solicita confirmación, verifica que no tengas cambios locales sin guardar y conmuta la copia al nuevo repositorio de forma segura tras crear una rama de respaldo (`respaldo-antes-de-mudanza-AAAAMMDD`). La nube de la barra también avisa de la mudanza sumándola al conteo de cambios pendientes.
+
+## 2026-11-20.20 · Apps Electron nítidas de inmediato en Wayland
+ChatGPT (Codex App), Claude Desktop y Antigravity ahora se lanzan nítidas sobre Wayland nativo sin depender de reiniciar sesión: el menú de IA (Super + C) y las sobrescrituras de lanzadores (.desktop) para el menú de apps (Super + Espacio) pasan explícitamente `--ozone-platform=wayland --enable-wayland-ime`. Si ya tenías alguna abierta, solo ciérrala y vuelve a abrirla.
+
+## 2026-11-20.19 · Reintentos y tolerancia a cortes de red en Hermes Desktop
+La instalación de Hermes Desktop en `packages.sh` ahora aguanta cortes temporales de red: antes de lanzar el instalador comprueba la conectividad con el servidor de assets (hasta 4 intentos con espera de 15 s) y reintenta la instalación hasta 3 veces (con pausas de 20 s), avisando y posponiendo el reintento para la siguiente actualización sin romper el proceso.
+
+## 2026-11-20.18 · Aplicaciones Electron y XWayland nítidas
+Las aplicaciones de Electron y Chromium (VS Code, Claude Desktop, ChatGPT, Antigravity) ya no se ven borrosas ni pixeladas en pantallas con escala: ahora corren en Wayland nativo con flags dedicados y las que usen XWayland aprovechan el escalado nítido con `force_zero_scaling`.
+
+## 2026-11-20.17 · Steam y juegos opcionales
+Steam y las herramientas de juego ahora son opcionales: al instalar con `setup.sh` se pregunta si se desean instalar, y en cualquier momento se pueden omitir con `touch ~/.config/miarch/sin-juegos`, evitando la instalación de Steam, multilib y controladores adicionales.
+
+## 2026-11-20.16 · Entrada limpia después del login
+Al terminar la animación del inicio de sesión, la consola de texto que aparecía unos instantes (con el cursor parpadeando y texto de arranque) ahora sale en negro y sin cursor; el texto de arranque va al registro `~/.cache/miarch/sesion.log`.
+
 ## 2026-11-20.15 · Miarch 1.0
 Primera versión estable. Reúne todo lo de estos días: menú de IA (Super + C), Steam y juegos, Wi-Fi completo, notificaciones nuevas, barra de volumen con sonido, pantalla de inicio de sesión propia, bloqueo y entrada de cine con firma, actualizador más robusto y la skill para agentes de IA.
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Miarch · fastfetch que se adapta al tamaño de la ventana.
 #   ancha y alta  -> logo grande + datos completos
 #   mediana       -> logo pequeño + datos principales
