@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Miarch · volumen con sonido y aviso. Uso: miarch-volumen up | down | mute
+# Cambia el volumen, suena un pitido corto (el del tema de sonidos de freedesktop) y muestra una barra sencilla (sin animación,
+# la dibuja el escritorio: qs ipc osd) que se va sola. Sin sonido si queda en silencio o si ya sonó hace un instante (tecla mantenida).
+S=@DEFAULT_AUDIO_SINK@
+case "${1:-}" in
+    up)   wpctl set-volume -l 1 "$S" 5%+; wpctl set-mute "$S" 0 ;;
+    down) wpctl set-volume "$S" 5%- ;;
+    mute) wpctl set-mute "$S" toggle ;;
+    *)    echo "Uso: miarch-volumen up|down|mute" >&2; exit 1 ;;
+esac
+estado="$(wpctl get-volume "$S" 2>/dev/null)" || exit 0
+vol="$(awk '{printf "%d", $2 * 100 + 0.5}' <<<"$estado")"
+silencio=0; [[ "$estado" == *MUTED* ]] && silencio=1
+
+run="${XDG_RUNTIME_DIR:-/tmp}"
+if [ "$silencio" = 0 ] && [ "${1:-}" != mute ] && [ "$vol" -gt 0 ]; then
+    ahora="$(date +%s%N)"; antes="$(cat "$run/miarch-volumen.t" 2>/dev/null || echo 0)"
+    if [ $(( (ahora - antes) / 1000000 )) -ge 110 ]; then            # como mucho un pitido cada 110 ms
+        echo "$ahora" > "$run/miarch-volumen.t"
+        snd=/usr/share/sounds/freedesktop/stereo/audio-volume-change.oga
+        [ -f "$snd" ] && { pw-play --volume=0.55 "$snd" >/dev/null 2>&1 & }
+    fi
+fi
+
+if [ "$silencio" = 1 ] || [ "$vol" -eq 0 ]; then texto="Silenciado"; valor=0
+else texto="$vol%"; valor=$vol; fi
+qs -c miarch ipc call osd mostrar "$valor" "$texto" "$silencio" >/dev/null 2>&1
+exit 0

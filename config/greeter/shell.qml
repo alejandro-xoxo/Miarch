@@ -57,6 +57,9 @@ ShellRoot {
     property string mensaje: ""
     property bool listoParaClave: root.prueba     // en real, true cuando greetd pide la contraseña
     signal sacudir()
+    property bool accesoOk: false                    // contraseña correcta: el fondo se acerca y se enfoca, y luego arranca la sesión
+    property real apertura: 0
+    property bool lanzar: false                      // greetd ya está listo para lanzar la sesión
 
     function iniciarSesion() {
         root.clave = ""; root.hayError = false; root.verificando = false
@@ -71,6 +74,7 @@ ShellRoot {
         root.iniciarSesion()
     }
     function fallar(texto) {
+        animApertura.stop(); root.accesoOk = false; root.apertura = 0      // si falla tras acertar, el login no se queda bloqueado sin teclado
         root.verificando = false; root.clave = ""; root.hayError = true
         root.mensaje = texto
         root.sacudir()
@@ -83,7 +87,7 @@ ShellRoot {
         root.hayError = false; root.mensaje = ""
         if (root.prueba) {
             root.verificando = true
-            if (c === "prueba") { root.mensaje = "Acceso concedido (modo de prueba)"; cierre.restart() }
+            if (c === "prueba") { root.mensaje = "Acceso concedido (modo de prueba)"; root.entrar() }
             else root.fallar("CONTRASEÑA INCORRECTA")
             return
         }
@@ -91,6 +95,21 @@ ShellRoot {
         Greetd.respond(c)
     }
 
+    // Entrada: al acertar, el fondo se acerca y se enfoca (llega a escala 1, igual que el escritorio) y entonces arranca la sesión
+    function entrar() {
+        if (root.accesoOk) return
+        root.accesoOk = true; root.apertura = 0
+        animApertura.restart()
+    }
+    NumberAnimation {
+        id: animApertura
+        target: root; property: "apertura"; from: 0; to: 1; duration: 5600
+        onFinished: {
+            if (root.prueba) { Qt.quit(); return }
+            // shell de login: así se carga tu entorno (~/.zprofile, PATH) como en un inicio normal
+            Greetd.launch(["zsh", "-lc", "exec start-hyprland"], [], true)
+        }
+    }
     Timer { id: reintento; interval: 1300; onTriggered: { if (!root.prueba) Greetd.cancelSession(); root.iniciarSesion() } }
     Timer { id: cierre; interval: 1400; onTriggered: Qt.quit() }
     Timer { running: root.prueba; interval: 14000; onTriggered: Qt.quit() }   // seguro: el modo de prueba se cierra solo
@@ -102,10 +121,7 @@ ShellRoot {
             else { root.mensaje = message; Greetd.respond("") }
         }
         function onAuthFailure(message) { root.fallar("CONTRASEÑA INCORRECTA") }
-        function onReadyToLaunch() {
-            // shell de login: así se carga tu entorno (~/.zprofile, PATH) como en un inicio normal
-            Greetd.launch(["zsh", "-lc", "exec start-hyprland"], [], true)
-        }
+        function onReadyToLaunch() { root.entrar() }
         function onError(error, message) { root.fallar(message || "ERROR DE INICIO DE SESIÓN") }
     }
 
@@ -129,12 +145,17 @@ ShellRoot {
                 focus: true
                 Component.onCompleted: { forceActiveFocus(); entrada = 1 }
                 property real entrada: 0
-                Behavior on entrada { NumberAnimation { duration: 1100; easing.type: Easing.OutCubic } }
+                Behavior on entrada { NumberAnimation { duration: 1500; easing.type: Easing.OutQuint } }
+                // Secuencia de cine (5,6 s): p = progreso 0..1
+                readonly property real p: root.apertura
+                function suave(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x) }
+                readonly property real abre: suave((p - 0.80) / 0.20)             // llega el fondo nítido
+                readonly property real barras: p < 0.86 ? suave(p / 0.12) : 1 - suave((p - 0.86) / 0.14)
 
                 Keys.onPressed: event => {
                     if (event.key === Qt.Key_Escape) { if (root.prueba) Qt.quit(); else root.clave = ""; return }
                     if (event.key === Qt.Key_Tab) { root.cambiarUsuario(1); return }
-                    if (root.verificando) return
+                    if (root.verificando || root.accesoOk) return
                     if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) { root.enviar(); return }
                     if (event.key === Qt.Key_Backspace) root.clave = root.clave.slice(0, -1)
                     else if (event.text.length > 0 && event.text.charCodeAt(0) >= 32) root.clave += event.text
@@ -157,14 +178,102 @@ ShellRoot {
                     visible: img.status === Image.Ready
                     blurEnabled: true; blurMax: 64; blur: 1.0
                     autoPaddingEnabled: false
+                    opacity: 1 - pantalla.abre; scale: 1 + 0.12 * pantalla.p
                 }
-                Rectangle { anchors.fill: parent; color: root.fondo; opacity: img.status === Image.Ready ? 0.58 : 0 }
+                Rectangle { anchors.fill: parent; color: root.fondo; opacity: (img.status === Image.Ready ? 0.58 : 0) * (1 - pantalla.abre) }
+                Image {   // el fondo nítido llega desde más cerca y se asienta en escala 1
+                    anchors.fill: parent
+                    source: img.source
+                    fillMode: Image.PreserveAspectCrop
+                    asynchronous: true
+                    visible: pantalla.abre > 0
+                    opacity: pantalla.abre
+                    scale: 1 + 0.12 * (1 - pantalla.abre)
+                }
+                // ── Secuencia de cine ──
+                Repeater {   // viñeta
+                    model: [ { l: true }, { l: false } ]
+                    Rectangle {
+                        required property var modelData
+                        visible: root.accesoOk
+                        x: modelData.l ? 0 : parent.width - width; width: parent.width * 0.22; height: parent.height
+                        opacity: 0.55 * pantalla.suave(pantalla.p / 0.2) * (1 - pantalla.abre)
+                        gradient: Gradient { orientation: Gradient.Horizontal
+                            GradientStop { position: 0; color: modelData.l ? "black" : "transparent" }
+                            GradientStop { position: 1; color: modelData.l ? "transparent" : "black" } }
+                    }
+                }
+                Column {   // título
+                    visible: root.accesoOk && pantalla.p > 0.3
+                    anchors.centerIn: parent
+                    spacing: pantalla.height * 0.012
+                    opacity: pantalla.suave((pantalla.p - 0.32) / 0.14) * (1 - pantalla.suave((pantalla.p - 0.84) / 0.08))
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: "MIARCH"
+                        color: root.arena
+                        font { family: root.fuente; pixelSize: pantalla.height * 0.085; weight: Font.Normal
+                               letterSpacing: pantalla.height * (0.012 + 0.03 * pantalla.suave((pantalla.p - 0.32) / 0.5)) }
+                    }
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: "BIENVENIDO, " + root.usuario.toUpperCase()
+                        color: root.terracota
+                        opacity: 0.85
+                        font { family: root.fuente; pixelSize: pantalla.height * 0.016; weight: Font.Medium; letterSpacing: 9 }
+                    }
+                    Text {   // firma: aparece un poco después del título
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        topPadding: pantalla.height * 0.03
+                        text: "by alejandro-xoxo"
+                        color: root.arena
+                        opacity: 0.7 * pantalla.suave((pantalla.p - 0.46) / 0.12)
+                        font { family: root.fuente; pixelSize: pantalla.height * 0.02; weight: Font.Normal; letterSpacing: 5 }
+                    }
+                }
+                Item {   // destello anamórfico
+                    visible: pantalla.p > 0.66 && pantalla.p < 0.9
+                    anchors.fill: parent
+                    opacity: Math.sin(Math.PI * Math.max(0, Math.min(1, (pantalla.p - 0.66) / 0.22)))
+                    Rectangle {
+                        width: parent.width * pantalla.suave((pantalla.p - 0.66) / 0.16); height: pantalla.height * 0.07
+                        x: (parent.width - width) / 2; y: parent.height / 2 - height / 2
+                        gradient: Gradient { orientation: Gradient.Vertical
+                            GradientStop { position: 0; color: "transparent" }
+                            GradientStop { position: 0.5; color: Qt.alpha("#ffe9c8", 0.10) }
+                            GradientStop { position: 1; color: "transparent" } }
+                    }
+                    Rectangle {
+                        width: parent.width * pantalla.suave((pantalla.p - 0.66) / 0.16); height: 3
+                        x: (parent.width - width) / 2; y: parent.height / 2 - 1.5
+                        gradient: Gradient { orientation: Gradient.Horizontal
+                            GradientStop { position: 0; color: "transparent" }
+                            GradientStop { position: 0.5; color: "#fff3e0" }
+                            GradientStop { position: 1; color: "transparent" } }
+                    }
+                }
+                Rectangle {   // luz
+                    anchors.fill: parent
+                    color: "#fff3e0"
+                    visible: opacity > 0
+                    opacity: 0.22 * pantalla.suave((pantalla.p - 0.76) / 0.12) * (1 - pantalla.suave((pantalla.p - 0.90) / 0.10))
+                }
+                Repeater {   // barras de cine
+                    model: [ true, false ]
+                    Rectangle {
+                        required property bool modelData
+                        visible: pantalla.barras > 0
+                        color: "black"
+                        width: parent.width; height: pantalla.height * 0.128 * pantalla.barras
+                        y: modelData ? 0 : parent.height - height
+                    }
+                }
 
                 Column {
                     x: parent.width * 0.05
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.verticalCenterOffset: (1 - pantalla.entrada) * 40
-                    opacity: pantalla.entrada
+                    opacity: pantalla.entrada * (1 - Math.min(1, root.apertura * 4))
                     spacing: 6
 
                     Text {
@@ -229,7 +338,7 @@ ShellRoot {
                             x: zonaClave.temblor
                             spacing: 14
                             Text {
-                                text: root.verificando ? "VERIFICANDO…"
+                                text: root.accesoOk ? "ACCESO CONCEDIDO" : root.verificando ? "VERIFICANDO…"
                                     : root.mensaje !== "" ? root.mensaje
                                     : (!root.listoParaClave ? "ESPERANDO…" : (root.clave.length ? "" : "ESCRIBE TU CONTRASEÑA"))
                                 color: root.hayError ? root.terracota : Qt.alpha(root.arena, 0.55)
@@ -259,7 +368,7 @@ ShellRoot {
                 Row {
                     x: parent.width * 0.05; y: parent.height - height - parent.height * 0.05
                     spacing: 28
-                    opacity: pantalla.entrada
+                    opacity: pantalla.entrada * (1 - Math.min(1, root.apertura * 4))
                     Repeater {
                         model: [ { t: "REINICIAR", c: "reboot" }, { t: "APAGAR", c: "poweroff" } ]
                         Text {

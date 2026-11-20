@@ -170,7 +170,7 @@ ui_ejecutar() {
         trap 'ancho="$(ui_ancho)"' WINCH        # si cambias el tamaño de la ventana, se vuelve a medir al instante
         while kill -0 "$pid" 2>/dev/null; do
             seg=$(( $(date +%s) - inicio ))
-            ultima="$(tail -c 400 "$UI_LOG" 2>/dev/null | tr '\r' '\n' | sed 's/\x1b\[[0-9;?]*[A-Za-z]//g' | grep -v '^[[:space:]]*$' | tail -n 1)"
+            ultima="$(tail -c 400 "$UI_LOG" 2>/dev/null | tr '\r' '\n' | tr -d '\000-\010\013\014\016-\037' | sed 's/\x1b\[[0-9;?]*[A-Za-z]//g' | grep -a -v '^[[:space:]]*$' | tail -n 1)"   # sin bytes de control: un instalador que imprime binario no ensucia el spinner
             tmp="$(ui_tiempo "$seg")"
             # texto fijo = "  ⠋  mensaje  (12s)  ": si no cabe entero, se recorta el mensaje; lo que sobra se usa para la última línea de salida
             fijo=$(( 2 + 1 + 2 + ${#tmp} + 4 + 2 ))
@@ -195,7 +195,7 @@ ui_ejecutar() {
         ui_registrar fallo
         vmsg="$(ui_recortar "$msg" $(( ancho - ${#S_ERR} - ${#t} - 20 )))"
         printf '  %s%s%s %s  (código %d, %s)\n' "$C_ERR" "$S_ERR" "$C_R" "$vmsg" "$rc" "$t"
-        tail -c +"$(( desde + 1 ))" "$UI_LOG" | tr '\r' '\n' | grep -v '^[[:space:]]*$' | tail -n 8 | sed "s/^/      ${C_TENUE}/; s/\$/${C_R}/"
+        tail -c +"$(( desde + 1 ))" "$UI_LOG" | tr '\r' '\n' | tr -d '\000-\010\013\014\016-\037' | grep -a -v '^[[:space:]]*$' | tail -n 8 | sed "s/^/      ${C_TENUE}/; s/\$/${C_R}/"
         printf '      %sRegistro completo: %s%s\n' "$C_TENUE" "$UI_LOG" "$C_R"
     fi
     return "$rc"

@@ -57,7 +57,7 @@ mkdir -p "$HOME/.config" "$HOME/.local/bin" "$WALL_DIR"
 # SCRIPTS (van a ~/.local/bin)
 # =========================
 ui_etapa "Instalando los scripts de Miarch"
-for f in wallpaper.sh miarch-colors miarch-set miarch-wifi miarch-info miarch-fetch miarch-update miarch-chrome-tema miarch-modo-juego miarch-steam; do
+for f in wallpaper.sh miarch-colors miarch-set miarch-wifi miarch-info miarch-fetch miarch-update miarch-chrome-tema miarch-modo-juego miarch-steam miarch-volumen; do
     [ -f "$DOTFILES_DIR/scripts/$f" ] && install -Dm755 "$DOTFILES_DIR/scripts/$f" "$HOME/.local/bin/$f"
 done
 
@@ -142,14 +142,6 @@ EJ
 # font_size 13
 # background_opacity 0.9
 EJ
-# skill para agentes de IA (Claude Code): enseña al agente a instalar y configurar cosas en este sistema de la mejor forma.
-# Solo se instala si el agente existe en este equipo. Es una copia gestionada por Miarch: se refresca en cada instalación
-# (sin copias de seguridad: dentro de ~/.claude/skills una copia extra se leería como una skill repetida).
-if [ -d "$HOME/.claude" ] && [ -d "$DOTFILES_DIR/skills/instalar-configurar" ]; then
-    mkdir -p "$HOME/.claude/skills"
-    rm -rf "$HOME/.claude/skills/instalar-configurar"
-    cp -r "$DOTFILES_DIR/skills/instalar-configurar" "$HOME/.claude/skills/instalar-configurar"
-fi
 # skill para agentes de IA: enseña al agente a instalar y configurar cosas en este sistema de la mejor forma.
 # Sigue el estándar abierto "Agent Skills" (una carpeta con SKILL.md), así que sirve igual en todos: solo cambia la carpeta.
 # Se copia a la de cada agente que exista en este equipo (por su comando o por su carpeta). Es una copia gestionada por Miarch:

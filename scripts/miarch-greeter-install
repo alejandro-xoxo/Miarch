@@ -7,6 +7,21 @@
 # y reinicia: vuelves al inicio de sesión de texto de siempre.
 set -euo pipefail
 
+# --pendiente: solo mira (sin sudo ni cambios) si hay que instalar o actualizar la pantalla. Sale con 0 si hay algo pendiente.
+# Quien no la quiere crea ~/.config/miarch/sin-greeter y Miarch deja de ofrecerla.
+if [ "${1:-}" = "--pendiente" ]; then
+    [ -e "$HOME/.config/miarch/sin-greeter" ] && exit 1
+    [ "$(systemctl is-enabled greetd 2>/dev/null)" = "enabled" ] || exit 0
+    R="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/config/greeter"
+    # hyprland.lua lleva el teclado sustituido: se compara ya con el valor de este equipo
+    KBP="$(grep -oP '^local KB *= *"\K[^"]+' "$HOME/.config/hypr/hyprland.lua" 2>/dev/null || echo latam)"
+    sed "s|__KB__|${KBP//|/_}|" "$R/hyprland.lua" | cmp -s - /usr/share/miarch/greeter/hyprland.lua || exit 0
+    for f in shell.qml start.sh config.toml; do
+        cmp -s "$R/$f" "/usr/share/miarch/greeter/$f" || { [ "$f" = config.toml ] && cmp -s "$R/$f" /etc/greetd/config.toml && continue; exit 0; }
+    done
+    exit 1
+fi
+
 [ "$EUID" -ne 0 ] || { echo "[ERROR] Ejecútalo con tu usuario normal, no como root."; exit 1; }
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SRC="$REPO/config/greeter"
@@ -25,13 +40,15 @@ echo "==> Copiando la pantalla de inicio de sesión a $DEST ..."
 KB="$(grep -oP '^local KB *= *"\K[^"]+' "$HOME/.config/hypr/hyprland.lua" 2>/dev/null || echo latam)"
 sudo install -d -m 755 "$DEST"
 sudo install -m 644 "$SRC/shell.qml" "$DEST/shell.qml"
-sed "s/__KB__/$KB/" "$SRC/hyprland.lua" | sudo tee "$DEST/hyprland.lua" >/dev/null
+sed "s|__KB__|${KB//|/_}|" "$SRC/hyprland.lua" | sudo tee "$DEST/hyprland.lua" >/dev/null
 sudo chmod 644 "$DEST/hyprland.lua"
 sudo install -m 755 "$SRC/start.sh" "$DEST/start.sh"
 
 echo "==> Carpeta del fondo y los colores (la actualiza wallpaper.sh sin necesitar sudo)..."
 sudo install -d -o "$USER" -g "$(id -gn)" -m 755 "$DATOS"
-[ -s "$HOME/.cache/miarch-wallpaper" ] && cp -f "$(cat "$HOME/.cache/miarch-wallpaper")" "$DATOS/wallpaper" && chmod 644 "$DATOS/wallpaper"
+# si el fondo anotado ya no existe, se sigue sin él (antes el script se detenía aquí y no activaba el login)
+FONDO="$(cat "$HOME/.cache/miarch-wallpaper" 2>/dev/null || true)"
+if [ -n "$FONDO" ] && [ -f "$FONDO" ]; then cp -f "$FONDO" "$DATOS/wallpaper" && chmod 644 "$DATOS/wallpaper"; fi
 [ -f "$HOME/.cache/miarch/colors.json" ] && cp -f "$HOME/.cache/miarch/colors.json" "$DATOS/colors.json" && chmod 644 "$DATOS/colors.json"
 
 echo "==> Configurando greetd (guardo una copia de la config anterior)..."

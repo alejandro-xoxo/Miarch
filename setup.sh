@@ -16,7 +16,7 @@ unset MIARCH_UI_INICIO MIARCH_UI_TOTAL MIARCH_UI_ACTUAL MIARCH_UI_SUB MIARCH_UI_
 # barra del avance TOTAL de toda la instalación: 2 etapas de setup.sh + las de packages.sh + las de install.sh
 ETAPAS_PAQUETES="$(bash ./packages.sh --etapas)"
 ETAPAS_INSTALL="$(bash ./install.sh --etapas)"
-export MIARCH_UI_TOTAL=$(( 2 + ETAPAS_PAQUETES + ETAPAS_INSTALL ))
+export MIARCH_UI_TOTAL=$(( 3 + ETAPAS_PAQUETES + ETAPAS_INSTALL ))
 export MIARCH_UI_ACTUAL=0
 export MIARCH_UI_SUB=1   # los scripts que lanza setup.sh no repiten el logo ni el resumen
 source ./lib/ui.sh
@@ -46,6 +46,19 @@ bash ./packages.sh
 export MIARCH_UI_ACTUAL=$(( 2 + ETAPAS_PAQUETES ))
 bash ./install.sh
 
+# Pantalla de inicio de sesión gráfica por defecto (se ve en el próximo arranque). Para no tenerla: touch ~/.config/miarch/sin-greeter
+export MIARCH_UI_ACTUAL=$(( 2 + ETAPAS_PAQUETES + ETAPAS_INSTALL ))
+GREETER_OK=0
+if [ ! -e "$HOME/.config/miarch/sin-greeter" ]; then
+    ui_etapa "Pantalla de inicio de sesión"
+    if ui_ejecutar "Instalando greetd y la pantalla de Miarch" bash ./scripts/miarch-greeter-install; then GREETER_OK=1
+    else ui_aviso "No se pudo instalar la pantalla de inicio de sesión: entrarás por la terminal. Reintenta con ./scripts/miarch-greeter-install"; fi
+fi
+
 ui_resumen "Instalación completa"
-ui_caja "Reinicia con:  sudo reboot" "Después inicia sesión en la terminal (tty1) y el escritorio arranca solo." "" "github.com/alejandro-xoxo/Miarch"
+if [ "$GREETER_OK" = 1 ]; then
+    ui_caja "Reinicia con:  sudo reboot" "Verás la pantalla de inicio de sesión de Miarch: escribe tu contraseña y entra." "" "github.com/alejandro-xoxo/Miarch"
+else
+    ui_caja "Reinicia con:  sudo reboot" "Después inicia sesión en la terminal (tty1) y el escritorio arranca solo." "" "github.com/alejandro-xoxo/Miarch"
+fi
 echo

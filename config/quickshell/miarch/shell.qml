@@ -113,7 +113,7 @@ ShellRoot {
                 // Todo el bloque entra deslizando con rebote
                 property real entrada: 0
                 Component.onCompleted: entrada = 1
-                Behavior on entrada { NumberAnimation { duration: 1400; easing.type: Easing.OutBack; easing.overshoot: 1.4 } }
+                Behavior on entrada { NumberAnimation { duration: 1400; easing.type: Easing.OutQuint } }
 
                 Column {
                     id: bloque
@@ -331,7 +331,9 @@ ShellRoot {
                   "f=0; grep -q -- --faltantes \"$d/packages.sh\" 2>/dev/null && f=$(bash \"$d/packages.sh\" --faltantes 2>/dev/null | grep -c .); " +
                   // paquetes que Miarch ya no usa y siguen instalados (se quitan al actualizar)
                   "s=0; grep -q -- --sobran \"$d/packages.sh\" 2>/dev/null && s=$(bash \"$d/packages.sh\" --sobran 2>/dev/null | grep -c .); " +
-                  "echo $((n + c + f + s))"]
+                  // pantalla de inicio de sesión de Miarch (greetd) aún sin instalar, salvo que se haya rechazado
+                  "g=0; [ -e \"$HOME/.config/miarch/sin-greeter\" ] || [ \"$(systemctl is-enabled greetd 2>/dev/null)\" = enabled ] || g=1; " +
+                  "echo $((n + c + f + s + g))"]
         stdout: StdioCollector {
             onStreamFinished: {
                 const t = text.trim()
@@ -1706,6 +1708,66 @@ ShellRoot {
         function search(texto: string): void { root.lanzadorAbierto = true; root.consultaLanz = texto }
     }
 
+    // ═════════════════ BARRA DE VOLUMEN (sin animación: aparece, se actualiza y se va) ═════════════════
+    // La llama miarch-volumen:  qs -c miarch ipc call osd mostrar <0-100> <texto> <1 si está en silencio>
+    property bool osdVisible: false
+    property int osdValor: 0
+    property string osdTexto: ""
+    property bool osdSilencio: false
+    Timer { id: tOsd; interval: 1200; onTriggered: root.osdVisible = false }
+    IpcHandler {
+        target: "osd"
+        function mostrar(valor: int, texto: string, silencio: int): void {
+            root.osdValor = Math.max(0, Math.min(100, valor)); root.osdTexto = texto; root.osdSilencio = silencio === 1
+            root.osdVisible = true; tOsd.restart()
+        }
+    }
+    Variants {
+        model: Quickshell.screens
+        PanelWindow {
+            required property var modelData
+            screen: modelData
+            readonly property bool enEstaPantalla: Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name === modelData.name : modelData === Quickshell.screens[0]
+            visible: root.osdVisible && enEstaPantalla
+            anchors { bottom: true }
+            margins { bottom: 70 }
+            implicitWidth: 300; implicitHeight: 52
+            color: "transparent"
+            mask: Region {}                                  // no captura el ratón
+            exclusionMode: ExclusionMode.Ignore
+            WlrLayershell.layer: WlrLayer.Overlay
+            WlrLayershell.namespace: "miarch-osd"
+            WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+            Rectangle {
+                anchors.fill: parent; radius: 26
+                color: Qt.alpha(Qt.lighter(root.fondo, 1.3), 0.95)
+                border.width: 1; border.color: Qt.alpha(root.arena, 0.13)
+                Text {
+                    x: 22; anchors.verticalCenter: parent.verticalCenter
+                    text: root.osdSilencio ? "MUDO" : "VOL"
+                    color: root.osdSilencio ? Qt.alpha(root.arena, 0.5) : root.terracota
+                    font { family: root.fuente; pixelSize: 11 * root.esc; weight: Font.Medium; letterSpacing: 3 }
+                }
+                Rectangle {
+                    x: 78; width: parent.width - 78 - 66; height: 6; radius: 3
+                    anchors.verticalCenter: parent.verticalCenter
+                    color: Qt.alpha(root.arena, 0.14)
+                    Rectangle {
+                        width: parent.width * (root.osdSilencio ? 0 : root.osdValor) / 100; height: parent.height; radius: 3
+                        color: root.terracota
+                    }
+                }
+                Text {
+                    anchors.right: parent.right; anchors.rightMargin: 22
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: root.osdTexto
+                    color: root.arena
+                    font { family: root.fuente; pixelSize: 13 * root.esc; weight: Font.Medium }
+                }
+            }
+        }
+    }
+
     // ═════════════════ NOTIFICACIONES ═════════════════
     // Quickshell es el servidor de notificaciones (reemplaza a dunst): arriba a la derecha, bajo la barra, con el mismo
     // estilo que los paneles. Se deslizan al entrar, muestran una cuenta atrás (se pausa con el ratón encima), barra de
@@ -1759,23 +1821,28 @@ ShellRoot {
                         property real resta: 1
                         visible: index < 5
                         width: colNotif.width
-                        height: visible ? tarjeta.height : 0
+                        height: visible ? tarjetaN.height : 0
                         Component.onCompleted: entrada = 1
                         Behavior on entrada { NumberAnimation { duration: 420; easing.type: Easing.OutCubic } }
-                        NumberAnimation { target: tj; property: "resta"; from: 1; to: 0; duration: Math.max(1, tj.dur)
-                                          running: tj.dur > 0; paused: hov.hovered; onFinished: tj.modelData.expire() }
-                        HoverHandler { id: hov }
+                        NumberAnimation { id: cuenta; target: tj; property: "resta"; from: 1; to: 0; duration: Math.max(1, tj.dur)
+                                          running: tj.dur > 0; paused: hovN.hovered; onFinished: tj.modelData.expire() }
+                        Connections {   // si la app reemplaza la notificación (volumen, brillo…), vuelve a empezar la cuenta atrás
+                            target: tj.modelData
+                            function onBodyChanged() { if (tj.dur > 0) cuenta.restart() }
+                            function onSummaryChanged() { if (tj.dur > 0) cuenta.restart() }
+                        }
+                        HoverHandler { id: hovN }
 
                         Rectangle {
-                            id: tarjeta
+                            id: tarjetaN
                             width: parent.width
                             x: (1 - tj.entrada) * 80
                             opacity: Math.min(1, tj.entrada)
-                            height: cuerpo.implicitHeight + 34
+                            height: cuerpoN.implicitHeight + 34
                             radius: 18
                             color: Qt.alpha(Qt.lighter(root.fondo, 1.3), 0.95)
                             border.width: 1
-                            border.color: tj.critica ? Qt.alpha("#b8665f", 0.85) : Qt.alpha(root.arena, hov.hovered ? 0.28 : 0.13)
+                            border.color: tj.critica ? Qt.alpha("#b8665f", 0.85) : Qt.alpha(root.arena, hovN.hovered ? 0.28 : 0.13)
                             Behavior on border.color { ColorAnimation { duration: 200 } }
                             Rectangle {   // franja de color a la izquierda: acento, o rojo mate si es crítica
                                 x: 0; y: 18; width: 3; height: parent.height - 36; radius: 1.5
@@ -1794,7 +1861,7 @@ ShellRoot {
                                 }
                             }
                             Row {
-                                id: cuerpo
+                                id: cuerpoN
                                 x: 20; y: 17
                                 width: parent.width - 36
                                 spacing: 14
@@ -1826,6 +1893,7 @@ ShellRoot {
                                         Text {
                                             id: nombreApp
                                             width: parent.width - 24; elide: Text.ElideRight
+                                            textFormat: Text.PlainText
                                             text: tj.modelData.appName.toUpperCase()
                                             color: Qt.alpha(root.arena, 0.5)
                                             font { family: root.fuente; pixelSize: 10 * root.esc; weight: Font.Medium; letterSpacing: 3 }
@@ -1841,6 +1909,7 @@ ShellRoot {
                                     }
                                     Text {
                                         width: parent.width; wrapMode: Text.Wrap; maximumLineCount: 2; elide: Text.ElideRight
+                                        textFormat: Text.PlainText
                                         text: tj.modelData.summary
                                         color: root.arena
                                         font { family: root.fuente; pixelSize: 15 * root.esc; weight: Font.Medium }
@@ -1849,7 +1918,7 @@ ShellRoot {
                                         visible: tj.modelData.body !== ""
                                         width: parent.width; wrapMode: Text.Wrap; maximumLineCount: 3; elide: Text.ElideRight
                                         textFormat: Text.StyledText
-                                        text: tj.modelData.body
+                                        text: tj.modelData.body.replace(/<img[^>]*>/gi, "")
                                         color: Qt.alpha(root.arena, 0.72)
                                         font { family: root.fuente; pixelSize: 13 * root.esc; weight: Font.Light }
                                     }
@@ -1888,7 +1957,7 @@ ShellRoot {
                                 visible: tj.dur > 0
                                 x: 20; y: parent.height - 5
                                 width: (parent.width - 40) * tj.resta; height: 2; radius: 1
-                                color: Qt.alpha(root.terracota, hov.hovered ? 0.8 : 0.45)
+                                color: Qt.alpha(root.terracota, hovN.hovered ? 0.8 : 0.45)
                             }
                         }
                     }
@@ -1910,8 +1979,8 @@ ShellRoot {
             { t: "Claude Desktop", d: "La app de Claude, con ventana propia", tipo: "APP", logo: "claude", c: "#c8745a", m: "C", bin: "claude-desktop", cmd: "claude-desktop" } ] },
         { t: "Codex App", d: "La app de ChatGPT con Codex (vista previa)", logo: "openai", c: "#86a595", m: "Cx", items: [
             { t: "Codex App", d: "La app de ChatGPT con Codex (vista previa)", tipo: "APP", logo: "openai", c: "#86a595", m: "Cx", bin: "chatgpt", cmd: "chatgpt" } ] },
-        { t: "Antigravity", d: "La plataforma de agentes de Google (2.0)", logo: "antigravity", c: "#7d9bc0", m: "A", items: [
-            { t: "Antigravity", d: "La plataforma de agentes de Google (2.0)", tipo: "APP", logo: "antigravity", c: "#7d9bc0", m: "A", bin: "antigravity", cmd: "antigravity" } ] },
+        { t: "Antigravity", d: "La app de agentes de Google (2.0)", logo: "antigravity", c: "#7d9bc0", m: "A", items: [
+            { t: "Antigravity", d: "La app de agentes de Google (2.0)", tipo: "APP", logo: "antigravity", c: "#7d9bc0", m: "A", bin: "antigravity", cmd: "antigravity" } ] },
         { t: "Hermes Desktop", d: "La app oficial de Hermes (Nous Research)", logo: "hermes", c: "#c0a06a", m: "H", items: [
             { t: "Hermes Desktop", d: "La app oficial de Hermes (Nous Research)", tipo: "APP", logo: "hermes", c: "#c0a06a", m: "H", bin: "hermes", cmd: "hermes desktop" } ] }
     ]
@@ -1966,7 +2035,7 @@ ShellRoot {
                     target: root
                     function onIaAbiertoChanged() { if (root.iaAbierto) { iaVista.entrada = 0; iaVista.entrada = 1; iaVista.forceActiveFocus() } }
                 }
-                Behavior on entrada { NumberAnimation { duration: 600; easing.type: Easing.OutBack; easing.overshoot: 1.4 } }
+                Behavior on entrada { NumberAnimation { duration: 750; easing.type: Easing.OutQuint } }
                 Keys.onPressed: event => {
                     if (event.key === Qt.Key_Escape || event.key === Qt.Key_Left || event.key === Qt.Key_Backspace) {
                         if (event.key === Qt.Key_Escape || root.iaNivel === 1) root.iaAtras()
@@ -2167,7 +2236,7 @@ ShellRoot {
                     target: root
                     function onEnergiaAbiertoChanged() { if (root.energiaAbierto) { en.entrada = 0; en.entrada = 1; en.forceActiveFocus() } }
                 }
-                Behavior on entrada { NumberAnimation { duration: 600; easing.type: Easing.OutBack; easing.overshoot: 1.4 } }
+                Behavior on entrada { NumberAnimation { duration: 750; easing.type: Easing.OutQuint } }
 
                 Keys.onPressed: event => {
                     if (event.key === Qt.Key_Escape) { if (root.energiaConfirmar >= 0) root.energiaConfirmar = -1; else root.energiaAbierto = false }
@@ -2327,7 +2396,7 @@ ShellRoot {
                     }
                     function onConsultaLanzChanged() { if (campo.text !== root.consultaLanz) campo.text = root.consultaLanz }
                 }
-                Behavior on entrada { NumberAnimation { duration: 700; easing.type: Easing.OutBack; easing.overshoot: 1.6 } }
+                Behavior on entrada { NumberAnimation { duration: 700; easing.type: Easing.OutQuint } }
 
                 // velo del color del fondo; clic fuera = cerrar
                 Rectangle {
@@ -2375,7 +2444,7 @@ ShellRoot {
                         height: 2; radius: 1
                         color: root.terracota
                         width: parent.width * Math.min(1, 0.12 + campo.text.length * 0.07)
-                        Behavior on width { NumberAnimation { duration: 450; easing.type: Easing.OutBack; easing.overshoot: 1.4 } }
+                        Behavior on width { NumberAnimation { duration: 450; easing.type: Easing.OutQuint } }
                         Behavior on color { ColorAnimation { duration: 800 } }
                     }
                     Item { width: 1; height: 8 }
@@ -2390,7 +2459,7 @@ ShellRoot {
                             color: root.terracota
                             y: lz.seleccion * 58 + 12
                             visible: lz.resultados.length > 0
-                            Behavior on y { NumberAnimation { duration: 380; easing.type: Easing.OutBack; easing.overshoot: 1.8 } }
+                            Behavior on y { NumberAnimation { duration: 380; easing.type: Easing.OutQuint } }
                             Behavior on color { ColorAnimation { duration: 800 } }
                         }
                         Repeater {
@@ -2402,7 +2471,7 @@ ShellRoot {
                                 visible: app !== null
                                 y: index * 58; width: parent.width; height: 58
                                 x: sel ? 14 : 0
-                                Behavior on x { NumberAnimation { duration: 380; easing.type: Easing.OutBack; easing.overshoot: 2 } }
+                                Behavior on x { NumberAnimation { duration: 380; easing.type: Easing.OutQuint } }
 
                                 readonly property string rutaIcono: app ? Quickshell.iconPath(app.icon, true) : ""
                                 IconImage {
@@ -2454,6 +2523,9 @@ ShellRoot {
     property string clave: ""
     property bool verificando: false
     property bool errorClave: false
+    property bool accesoOk: false                    // la contraseña fue correcta: suena, sale el log y se abre
+    property real apertura: 0                        // 0 → 1 durante la secuencia de desbloqueo
+    property var lineasLog: []
     property string wallpaperRuta: ""
     signal sacudir()
 
@@ -2474,7 +2546,7 @@ ShellRoot {
             root.clave = ""
             if (result === PamResult.Success) {
                 root.errorClave = false
-                sesion.locked = false
+                root.iniciarApertura()
             } else {
                 root.errorClave = true
                 root.sacudir()
@@ -2483,22 +2555,46 @@ ShellRoot {
         onError: err => { root.verificando = false; root.clave = ""; root.errorClave = true; root.sacudir() }
     }
 
+    // Desbloqueo: suena, aparece el log real del sistema tecleándose y luego se despeja la pantalla (se ve el fondo nítido)
+    function iniciarApertura() {
+        if (root.accesoOk) return
+        root.accesoOk = true
+        root.apertura = 0
+        pLog.running = true
+        tPorSiNoHayLog.start()
+    }
+    function arrancarApertura() {
+        if (!root.accesoOk) return                     // se volvió a bloquear mientras tanto: no se desbloquea nada
+        Quickshell.execDetached(["pw-play", "--volume=0.6", Quickshell.env("HOME") + "/.config/quickshell/miarch/sonidos/desbloqueo.wav"])
+        animApertura.restart()                         // el sonido y la animación empiezan a la vez: el golpe cae con el destello
+    }
+    Process {
+        id: pLog
+        command: ["sh", "-c", "journalctl -b -n 26 --no-pager -o short-monotonic 2>/dev/null || journalctl --user -b -n 26 --no-pager -o short-monotonic 2>/dev/null"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const l = text.split("\n").map(x => x.trim()).filter(x => x.length > 0)
+                root.lineasLog = l.length > 0 ? l : ["[    0.000000] miarch: sesión desbloqueada"]
+                tPorSiNoHayLog.stop()
+                root.arrancarApertura()
+            }
+        }
+    }
+    Timer { id: tPorSiNoHayLog; interval: 600; onTriggered: { if (!animApertura.running) { root.lineasLog = ["[    0.000000] miarch: sesión desbloqueada"]; root.arrancarApertura() } } }
+    NumberAnimation {
+        id: animApertura
+        target: root; property: "apertura"; from: 0; to: 1; duration: 5600
+        onFinished: { if (!root.accesoOk) return; sesion.locked = false; root.accesoOk = false; root.apertura = 0 }   // solo si la contraseña fue correcta y sigue vigente
+    }
     function intentar() {
         if (root.clave.length === 0 || root.verificando) return
         root.verificando = true
-        if (!pam.start()) { root.verificando = false; root.errorClave = true; root.sacudir() }
+        if (!pam.start()) { root.verificando = false; root.clave = ""; root.errorClave = true; root.sacudir() }
     }
 
     IpcHandler {
         target: "lock"
-        function lock(): void { root.clave = ""; root.errorClave = false; sesion.locked = true }
-    }
-
-    // Solo para pruebas: MIARCH_LOCK_TEST=1 qs -c miarch  → se desbloquea solo a los 9 s
-    Timer {
-        running: sesion.locked && Quickshell.env("MIARCH_LOCK_TEST") === "1"
-        interval: 9000
-        onTriggered: sesion.locked = false
+        function lock(): void { animApertura.stop(); tPorSiNoHayLog.stop(); root.clave = ""; root.errorClave = false; root.accesoOk = false; root.apertura = 0; sesion.locked = true }   // un bloqueo nuevo cancela cualquier desbloqueo a medias
     }
 
     WlSessionLock {
@@ -2515,10 +2611,17 @@ ShellRoot {
 
                 property real entrada: 0
                 Component.onCompleted: { forceActiveFocus(); entrada = 1 }
-                Behavior on entrada { NumberAnimation { duration: 1200; easing.type: Easing.OutBack; easing.overshoot: 1.3 } }
+                Behavior on entrada { NumberAnimation { duration: 1500; easing.type: Easing.OutQuint } }
+
+                // 0 durante el log y 0→1 cuando la pantalla se despeja (último 38 % de la secuencia)
+                // Secuencia de cine (5,6 s): p = progreso 0..1. El golpe del sonido cae en p = 0.76.
+                readonly property real p: root.apertura
+                function suave(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x) }
+                readonly property real abre: suave((p - 0.80) / 0.20)             // llega el fondo nítido
+                readonly property real barras: p < 0.86 ? suave(p / 0.12) : 1 - suave((p - 0.86) / 0.14)   // barras de cine
 
                 Keys.onPressed: event => {
-                    if (root.verificando) return
+                    if (root.verificando || root.accesoOk) return
                     if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) { root.intentar(); return }
                     if (event.key === Qt.Key_Backspace) root.clave = root.clave.slice(0, -1)
                     else if (event.key === Qt.Key_Escape) root.clave = ""
@@ -2540,9 +2643,104 @@ ShellRoot {
                     anchors.fill: parent
                     source: imgFondo
                     blurEnabled: true; blurMax: 64; blur: 1.0
+                    opacity: 1 - candado.abre; scale: 1 + 0.12 * candado.p
                     autoPaddingEnabled: false
                 }
-                Rectangle { anchors.fill: parent; color: root.fondo; opacity: 0.58 }
+                Rectangle { anchors.fill: parent; color: root.fondo; opacity: 0.58 * (1 - candado.abre) }
+                // Al desbloquear el fondo se acerca y se enfoca, como si entraras en él: llega a escala 1, igual que el escritorio
+                Image {
+                    anchors.fill: parent
+                    source: imgFondo.source
+                    fillMode: Image.PreserveAspectCrop
+                    asynchronous: true
+                    visible: candado.abre > 0
+                    opacity: candado.abre
+                    scale: 1 + 0.12 * (1 - candado.abre)               // sigue el avance lento y se asienta en escala 1, igual que el escritorio
+                }
+
+                // ── Secuencia de cine ──
+                // Viñeta: los bordes se oscurecen mientras dura
+                Repeater {
+                    model: [ { l: true }, { l: false } ]
+                    Rectangle {
+                        required property var modelData
+                        visible: root.accesoOk
+                        x: modelData.l ? 0 : parent.width - width; width: parent.width * 0.22; height: parent.height
+                        opacity: 0.55 * candado.suave(candado.p / 0.2) * (1 - candado.abre)
+                        gradient: Gradient { orientation: Gradient.Horizontal
+                            GradientStop { position: 0; color: modelData.l ? "black" : "transparent" }
+                            GradientStop { position: 1; color: modelData.l ? "transparent" : "black" } }
+                    }
+                }
+                // Título: MIARCH, letras muy separadas que se abren despacio
+                Column {
+                    visible: root.accesoOk && candado.p > 0.45
+                    anchors.centerIn: parent
+                    spacing: candado.height * 0.012
+                    opacity: candado.suave((candado.p - 0.46) / 0.14) * (1 - candado.suave((candado.p - 0.84) / 0.08))
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: "MIARCH"
+                        color: root.arena
+                        font { family: root.fuente; pixelSize: candado.height * 0.085; weight: Font.Normal
+                               letterSpacing: candado.height * (0.012 + 0.03 * candado.suave((candado.p - 0.46) / 0.4)) }
+                    }
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: "ACCESO CONCEDIDO"
+                        color: root.terracota
+                        opacity: 0.85
+                        font { family: root.fuente; pixelSize: candado.height * 0.016; weight: Font.Medium; letterSpacing: 9 }
+                    }
+                    Text {   // firma: aparece un poco después del título
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        topPadding: candado.height * 0.03
+                        text: "by alejandro-xoxo"
+                        color: root.arena
+                        opacity: 0.7 * candado.suave((candado.p - 0.56) / 0.12)
+                        font { family: root.fuente; pixelSize: candado.height * 0.02; weight: Font.Normal; letterSpacing: 5 }
+                    }
+                }
+                // Destello anamórfico: una línea de luz horizontal que cruza la pantalla en el golpe del sonido
+                Item {
+                    visible: candado.p > 0.66 && candado.p < 0.9
+                    anchors.fill: parent
+                    opacity: Math.sin(Math.PI * Math.max(0, Math.min(1, (candado.p - 0.66) / 0.22)))
+                    Rectangle {   // resplandor suave
+                        width: parent.width * candado.suave((candado.p - 0.66) / 0.16); height: candado.height * 0.07
+                        x: (parent.width - width) / 2; y: parent.height / 2 - height / 2
+                        gradient: Gradient { orientation: Gradient.Vertical
+                            GradientStop { position: 0; color: "transparent" }
+                            GradientStop { position: 0.5; color: Qt.alpha("#ffe9c8", 0.10) }
+                            GradientStop { position: 1; color: "transparent" } }
+                    }
+                    Rectangle {   // el filo brillante
+                        width: parent.width * candado.suave((candado.p - 0.66) / 0.16); height: 3
+                        x: (parent.width - width) / 2; y: parent.height / 2 - 1.5
+                        gradient: Gradient { orientation: Gradient.Horizontal
+                            GradientStop { position: 0; color: "transparent" }
+                            GradientStop { position: 0.5; color: "#fff3e0" }
+                            GradientStop { position: 1; color: "transparent" } }
+                    }
+                }
+                // Luz: todo se aclara tras el golpe y se disuelve en el escritorio
+                Rectangle {
+                    anchors.fill: parent
+                    color: "#fff3e0"
+                    visible: opacity > 0
+                    opacity: 0.22 * candado.suave((candado.p - 0.76) / 0.12) * (1 - candado.suave((candado.p - 0.90) / 0.10))
+                }
+                // Barras de cine arriba y abajo
+                Repeater {
+                    model: [ true, false ]
+                    Rectangle {
+                        required property bool modelData
+                        visible: candado.barras > 0
+                        color: "black"
+                        width: parent.width; height: candado.height * 0.128 * candado.barras
+                        y: modelData ? 0 : parent.height - height
+                    }
+                }
 
                 // Música (solo si hay un reproductor): tarjeta grande a la derecha del reloj
                 Item {
@@ -2650,11 +2848,48 @@ ShellRoot {
                     }
                 }
 
+                // Log del sistema (el de verdad, de journalctl) tecleándose al desbloquear, y luego se despeja todo
+                Item {
+                    id: capaLog
+                    visible: root.accesoOk
+                    x: candado.width * 0.05; width: candado.width * 0.9
+                    anchors.verticalCenter: parent.verticalCenter
+                    height: colLog.implicitHeight
+                    opacity: Math.min(1, root.apertura * 10) * (1 - candado.suave((candado.p - 0.42) / 0.10))
+                    readonly property int n: root.lineasLog.length
+                    readonly property int visibles: Math.floor(Math.min(1, root.apertura / 0.38) * (n + 1))
+                    Column {
+                        id: colLog
+                        width: parent.width
+                        spacing: candado.height * 0.004
+                        Text {
+                            text: "MIARCH  ::  ACCESO CONCEDIDO  ::  CARGANDO SESIÓN"
+                            color: root.salvia
+                            font { family: root.fuente; pixelSize: candado.height * 0.02; weight: Font.Medium; letterSpacing: 6 }
+                            bottomPadding: candado.height * 0.014
+                        }
+                        Repeater {
+                            model: root.lineasLog
+                            Text {
+                                required property string modelData
+                                required property int index
+                                width: parent.width; elide: Text.ElideRight
+                                visible: index < capaLog.visibles
+                                text: modelData
+                                // la línea más reciente en el acento; las anteriores se apagan hacia arriba
+                                color: index === capaLog.visibles - 1 ? root.terracota : root.arena
+                                opacity: index === capaLog.visibles - 1 ? 1 : 0.35 + 0.4 * (index / Math.max(1, capaLog.n))
+                                font { family: root.fuente; pixelSize: candado.height * 0.0165; weight: Font.Light }
+                            }
+                        }
+                    }
+                }
+
                 Column {
                     x: parent.width * 0.05
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.verticalCenterOffset: (1 - candado.entrada) * 60
-                    opacity: Math.min(1, candado.entrada)
+                    opacity: Math.min(1, candado.entrada) * (1 - Math.min(1, root.apertura * 6))
                     spacing: 6
 
                     Text {

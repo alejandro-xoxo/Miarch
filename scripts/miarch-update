@@ -88,6 +88,15 @@ RUTAS_CFG=(config scripts home lib install.sh setup.sh packages.sh skills AGENTS
 MARCA_ANT="$(cat "$CFG_MARCA" 2>/dev/null)"
 CFG_PENDIENTES=1
 if [ -n "$MARCA_ANT" ] && git cat-file -e "$MARCA_ANT^{commit}" 2>/dev/null && git diff --quiet "$MARCA_ANT" HEAD -- "${RUTAS_CFG[@]}"; then CFG_PENDIENTES=0; fi
+# Pantalla de inicio de sesión gráfica (greetd): por defecto. Pendiente si no está activa, o si sus archivos cambiaron.
+# Quien no la quiere: touch ~/.config/miarch/sin-greeter
+GREETER_PEND=0
+if [ ! -e "$HOME/.config/miarch/sin-greeter" ]; then
+    [ "$(systemctl is-enabled greetd 2>/dev/null)" = "enabled" ] || GREETER_PEND=1
+    [ "$GREETER_PEND" = 0 ] && [ -n "$MARCA_ANT" ] && ! git diff --quiet "$MARCA_ANT" "${UP:-HEAD}" -- config/greeter 2>/dev/null && GREETER_PEND=1
+    # y si el instalador sabe compararse con lo instalado (sirve aunque no haya marca), se le pregunta también
+    [ "$GREETER_PEND" = 0 ] && grep -q -- '--pendiente' ./scripts/miarch-greeter-install 2>/dev/null && bash ./scripts/miarch-greeter-install --pendiente && GREETER_PEND=1
+fi
 PAQ_CAMBIA=0; [ "$NUEVOS" -gt 0 ] && ! git diff --quiet HEAD "$UP" -- packages.sh && PAQ_CAMBIA=1
 
 # un packages.sh antiguo no conoce --faltantes y ejecutaría la instalación completa: solo se pregunta si lo soporta
@@ -132,6 +141,7 @@ elif [ "$PAQ_CAMBIA" = 1 ]; then
 else
     ui_ok "Paquetes de Miarch: no falta ninguno"
 fi
+[ "$GREETER_PEND" = 1 ] && ui_info "Se instalará la pantalla de inicio de sesión de Miarch (la verás al reiniciar)"
 if [ "$N_SIS" -gt 0 ]; then
     ui_info "Sistema: ${#SIS_OFI[@]} oficiales y ${#SIS_AUR[@]} de AUR por actualizar:"
     printf '%s\n' "${SIS_OFI[@]}" "${SIS_AUR[@]}" | grep -v '^$' | head -10 | sed 's/^/        - /'
@@ -142,10 +152,12 @@ fi
 
 # qué se haría
 HACER_MIARCH=0; { [ "$NUEVOS" -gt 0 ] && [ "$SUCIO" = 0 ]; } && HACER_MIARCH=1
-{ [ "$FORZAR" = 1 ] || [ "$CFG_PENDIENTES" = 1 ]; } && HACER_MIARCH=1
+# con cambios sin guardar y cambios nuevos por descargar no se intenta nada: antes se intentaba el pull y fallaba con un mensaje confuso
+if [ "$FORZAR" = 1 ] || { [ "$CFG_PENDIENTES" = 1 ] && ! { [ "$NUEVOS" -gt 0 ] && [ "$SUCIO" = 1 ]; }; }; then HACER_MIARCH=1; fi
 HACER_PAQ=0; { [ "${#FALTAN[@]}" -gt 0 ] || [ "${#SOBRAN[@]}" -gt 0 ] || [ "$PAQ_CAMBIA" = 1 ]; } && HACER_PAQ=1
 HACER_SIS=0; [ "$N_SIS" -gt 0 ] && HACER_SIS=1
-if [ "$HACER_MIARCH$HACER_PAQ$HACER_SIS" = "000" ]; then
+HACER_GREET=$GREETER_PEND
+if [ "$HACER_MIARCH$HACER_PAQ$HACER_SIS$HACER_GREET" = "0000" ]; then
     echo
     ui_ok "Todo está al día. No hay nada que descargar ni instalar."
     ui_resumen "Todo al día"
@@ -155,14 +167,22 @@ fi
 PLAN=()
 [ "$HACER_MIARCH" = 1 ] && PLAN+=("$([ "$NUEVOS" -gt 0 ] && echo "descargar y aplicar los cambios de Miarch" || echo "aplicar las configuraciones de Miarch")")
 [ "$HACER_PAQ" = 1 ]    && PLAN+=("instalar los paquetes de Miarch que faltan")
+[ "$HACER_GREET" = 1 ]  && PLAN+=("instalar la pantalla de inicio de sesión")
 [ "$HACER_SIS" = 1 ]    && PLAN+=("actualizar $N_SIS $(plural "$N_SIS" paquete paquetes) del sistema")
 echo
 si "Se va a: $(unir "${PLAN[@]}"). ¿Continuar? (pide tu contraseña si hace falta)" || { ui_info "No se hizo ningún cambio."; fin 0; }
 
 # etapas reales = las tareas elegidas (la barra del total muestra solo lo que de verdad se hará)
 UI_ACTUAL=0
-UI_TOTAL=$(( HACER_MIARCH * 2 + HACER_PAQ + HACER_SIS ))
-{ [ "$HACER_PAQ" = 1 ] || [ "$HACER_SIS" = 1 ]; } && { sudo -v || { ui_error "Sin permiso de administrador: no se instala nada."; fin 1; }; }
+UI_TOTAL=$(( HACER_MIARCH * 2 + HACER_PAQ + HACER_SIS + HACER_GREET ))
+if [ "$HACER_PAQ" = 1 ] || [ "$HACER_SIS" = 1 ] || [ "$HACER_GREET" = 1 ]; then
+    sudo -v || { ui_error "Sin permiso de administrador: no se instala nada."; fin 1; }
+    # La contraseña de sudo caduca a los pocos minutos y compilar apps tarda más: se renueva mientras dure la actualización.
+    # Sin esto, un paso posterior se quedaría esperando la contraseña, invisible bajo el indicador de progreso.
+    ( while true; do sudo -n true 2>/dev/null; sleep 45; kill -0 "$$" 2>/dev/null || exit; done ) &
+    SUDO_KEEPALIVE=$!
+    trap 'kill "$SUDO_KEEPALIVE" 2>/dev/null' EXIT
+fi
 
 # =====================================================================================================
 # 2) HACER solo lo que hace falta
@@ -203,13 +223,7 @@ open(ruta, "w", encoding="utf-8").write(txt)
 PY
         ui_ok "Tus ajustes (animaciones, blur, escala, teclado...) se conservaron"
     fi
-    if [ -z "${MIARCH_SIN_REINICIO:-}" ]; then
-        hyprctl reload >/dev/null 2>&1 || true
-        qs kill -c miarch >/dev/null 2>&1; sleep 1
-        # Quickshell queda vivo mucho tiempo y lanza el siguiente actualizador: no debe heredar las variables de ESTA ejecución
-        (env -u MIARCH_UI_INICIO -u MIARCH_UI_TOTAL -u MIARCH_UI_ACTUAL -u MIARCH_UI_SUB -u MIARCH_UI_COMPACTO -u MIARCH_SUDO_VIVO -u MIARCH_STATS setsid qs -c miarch >/dev/null 2>&1 &)
-        ui_ok "Hyprland y el escritorio recargados"
-    fi
+    RECARGAR=1      # se recarga al final, cuando ya están instalados los paquetes nuevos (Quickshell o Hyprland pueden haberse actualizado)
 fi
 
 if [ "$HACER_PAQ" = 1 ]; then
@@ -218,7 +232,11 @@ if [ "$HACER_PAQ" = 1 ]; then
     grep -q -- '--faltantes' ./packages.sh 2>/dev/null && mapfile -t FALTAN < <(bash ./packages.sh --faltantes 2>/dev/null)
     grep -q -- '--sobran' ./packages.sh 2>/dev/null && mapfile -t SOBRAN < <(bash ./packages.sh --sobran 2>/dev/null)
     if [ "${#FALTAN[@]}" -gt 0 ] || [ "${#SOBRAN[@]}" -gt 0 ]; then
-        ui_etapa "Instalando ${#FALTAN[@]} $(plural "${#FALTAN[@]}" 'paquete que faltaba' 'paquetes que faltaban'): $(unir "${FALTAN[@]}")"
+        if [ "${#FALTAN[@]}" -gt 0 ]; then
+            ui_etapa "Instalando ${#FALTAN[@]} $(plural "${#FALTAN[@]}" 'paquete que faltaba' 'paquetes que faltaban'): $(unir "${FALTAN[@]}")"
+        else
+            ui_etapa "Quitando lo que Miarch ya no usa: $(unir "${SOBRAN[@]}")"
+        fi
         MIARCH_UI_COMPACTO=1 bash ./packages.sh || ui_aviso "packages.sh terminó con errores (arriba). Se volverá a ofrecer la próxima vez."
     else
         ui_etapa "Revisando los paquetes de Miarch"
@@ -226,9 +244,27 @@ if [ "$HACER_PAQ" = 1 ]; then
     fi
 fi
 
+if [ "$HACER_GREET" = 1 ]; then
+    ui_etapa "Instalando la pantalla de inicio de sesión (se ve al reiniciar)"
+    if [ -x ./scripts/miarch-greeter-install ]; then
+        MIARCH_SUDO_VIVO=1 ui_ejecutar "Instalando greetd y la pantalla de Miarch" bash ./scripts/miarch-greeter-install \
+            || ui_aviso "No se pudo instalar la pantalla de inicio de sesión. Sigues entrando por la terminal; reintenta con ./scripts/miarch-greeter-install"
+    else
+        ui_aviso "Este Miarch aún no trae la pantalla de inicio de sesión: descarga los cambios y vuelve a intentarlo."
+    fi
+fi
+
 if [ "$HACER_SIS" = 1 ]; then
     ui_etapa "Actualizando $N_SIS $(plural "$N_SIS" paquete paquetes) del sistema"
     ui_ejecutar "Actualizando el sistema (yay -Syu)" yay -Syu --noconfirm || ui_aviso "La actualización del sistema falló (arriba están las últimas líneas)."
+fi
+
+if [ "${RECARGAR:-0}" = 1 ] && [ -z "${MIARCH_SIN_REINICIO:-}" ]; then
+    hyprctl reload >/dev/null 2>&1 || true
+    qs kill -c miarch >/dev/null 2>&1; sleep 1
+    # Quickshell queda vivo mucho tiempo y lanza el siguiente actualizador: no debe heredar las variables de ESTA ejecución
+    (env -u MIARCH_UI_INICIO -u MIARCH_UI_TOTAL -u MIARCH_UI_ACTUAL -u MIARCH_UI_SUB -u MIARCH_UI_COMPACTO -u MIARCH_SUDO_VIVO -u MIARCH_STATS setsid qs -c miarch >/dev/null 2>&1 &)
+    ui_ok "Hyprland y el escritorio recargados"
 fi
 
 ui_resumen "Actualización completa"

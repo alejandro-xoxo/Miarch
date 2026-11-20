@@ -3,6 +3,30 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-20.15 · Miarch 1.0
+Primera versión estable. Reúne todo lo de estos días: menú de IA (Super + C), Steam y juegos, Wi-Fi completo, notificaciones nuevas, barra de volumen con sonido, pantalla de inicio de sesión propia, bloqueo y entrada de cine con firma, actualizador más robusto y la skill para agentes de IA.
+
+## 2026-11-20.14 · Revisión del actualizador
+Se corrigieron varios fallos del actualizador: Ollama ya no se rompe cuando sus modelos van a /home, Docker no esconde los datos que ya tiene, el instalador del login no se detiene si el fondo anotado desapareció, y el escritorio se recarga al final (con los paquetes ya actualizados) en vez de al principio.
+
+## 2026-11-20.13 · Actualizador más robusto
+El actualizador ya no se llena de avisos cuando un instalador (como el de Hermes) imprime caracteres raros, mantiene viva la contraseña de administrador mientras compila apps largas y corta el instalador de Hermes si pasa media hora sin terminar. También se cerró un fallo del bloqueo: si te autenticabas y se volvía a bloquear durante la animación, se podía desbloquear sin contraseña.
+
+## 2026-11-20.12 · Barra de volumen sencilla
+El volumen ya no usa una notificación (se quedaba pegada): ahora sale una barra pequeña abajo, sin animación, que se actualiza al pulsar y se va sola al segundo.
+
+## 2026-11-20.11 · Arreglo: las teclas de volumen
+Las teclas de volumen dejaron de funcionar con el cambio del pitido: Hyprland no encuentra los scripts sin su ruta completa. Ya suben, bajan y silencian otra vez.
+
+## 2026-11-20.10 · Pantalla de inicio de sesión por defecto
+Al actualizar (y en una instalación nueva), Miarch instala la pantalla de inicio de sesión gráfica con el estilo del bloqueo, para que al reiniciar no salga la terminal. Si falla, sigues entrando por la terminal. Si no la quieres: `touch ~/.config/miarch/sin-greeter`.
+
+## 2026-11-20.09 · Sonido al subir y bajar el volumen
+Las teclas de volumen ahora hacen un pitido corto y muestran una barra de volumen que se actualiza sin apilarse. En silencio no suena.
+
+## 2026-11-20.08 · Desbloquear e iniciar sesión como en una película
+Al desbloquear (y al iniciar sesión) se hace una secuencia de cine de unos 5,6 segundos: aparecen barras negras arriba y abajo, el fondo avanza despacio, sale el título MIARCH con las letras muy separadas, un destello de luz horizontal cruza la pantalla y todo se aclara suavemente hasta entrar a tu escritorio. Debajo del título aparece la firma "by alejandro-xoxo". Al desbloquear suena una música de tráiler (graves que crecen, un golpe y una cola larga) y se teclea el log real del sistema.
+
 ## 2026-11-20.06 · Notificaciones nuevas y menú de IA solo con apps
 Las notificaciones ahora las dibuja el propio escritorio: salen deslizándose arriba a la derecha, con el estilo de los paneles, icono, nombre de la app, barra de progreso (volumen, brillo), botones de acción y una cuenta atrás que se pausa si pones el ratón encima. Las críticas se marcan en rojo mate y no se van solas. Clic cierra una, clic derecho las cierra todas. Miarch quita `dunst`, que ya no hace falta.
 El menú de IA (Super + C) ahora es solo para apps de escritorio: Claude Desktop, Codex App, Antigravity y Hermes Desktop. Antigravity y Codex App se instalan al actualizar.

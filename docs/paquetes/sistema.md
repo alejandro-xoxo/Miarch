@@ -4,6 +4,7 @@
 |---|---|
 | `mesa` · `intel-media-driver` | Gráficos y aceleración de video. **Si tu GPU es AMD o NVIDIA, cambia `intel-media-driver`** en `packages.sh` |
 | `pipewire` · `pipewire-pulse` · `wireplumber` | Audio |
+| `sound-theme-freedesktop` | Sonidos del sistema (el pitido al cambiar el volumen) |
 | `iwd` | Wi‑Fi (sin NetworkManager); el panel de la barra lo maneja con `miarch-wifi` |
 | `bluez` · `bluez-utils` | Bluetooth |
 | `power-profiles-daemon` | Modos de energía (ahorro, equilibrado, rendimiento) |
