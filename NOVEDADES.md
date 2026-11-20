@@ -4,10 +4,6 @@ Una entrada por cosa importante, la más nueva arriba. La ventana de actualizaci
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
 ## 2026-11-19.13 · Skill para tu agente de IA
-Si usas Claude Code, Miarch le instala una skill que le enseña a instalar y configurar cosas en tu sistema de la mejor forma posible
-(la opción más ligera y nativa, midiendo cuando importa) y a dejar los cambios donde las actualizaciones no los borran.
-
-## 2026-11-19.13 · Skill para tu agente de IA
 Si usas Claude Code, Codex o Antigravity, Miarch le instala una skill que le enseña a instalar y configurar cosas en tu sistema
 de la mejor forma posible (la opción más ligera y nativa, midiendo cuando importa) y a dejar los cambios donde las actualizaciones no los borran.
 

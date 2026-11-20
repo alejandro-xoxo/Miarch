@@ -323,7 +323,9 @@ ShellRoot {
                   "u=$(git -C \"$d\" rev-parse -q --verify '@{u}' 2>/dev/null || echo \"origin/$(git -C \"$d\" rev-parse --abbrev-ref HEAD)\"); " +
                   "n=$(git -C \"$d\" rev-list --count \"HEAD..$u\" 2>/dev/null || echo 0); " +
                   // configuraciones del repo aún sin aplicar en este equipo (miarch-update guarda el commit que aplicó)
-                  "c=0; [ \"$(cat \"$HOME/.cache/miarch/configs-aplicadas\" 2>/dev/null)\" != \"$(git -C \"$d\" rev-parse HEAD 2>/dev/null)\" ] && c=1; " +
+                  "c=1; m=$(cat \"$HOME/.cache/miarch/configs-aplicadas\" 2>/dev/null); " +
+                  "[ -n \"$m\" ] && git -C \"$d\" cat-file -e \"$m^{commit}\" 2>/dev/null && " +
+                  "git -C \"$d\" diff --quiet \"$m\" HEAD -- config scripts home lib install.sh setup.sh packages.sh skills AGENTS.md && c=0; " +
                   // paquetes de Miarch que faltan en este equipo
                   "f=0; grep -q -- --faltantes \"$d/packages.sh\" 2>/dev/null && f=$(bash \"$d/packages.sh\" --faltantes 2>/dev/null | grep -c .); " +
                   "echo $((n + c + f))"]
