@@ -43,6 +43,7 @@ El número que muestra la nube de la barra es la suma de lo pendiente:
 | Paquetes que faltan | `packages.sh --faltantes` devuelve algo. |
 | Paquetes que sobran | `packages.sh --sobran` devuelve algo. |
 | Pantalla de inicio de sesión | `greetd` no está activo, o cambiaron los archivos del login. |
+| Mudanza de repositorio | Existe el archivo `MUDANZA` en la rama remota. |
 
 Clic izquierdo en la nube ejecuta `miarch-update`; clic derecho ejecuta `miarch-update --forzar`, que vuelve a aplicar las configuraciones aunque no haya cambios nuevos.
 
@@ -122,6 +123,42 @@ miarch-update --forzar
 ```
 
 También puede dispararse de manera gráfica haciendo clic derecho sobre el icono de la nube en la barra de Quickshell.
+
+## Mudanza a otro repositorio
+
+Cuando el proyecto Miarch se traslada a un repositorio nuevo (por ejemplo, al publicar con historial reescrito o cambio de organización), el actualizador gestiona la transición de las copias locales de forma automática y transparente sin romper el flujo de actualización (`git pull --ff-only`).
+
+### Detección y archivo MUDANZA
+
+El repositorio de origen publica en su rama remota un archivo llamado `MUDANZA`.
+- Su contenido es una sola línea con la URL del nuevo repositorio (por ejemplo, `https://github.com/usuario/nuevo-repo.git`).
+- Se ignoran líneas vacías y comentarios que comiencen con `#`.
+- El actualizador valida estrictamente que la URL siga el formato `https://github.com/<usuario>/<repo>(.git)` y que sea distinta de la URL remota actual (`origin`). Si no es válida o apunta al mismo origen, se ignora.
+
+### Salvaguardas
+
+Para garantizar que la migración sea segura:
+1. **Comprobación de cambios locales:** Si existen archivos modificados sin confirmar (`git status --porcelain --untracked-files=no`), el actualizador no realiza la migración y solicita guardar o descartar los cambios.
+2. **Confirmación expresa:** Se solicita confirmación antes de iniciar cualquier cambio en el repositorio.
+3. **Rama de respaldo:** Antes de modificar el remoto, se genera una rama local de respaldo:
+   ```bash
+   respaldo-antes-de-mudanza-AAAAMMDD
+   ```
+   que conserva el commit y el historial anterior intactos.
+4. **Reversión automática ante fallos:** Si la descarga (`fetch`) o el cambio de rama (`checkout`) hacia el nuevo repositorio fallan, el actualizador restaura de inmediato la URL remota original (`origin`) y termina sin tocar el árbol de trabajo.
+5. **Reinicio limpio:** Tras migrar exitosamente, se elimina el marcador `~/.cache/miarch/configs-aplicadas` para forzar la sincronización completa de configuraciones con el nuevo código, y el actualizador se reinvoca automáticamente con la variable de entorno `MIARCH_MUDADO=1` para evitar bucles.
+
+### Cómo recuperar la copia vieja
+
+Si en algún momento necesitas consultar o volver al estado previo a la mudanza:
+1. Cambia a la rama de respaldo creada:
+   ```bash
+   git checkout respaldo-antes-de-mudanza-AAAAMMDD
+   ```
+2. Si deseas que vuelva a apuntar al repositorio anterior:
+   ```bash
+   git remote set-url origin <URL-del-repositorio-anterior>
+   ```
 
 ## Diagnóstico y resolución de incidencias
 
