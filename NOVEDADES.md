@@ -3,6 +3,9 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-20.15 · Miarch 1.0
+Primera versión estable. Reúne todo lo de estos días: menú de IA (Super + C), Steam y juegos, Wi-Fi completo, notificaciones nuevas, barra de volumen con sonido, pantalla de inicio de sesión propia, bloqueo y entrada de cine con firma, actualizador más robusto y la skill para agentes de IA.
+
 ## 2026-11-20.14 · Revisión del actualizador
 Se corrigieron varios fallos del actualizador: Ollama ya no se rompe cuando sus modelos van a /home, Docker no esconde los datos que ya tiene, el instalador del login no se detiene si el fondo anotado desapareció, y el escritorio se recarga al final (con los paquetes ya actualizados) en vez de al principio.
 
