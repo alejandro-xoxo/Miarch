@@ -477,6 +477,18 @@ hl.window_rule({
     opacity = "0.93 0.88",
 })
 
+-- Miarch: juegos (Steam y gamescope). Sin desenfoque, sombras ni animaciones en la ventana del juego (menos carga para la
+-- gráfica) y la pantalla no se bloquea ni se apaga mientras el juego está a pantalla completa.
+hl.window_rule({
+    name  = "juegos",
+    match = { class = "^(steam_app_.*|gamescope)$" },
+    idle_inhibit = "fullscreen",
+    no_blur   = true,
+    no_shadow = true,
+    no_anim   = true,
+    no_dim    = true,
+})
+
 -- Miarch: el velo del lanzador de apps desenfoca todo lo que hay detrás
 hl.layer_rule({
     name  = "miarch-lanzador-blur",

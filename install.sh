@@ -57,7 +57,7 @@ mkdir -p "$HOME/.config" "$HOME/.local/bin" "$WALL_DIR"
 # SCRIPTS (van a ~/.local/bin)
 # =========================
 ui_etapa "Instalando los scripts de Miarch"
-for f in wallpaper.sh miarch-colors miarch-set miarch-wifi miarch-info miarch-fetch miarch-update miarch-chrome-tema; do
+for f in wallpaper.sh miarch-colors miarch-set miarch-wifi miarch-info miarch-fetch miarch-update miarch-chrome-tema miarch-modo-juego miarch-steam; do
     [ -f "$DOTFILES_DIR/scripts/$f" ] && install -Dm755 "$DOTFILES_DIR/scripts/$f" "$HOME/.local/bin/$f"
 done
 
@@ -70,6 +70,40 @@ if command -v gsettings &>/dev/null; then
     [ "$(gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null)" = "'prefer-dark'" ] \
         || gsettings set org.gnome.desktop.interface color-scheme prefer-dark 2>/dev/null || true
 fi
+# juegos: GameMode pone el perfil de energía "rendimiento" mientras juegas y MangoHud usa la paleta de Miarch. Solo si no existen.
+if [ ! -f "$HOME/.config/gamemode.ini" ]; then
+    printf '[custom]\nstart=%s/.local/bin/miarch-modo-juego start\nend=%s/.local/bin/miarch-modo-juego end\n' "$HOME" "$HOME" > "$HOME/.config/gamemode.ini"
+fi
+if [ ! -f "$HOME/.config/MangoHud/MangoHud.conf" ]; then
+    mkdir -p "$HOME/.config/MangoHud"
+    cat > "$HOME/.config/MangoHud/MangoHud.conf" <<'MANGO'
+# Miarch · MangoHud con la paleta morada. Mostrar u ocultar: Shift derecho + F12
+legacy_layout=false
+position=top-left
+font_size=20
+round_corners=10
+background_alpha=0.40
+background_color=0B0F1A
+text_color=E6E9F0
+engine_color=8892A6
+gpu_color=6F65D6
+cpu_color=C4B5FD
+frametime_color=A7F3D0
+fps_color_change
+fps_value=30,60
+fps_color=E8809F,FBCFE8,A7F3D0
+fps
+frametime
+cpu_stats
+cpu_temp
+gpu_stats
+gpu_temp
+ram
+toggle_hud=Shift_R+F12
+MANGO
+fi
+"$HOME/.local/bin/miarch-steam" --instalar-lanzador 2>/dev/null || true     # lanzador de Steam con la escala de tu pantalla (si Steam está instalado)
+
 for v in gtk-3.0 gtk-4.0; do
     if [ ! -f "$HOME/.config/$v/settings.ini" ]; then
         mkdir -p "$HOME/.config/$v"

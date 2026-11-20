@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Miarch · abre Steam con el tamaño de interfaz según la escala de tu pantalla.
+# Steam corre sobre XWayland: con una escala de 1.5 sin esto su ventana se ve diminuta.
+#   miarch-steam [argumentos de steam]
+#   miarch-steam --instalar-lanzador   crea ~/.local/share/applications/steam.desktop (el del lanzador de apps apunta a este script)
+set -uo pipefail
+
+if [ "${1:-}" = "--instalar-lanzador" ]; then
+    destino="$HOME/.local/share/applications/steam.desktop"
+    if [ ! -x /usr/bin/steam ]; then rm -f "$destino"; exit 0; fi        # sin Steam no hay lanzador
+    mkdir -p "$(dirname "$destino")"
+    cat > "$destino" <<DESK
+[Desktop Entry]
+Name=Steam
+Comment=Tienda y biblioteca de juegos
+Exec=$HOME/.local/bin/miarch-steam %U
+Icon=steam
+Terminal=false
+Type=Application
+Categories=Network;FileTransfer;Game;
+MimeType=x-scheme-handler/steam;x-scheme-handler/steamlink;
+DESK
+    echo "[OK] Lanzador de Steam creado"; exit 0
+fi
+
+escala=1
+if command -v hyprctl >/dev/null 2>&1; then
+    escala="$(hyprctl monitors -j 2>/dev/null | python3 -I -c '
+import json, sys
+try:
+    m = json.load(sys.stdin)
+    f = next((x for x in m if x.get("focused")), m[0] if m else {})
+    print(f.get("scale", 1))
+except Exception:
+    print(1)' 2>/dev/null)"
+fi
+export STEAM_FORCE_DESKTOPUI_SCALING="${escala:-1}"
+command -v steam >/dev/null || { echo "Steam no está instalado: ejecuta ~/Miarch/packages.sh" >&2; exit 1; }
+exec steam "$@"

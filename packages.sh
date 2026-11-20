@@ -62,23 +62,100 @@ AUR_PAQUETES=(
     claude-desktop
     antigravity-cli
     hermes-webui-desktop-bin     # ventana de escritorio de Hermes WebUI (necesita un servidor hermes-webui local o remoto)
+    protonup-qt                  # instala y actualiza Proton-GE con clics (mejor compatibilidad de juegos de Windows)
+)
+
+# =========================
+# JUEGOS: Steam y lo necesario. Steam es de 32 bits, así que necesita el repositorio multilib.
+# =========================
+gpu_juegos() {   # controladores Vulkan (64 y 32 bits) según la tarjeta gráfica del equipo (Intel, AMD, NVIDIA)
+    local f v pk=()
+    for f in "${MIARCH_DRM_DIR:-/sys/class/drm}"/card[0-9]*/device/vendor; do
+        [ -r "$f" ] || continue
+        v="$(cat "$f")"
+        case "$v" in
+            0x8086) pk+=(vulkan-intel lib32-vulkan-intel) ;;
+            0x1002) pk+=(vulkan-radeon lib32-vulkan-radeon) ;;
+            0x10de) pk+=(nvidia-utils lib32-nvidia-utils) ;;
+        esac
+    done
+    [ "${#pk[@]}" -gt 0 ] || pk=(vulkan-swrast lib32-vulkan-swrast)   # tarjeta no reconocida (por ejemplo máquina virtual): por software
+    printf '%s\n' "${pk[@]}" | sort -u
+}
+mapfile -t JUEGOS_GPU < <(gpu_juegos)
+JUEGOS=(
+    steam                                       # Steam (multilib); trae las reglas udev de los mandos
+    vulkan-icd-loader lib32-vulkan-icd-loader   # cargador de Vulkan (64 y 32 bits)
+    lib32-mesa lib32-pipewire lib32-libpulse    # gráficos y audio de 32 bits para los juegos
+    ttf-liberation                              # tipografías que Steam necesita
+    gamemode lib32-gamemode                     # sube la prioridad del juego y pone el modo de energía "rendimiento"
+    mangohud lib32-mangohud                     # contador de FPS y temperaturas (Shift derecho + F12)
+    gamescope                                   # reescalado FSR para tarjetas integradas (ver docs/juegos.md)
+    xorg-xwayland                               # los juegos de Steam corren sobre XWayland
+    "${JUEGOS_GPU[@]}"                          # controladores Vulkan de TU tarjeta
 )
 
 # setup.sh pregunta cuántas etapas tiene este script para dibujar la barra del total
-ETAPAS=$(( 6 + ${#AUR_PAQUETES[@]} ))
+ETAPAS=$(( 7 + ${#AUR_PAQUETES[@]} ))
 [ "${1:-}" = "--etapas" ] && { echo "$ETAPAS"; exit 0; }
 # miarch-update pregunta qué paquetes de esta lista aún no están instalados (no instala ni cambia nada)
 if [ "${1:-}" = "--faltantes" ]; then
-    for paquete in "${PAQUETES[@]}" "${AUR_PAQUETES[@]}"; do pacman -Q "$paquete" >/dev/null 2>&1 || echo "$paquete"; done
+    for paquete in "${PAQUETES[@]}" "${JUEGOS[@]}" "${AUR_PAQUETES[@]}"; do pacman -Q "$paquete" >/dev/null 2>&1 || echo "$paquete"; done
     exit 0
 fi
+
+habilitar_multilib() {
+    local conf="${MIARCH_PACMAN_CONF:-/etc/pacman.conf}"             # la variable solo se usa en las pruebas
+    grep -q '^\[multilib\]' "$conf" && return 0
+    ui_info "Activando el repositorio multilib (paquetes de 32 bits que necesita Steam)"
+    sudo cp -n "$conf" "$conf.miarch-bak"                            # copia de seguridad, solo la primera vez
+    sudo sed -i '/^#\[multilib\]/,/^#Include/ s/^#//' "$conf"
+    grep -q '^\[multilib\]' "$conf"
+}
+
+configurar_juegos() {
+    # GameMode necesita que tu usuario esté en el grupo "gamemode" para subir la prioridad del juego
+    if getent group gamemode >/dev/null && ! id -nG "$USER" | tr ' ' '\n' | grep -qx gamemode; then
+        sudo usermod -aG gamemode "$USER" && ui_info "Entraste al grupo gamemode: cierra sesión y vuelve a entrar para que se aplique."
+    fi
+    # ntsync: sincronización de hilos del kernel que Proton usa para ir más rápido (kernel 6.14 o más nuevo)
+    if modinfo ntsync >/dev/null 2>&1; then
+        echo ntsync | sudo tee /etc/modules-load.d/ntsync.conf >/dev/null
+        sudo modprobe ntsync 2>/dev/null || true
+        [ -e /dev/ntsync ] && ui_ok "ntsync activo (Proton sincroniza más rápido)"
+    fi
+    # Memoria comprimida (zram) si el equipo no tiene ningún swap: evita cierres bruscos de juegos grandes
+    if [ -z "$(swapon --noheadings 2>/dev/null)" ]; then
+        ui_info "El equipo no tiene swap: se activa zram (memoria comprimida)"
+        sudo pacman -S --needed --noconfirm zram-generator >/dev/null 2>&1 || true
+        if [ ! -f /etc/systemd/zram-generator.conf ]; then
+            printf '[zram0]\nzram-size = min(ram / 2, 4096)\ncompression-algorithm = zstd\n' | sudo tee /etc/systemd/zram-generator.conf >/dev/null
+        fi
+        sudo systemctl daemon-reload && sudo systemctl start systemd-zram-setup@zram0.service 2>/dev/null || ui_aviso "No se pudo activar zram (se activará al reiniciar)"
+    fi
+    # lanzador de Steam con el tamaño de interfaz según la escala de tu pantalla
+    bash "$(dirname "${BASH_SOURCE[0]}")/scripts/miarch-steam" --instalar-lanzador || true
+    # NVIDIA: este script instala las bibliotecas Vulkan pero no el módulo del kernel
+    printf '%s\n' "${JUEGOS_GPU[@]}" | grep -q nvidia && ui_aviso "Tarjeta NVIDIA: instala también el módulo del kernel (nvidia-open o nvidia-dkms) para jugar."
+    return 0
+}
 
 ui_total "$ETAPAS"
 [ -n "${MIARCH_UI_SUB:-}" ] || ui_banner "paquetes"   # solo si no lo lanza setup.sh
 ui_sudo
 ui_etapa "Actualizando el sistema e instalando los paquetes oficiales"
+JUEGOS_OK=1; habilitar_multilib || JUEGOS_OK=0     # antes del -Syu, para que se sincronice multilib
 ui_ejecutar "Actualizando el sistema (pacman -Syu)" sudo pacman -Syu --noconfirm
 ui_ejecutar "Instalando ${#PAQUETES[@]} paquetes oficiales" sudo pacman -S --noconfirm --needed "${PAQUETES[@]}"
+
+ui_etapa "Preparando el equipo para jugar (Steam)"
+if [ "$JUEGOS_OK" = 1 ]; then
+    ui_ejecutar "Instalando Steam y las herramientas para jugar (${#JUEGOS[@]} paquetes)" sudo pacman -S --noconfirm --needed "${JUEGOS[@]}" \
+        || ui_aviso "No se pudo instalar Steam y sus herramientas (revisa el registro). El resto de la instalación sigue."
+    configurar_juegos
+else
+    ui_aviso "No se pudo activar multilib: se omite Steam. Actívalo a mano y vuelve a ejecutar packages.sh."
+fi
 
 # =========================
 # DOCKER Y OLLAMA
