@@ -9,6 +9,10 @@
 # Uso: miarch-update [--forzar]    (--forzar vuelve a aplicar las configuraciones aunque no haya cambios nuevos)
 set -uo pipefail
 
+# Este es un punto de entrada: empieza de cero aunque haya heredado variables de otra ejecución (si no, el tiempo del
+# resumen se acumulaba de una actualización a la siguiente).
+unset MIARCH_UI_INICIO MIARCH_UI_TOTAL MIARCH_UI_ACTUAL MIARCH_UI_SUB MIARCH_UI_COMPACTO MIARCH_SUDO_VIVO MIARCH_STATS
+
 REPO="${MIARCH_DIR:-$HOME/Miarch}"
 FORZAR=0; [ "${1:-}" = "--forzar" ] && FORZAR=1
 
@@ -136,7 +140,8 @@ PY
     if [ -z "${MIARCH_SIN_REINICIO:-}" ]; then
         hyprctl reload >/dev/null 2>&1 || true
         qs kill -c miarch >/dev/null 2>&1; sleep 1
-        (setsid qs -c miarch >/dev/null 2>&1 &)
+        # Quickshell queda vivo mucho tiempo y lanza el siguiente actualizador: no debe heredar las variables de ESTA ejecución
+        (env -u MIARCH_UI_INICIO -u MIARCH_UI_TOTAL -u MIARCH_UI_ACTUAL -u MIARCH_UI_SUB -u MIARCH_UI_COMPACTO -u MIARCH_SUDO_VIVO -u MIARCH_STATS setsid qs -c miarch >/dev/null 2>&1 &)
         ui_ok "Hyprland y el escritorio recargados"
     fi
 fi
