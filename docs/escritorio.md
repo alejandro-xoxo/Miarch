@@ -14,6 +14,7 @@ Todo el escritorio propio, en un solo archivo organizado por secciones:
 | Conexiones | Paneles de Wi‑Fi y Bluetooth (clic en la barra) |
 | Ajustes | `Super + Esc`: red, sonido, pantalla, apariencia, teclado y ratón, accesibilidad, energía y sistema |
 | Bloqueo | `Super + L`: wallpaper desenfocado, reloj, anillos, música y contraseña |
+| Energía | `Super + Shift + Esc`: menú para bloquear, suspender, cerrar sesión, reiniciar y apagar |
 
 ## Colores del wallpaper
 `wallpaper.sh` cambia el fondo y llama a `miarch-colors`, que saca una paleta mate y la escribe para: Quickshell (`colors.json`), kitty, Dolphin y las apps de Qt (`kdeglobals` y `qt6ct`). Se adapta a fondos claros u oscuros. Los GIF se muestran como imagen fija salvo que actives GIF en Ajustes.

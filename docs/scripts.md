@@ -10,5 +10,6 @@
 | `miarch-wifi` | Puente con `iwd`: la contraseña se la da a `iwctl` por una terminal virtual, nunca como argumento de un comando |
 | `miarch-info` | Información del equipo para la página Sistema |
 | `miarch-fetch` | fastfetch que se adapta al tamaño de la ventana (logo grande, pequeño o ninguno) |
+| `miarch-update` | Actualizador semiautomático: baja los cambios de Miarch, los aplica conservando tus ajustes y tu fondo, y pregunta antes de instalar paquetes o actualizar el sistema (ver [instalación](instalacion.md#actualizar)) |
 | `miarch-greeter-install` | Instala la pantalla de inicio de sesión gráfica (pide sudo; no se activa hasta reiniciar) |
 | `tomar-capturas` | Regenera las capturas del README (ver [capturas](capturas.md)) |

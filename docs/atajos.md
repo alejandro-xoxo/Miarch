@@ -10,7 +10,7 @@
 | `Super + Shift + Q` | Cerrar ventana |
 | `Super + L` | Bloquear pantalla |
 | `Super + Esc` | Ajustes del equipo |
-| `Super + Shift + Esc` | Apagar, reiniciar, suspender y cerrar sesión (piden confirmar con una segunda pulsación) |
+| `Super + Shift + Esc` | Menú de energía: bloquear, suspender, cerrar sesión, reiniciar y apagar. `↑` `↓` y `Enter`; las tres últimas piden una segunda pulsación |
 | `Super + W` | Cambiar wallpaper (y los colores) |
 | `Super + B` | Navegador (Chrome) |
 | `Super + V` · `Super + C` | VS Code · Claude Desktop |
@@ -23,5 +23,5 @@
 | `Super + rueda` | Cambiar de escritorio |
 | `Super + clic izq./der. arrastrando` | Mover · redimensionar ventana |
 | `Super + .` | Captura de una región al portapapeles |
-| `Super + M` | Salir de Hyprland |
+| `Super + Ctrl + Shift + M` | Salida de emergencia: cierra Hyprland al instante, sin confirmar. Funciona aunque el escritorio (Quickshell) se cuelgue |
 | Teclas de volumen, brillo y multimedia | Funcionan también con la pantalla bloqueada |

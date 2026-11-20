@@ -361,14 +361,14 @@ local mainMod = "SUPER" -- Sets "Windows" key as main modifier
 -- Example binds, see https://wiki.hypr.land/configuring/core/binds/ for more
 hl.bind(mainMod .. " + L", hl.dsp.exec_cmd("qs -c miarch ipc call lock lock"))   -- bloquear pantalla
 hl.bind(mainMod .. " + ESCAPE", hl.dsp.exec_cmd("qs -c miarch ipc call settings toggle"))   -- panel de Ajustes
-hl.bind(mainMod .. " + SHIFT + ESCAPE", hl.dsp.exec_cmd("qs -c miarch ipc call settings page energia"))   -- apagar, reiniciar, suspender, cerrar sesión (Ajustes › Energía)
+hl.bind(mainMod .. " + SHIFT + ESCAPE", hl.dsp.exec_cmd("qs -c miarch ipc call power toggle"))   -- menú de energía: bloquear, suspender, cerrar sesión, reiniciar, apagar
 hl.bind(mainMod .. " + RETURN", hl.dsp.exec_cmd(terminal))                 -- terminal
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("google-chrome-stable"))        -- navegador (Chrome)
 hl.bind(mainMod .. " + V", hl.dsp.exec_cmd("code"))                     -- VS Code
 hl.bind(mainMod .. " + C", hl.dsp.exec_cmd("claude-desktop"))          -- Claude Desktop
 local closeWindowBind = hl.bind(mainMod .. " + SHIFT + Q", hl.dsp.window.close()) -- cerrar ventana (con Shift para evitar clics accidentales)
 -- closeWindowBind:set_enabled(false)
-hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("command -v hyprshutdown >/dev/null 2>&1 && hyprshutdown || hyprctl dispatch 'hl.dsp.exit()'"))
+hl.bind(mainMod .. " + CTRL + SHIFT + M", hl.dsp.exec_cmd("command -v hyprshutdown >/dev/null 2>&1 && hyprshutdown || hyprctl dispatch 'hl.dsp.exit()'"))
 hl.bind(mainMod .. " + E", hl.dsp.exec_cmd(fileManager))
 hl.bind(mainMod .. " + F", hl.dsp.window.float({ action = "toggle" }))  -- ventana flotante
 hl.bind(mainMod .. " + SPACE", hl.dsp.exec_cmd("qs -c miarch ipc call launcher toggle"))   -- lanzador de apps (Quickshell)
@@ -480,7 +480,7 @@ hl.window_rule({
 -- Miarch: el velo del lanzador de apps desenfoca todo lo que hay detrás
 hl.layer_rule({
     name  = "miarch-lanzador-blur",
-    match = { namespace = "^miarch-(lanzador|ajustes|conexiones)$" },
+    match = { namespace = "^miarch-(lanzador|ajustes|conexiones|energia)$" },
     blur         = true,
     ignore_alpha = 0.05,
 })
