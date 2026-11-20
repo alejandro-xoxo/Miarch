@@ -11,6 +11,7 @@
 | `config/kitty/` · `config/nvim/` · `config/chrome/` | Terminal, Neovim, Chrome |
 | `config/waybar/` | Tema anterior (respaldo) |
 | `home/.zshrc` | Configuración de zsh |
+| `lib/ui.sh` | Barra de progreso y animación de los scripts de instalación |
 | `scripts/` | Herramientas ([lista](scripts.md)) |
 | `wallpapers/` | Fondos |
 | `docs/` | Esta documentación y las capturas (`docs/screenshots/`) |

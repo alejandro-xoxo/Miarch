@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Miarch · puente entre el panel de Quickshell e iwd (iwctl). Todas las salidas son JSON.
-  miarch-wifi list                 → {power, iface, redes:[{nombre,seguridad,senal,conectada,conocida}]}
+  miarch-wifi list                 -> {power, iface, redes:[{nombre,seguridad,senal,conectada,conocida}]}
   miarch-wifi scan
-  miarch-wifi connect "RED"        → usa la variable de entorno MIARCH_PASS si la red necesita clave
+  miarch-wifi connect "RED"        -> usa la variable de entorno MIARCH_PASS si la red necesita clave
   miarch-wifi disconnect
   miarch-wifi power on|off
   miarch-wifi forget "RED"
@@ -59,7 +59,7 @@ def ejecutar_con_clave(cmd, clave, esperar=b"Passphrase:", limite=40):
     rc = os.waitstatus_to_exitcode(estado)
     texto = ANSI.sub("", buf.decode(errors="replace"))
     if clave:
-        texto = texto.replace(clave, "•" * len(clave))
+        texto = texto.replace(clave, "-" * len(clave))
     return rc, texto, enviada
 
 def interfaz():
