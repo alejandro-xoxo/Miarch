@@ -74,11 +74,11 @@ Tras la validación correcta de credenciales, se dispara una secuencia de transi
 2. Acercamiento progresivo de la imagen de fondo (*push-in* de +12%).
 3. Aplicación de viñeteado óptico y tipografía gradual del registro real del sistema (`journalctl`) al inicio del proceso.
 4. Aparición del título "MIARCH" con incremento progresivo de interletraje y la firma "by alejandro-xoxo".
-5. Destello anamórfico horizontal (*flare*) sincronizado exactamente al 76% de la línea de tiempo.
-6. Resplandor de luz (*bloom*) y desvanecimiento hacia el fondo nítido a escala 1:1 coincidente con la geometría del escritorio.
+5. Desvanecimiento suave con desplazamiento de la tarjeta multimedia.
+6. Transición hacia el fondo nítido a escala 1:1 coincidente con la geometría del escritorio.
 
 ### Síntesis de Audio
-El diseño sonoro se genera sintéticamente sin muestras externas mediante el script `config/quickshell/miarch/sonidos/generar-desbloqueo.py` utilizando `numpy`. Produce una señal de 8.2 segundos consistente en una entrada de metales (*brass swell*), silencio transitorio, impacto profundo en el segundo 4.26, resonancia metálica, sección de cuerdas y reverberación de catedral.
+El diseño sonoro se genera sintéticamente sin muestras externas mediante el script `config/quickshell/miarch/sonidos/generar-desbloqueo.py` utilizando `numpy`. Es un sonido de teclado mecánico generado por código, sin muestras de terceros, que acompaña la salida mecanografiada del registro del sistema con pulsaciones sintetizadas (clic filtrado, golpe tipo thock y retorno).
 
 ### Parámetros de Seguridad
 - Una orden de bloqueo posterior interrumpe y anula cualquier animación de desbloqueo en progreso.

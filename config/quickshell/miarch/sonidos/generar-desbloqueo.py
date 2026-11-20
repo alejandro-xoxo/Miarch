@@ -1,104 +1,121 @@
 #!/usr/bin/env python3
-"""Genera desbloqueo.wav: sonido original de Miarch al desbloquear, estilo tráiler de cine (sin muestras de terceros).
-Línea de tiempo (coincide con la animación de la pantalla de bloqueo, 5,6 s):
-  0.00 - 4.18 s  subida de tensión: zumbido grave de metales que se abre, barrido de ruido y un vacío justo antes del golpe
-  4.26 s         golpe: bombo profundo con caída de tono, metales graves detonando y metal que resuena (ritmo del destello)
-  4.26 - 8.20 s  cola larga: cuerdas luminosas de re mayor que se abren y reverberación de catedral"""
-import numpy as np, wave
+"""Genera desbloqueo.wav: sonido de teclado mecánico generado por código, sin muestras de terceros.
+Sintetiza las pulsaciones de teclado mecánico que acompañan la aparición del log
+en la pantalla de desbloqueo (27 líneas más cabecera con cadencia ~79 ms y Enter final)."""
+import os, wave
+import numpy as np
+
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
 SR = 44100
-rng = np.random.default_rng(11)
-T = 8.2
+T = 2.5
 n = int(SR * T)
-t = np.arange(n) / SR
-IMP = 4.256                                        # instante del golpe (76 % de 5,6 s)
-act = (t >= IMP).astype(float)
-s = np.clip(t - IMP, 0, None)                      # tiempo desde el golpe
+rng = np.random.default_rng(2026)
 
-def saw_aditivo(f, tt, maxhz=5000):
-    """Diente de sierra por suma de armónicos (sin aliasing)."""
-    v = np.zeros_like(tt)
-    for h in range(1, int(maxhz / f) + 1):
-        v += np.sin(2 * np.pi * f * h * tt) / h
-    return v * (2 / np.pi)
+out_l = np.zeros(n)
+out_r = np.zeros(n)
 
-def pasabajos(x, corte):
-    """Dos polos con corte variable (array en Hz o número)."""
-    corte = np.broadcast_to(np.asarray(corte, dtype=float), x.shape)
-    a = 1 - np.exp(-2 * np.pi * corte / SR)
-    y1 = np.zeros_like(x); y2 = np.zeros_like(x); p = q = 0.0
-    for i in range(len(x)):
-        p += a[i] * (x[i] - p); q += a[i] * (p - q); y2[i] = q
-    return y2
+base_cadence = np.linspace(0.05, 2.10, 27)
+jitter = rng.uniform(-0.015, 0.015, 27)
+t_keys = base_cadence + jitter
+for i in range(1, len(t_keys)):
+    if t_keys[i] <= t_keys[i - 1] + 0.035:
+        t_keys[i] = t_keys[i - 1] + 0.040
 
-def suave(x): x = np.clip(x, 0, 1); return x * x * (3 - 2 * x)
+t_all = np.append(t_keys, 2.20)
+space_indices = {7, 16}
 
-# --- 1) subida de tensión (0 → golpe): metales graves que se abren
-sube = np.clip(t / IMP, 0, 1)
-env_sube = (sube ** 2.6) * (t < IMP)
-# vacío justo antes del golpe: baja casi a cero 180 ms para que el golpe pegue más
-vacio = 1 - 0.9 * suave((t - (IMP - 0.18)) / 0.05) * (t < IMP)
-bajos = np.zeros(n)
-for f, a in ((36.71, 1.0), (55.0, 0.7), (73.42, 0.6), (110.0, 0.35)):        # re1 la1 re2 la2
-    for det in (-0.35, 0.0, 0.35):                                           # desafinación leve = grosor
-        bajos += a * saw_aditivo(f * (1 + det / 100), t, 2200)
-corte_met = 90 * (14 ** sube)                                                # 90 → ~1260 Hz
-metales = pasabajos(bajos * env_sube, np.where(t < IMP, corte_met, 1260))
-metales *= vacio * 0.42
+for idx, t_k in enumerate(t_all):
+    is_enter = (idx == len(t_all) - 1)
+    is_space = (idx in space_indices)
 
-# barrido de ruido (whoosh) que sube hacia el golpe
-ruido = rng.standard_normal(n)
-barrido = pasabajos(ruido, 250 * (28 ** sube)) * (sube ** 3.2) * (t < IMP) * vacio * 0.22
+    dur = 0.16
+    n_k = int(dur * SR)
+    start = int(t_k * SR)
+    end = min(n, start + n_k)
+    actual_len = end - start
+    if actual_len <= 0:
+        continue
+    tk = np.arange(actual_len) / SR
 
-# tono que sube (tensión): re3 → re4 en glissando con vibrato lento
-fglis = 146.83 * (2 ** (sube * 1.0))
-fase = 2 * np.pi * np.cumsum(fglis) / SR
-tension = (np.sin(fase) + 0.4 * np.sin(2 * fase)) * env_sube * vacio * 0.05 * (1 + 0.15 * np.sin(2 * np.pi * 5 * t))
+    if is_enter:
+        f0 = rng.uniform(110, 130)
+        thock_decay = rng.uniform(0.030, 0.035)
+        vel = 1.15
+        pan = 0.0
+    elif is_space:
+        f0 = rng.uniform(120, 145)
+        thock_decay = rng.uniform(0.028, 0.034)
+        vel = rng.uniform(1.0, 1.15)
+        pan = rng.uniform(-0.08, 0.08)
+    else:
+        f0 = rng.uniform(150, 240)
+        thock_decay = rng.uniform(0.020, 0.030)
+        vel = rng.uniform(0.85, 1.12)
+        pan = rng.uniform(-0.25, 0.25)
 
-# --- 2) golpe: bombo profundo + metales detonando + metal que resuena + chasquido
-f_bombo = 30 + 70 * np.exp(-s * 7.5)
-bombo = np.sin(2 * np.pi * np.cumsum(f_bombo) / SR) * np.exp(-s * 1.6) * act * 1.25
-brass = np.zeros(n)
-for f, a in ((36.71, 1.0), (73.42, 0.8), (110.0, 0.55), (146.83, 0.45), (220.0, 0.3)):
-    for det in (-0.4, 0.0, 0.4):
-        brass += a * saw_aditivo(f * (1 + det / 100), t, 3000)
-brass = pasabajos(brass * act * np.minimum(1, s / 0.015), 700 + 2400 * np.exp(-s * 3.5)) * np.exp(-s * 0.95) * 0.5
-metal = np.zeros(n)
-for f, a in ((312.0, 1.0), (598.0, 0.7), (871.0, 0.5), (1347.0, 0.35), (2210.0, 0.2)):   # parciales inarmónicos: golpe de metal
-    metal += a * np.sin(2 * np.pi * f * t) * np.exp(-s * (1.6 + f / 900))
-metal *= act * 0.05
-chasq = rng.standard_normal(n) * np.exp(-s * 26) * act * 0.45
-chasq -= np.convolve(chasq, np.ones(30) / 30, mode="same")
+    # 1. Clic al pulsar: ráfaga breve de ruido filtrado (2-4 ms)
+    click_decay = rng.uniform(0.002, 0.0035)
+    noise_press = rng.standard_normal(actual_len)
+    m = int(0.0035 * SR)
+    tm = np.arange(m) / SR
+    h_click = np.sin(2 * np.pi * 3600 * tm) * np.exp(-tm / 0.001)
+    click = np.convolve(noise_press, h_click, mode="full")[:actual_len]
+    click = click * np.exp(-tk / click_decay)
+    click = click / (np.max(np.abs(click)) + 1e-9) * 0.45
 
-# --- 3) cola: cuerdas luminosas de re mayor add9 que se abren despacio
-cuerdas = np.zeros(n)
-for f, a in ((293.66, 1.0), (369.99, 0.8), (440.0, 0.9), (587.33, 0.7), (739.99, 0.5), (880.0, 0.45), (1174.7, 0.25)):
-    for det in (-0.25, 0.25):
-        cuerdas += a * saw_aditivo(f * (1 + det / 100), t, 4500) * (1 + 0.04 * np.sin(2 * np.pi * (4.7 + det) * t))
-env_cu = suave(s / 1.4) * np.exp(-np.clip(s - 1.4, 0, None) * 0.55) * act
-cuerdas = pasabajos(cuerdas * env_cu, 900 + 2600 * suave(s / 1.8)) * 0.034
+    # 2. Thock: senoidal 120-260 Hz con caída de 20-35 ms
+    f_inst = f0 * (1.0 + 0.35 * np.exp(-tk / 0.008))
+    phase = 2 * np.pi * np.cumsum(f_inst) / SR
+    thock = np.sin(phase) * np.exp(-tk / thock_decay)
+    thock += 0.28 * np.sin(2 * phase) * np.exp(-tk / (thock_decay * 0.75))
+    thock = thock / (np.max(np.abs(thock)) + 1e-9) * 0.80
 
-subida = metales + barrido + tension                  # la subida de tensión: casi seca
-golpe = bombo + brass + metal + chasq + cuerdas        # el golpe y su cola: aquí va la reverberación
-seco = subida + golpe
+    press = (click + thock) * vel
 
-# --- 4) reverberación de catedral: ruido que decae (4 s), oscurecido; convolución por FFT
-ri = int(SR * 4.2)
-tr = np.arange(ri) / SR
-ir = rng.standard_normal(ri) * np.exp(-tr * 1.55)
-ir = pasabajos(ir, np.maximum(900, 7000 * np.exp(-tr * 0.9)))
-ir[: int(0.02 * SR)] *= np.linspace(0, 1, int(0.02 * SR))
-L = n + ri
-humedo = np.fft.irfft(np.fft.rfft(golpe, L) * np.fft.rfft(ir, L), L)[:n]
-humedo *= np.max(np.abs(golpe)) / (np.max(np.abs(humedo)) + 1e-9)
-mezcla = seco * 0.80 + humedo * 0.62
+    # 3. Clic al soltar unos 50-90 ms después
+    rel_time = rng.uniform(0.055, 0.085)
+    rel_decay = rng.uniform(0.002, 0.003)
+    tk_rel = np.maximum(0, tk - rel_time)
+    noise_rel = rng.standard_normal(actual_len)
+    m_rel = int(0.003 * SR)
+    tm_rel = np.arange(m_rel) / SR
+    h_rel = np.sin(2 * np.pi * 4600 * tm_rel) * np.exp(-tm_rel / 0.0008)
+    click_rel = np.convolve(noise_rel, h_rel, mode="full")[:actual_len]
+    click_rel = click_rel * np.exp(-tk_rel / rel_decay) * (tk >= rel_time)
+    click_rel = click_rel / (np.max(np.abs(click_rel)) + 1e-9) * 0.20 * vel
 
-# --- 5) estéreo, normalización y cierre
-izq = mezcla + 0.18 * np.roll(mezcla, int(0.013 * SR)) - 0.05 * np.roll(humedo, int(0.031 * SR))
-der = mezcla + 0.18 * np.roll(mezcla, int(0.019 * SR)) + 0.05 * np.roll(humedo, int(0.027 * SR))
-st = np.stack([izq, der], axis=1)
-st = np.tanh(st * 1.15) / np.tanh(1.15)            # saturación suave: pega fuerte sin recortar
-st = st / np.max(np.abs(st)) * 0.85
-fade = int(SR * 0.9); st[-fade:] *= np.linspace(1, 0, fade)[:, None] ** 2
-w = wave.open("desbloqueo.wav", "wb"); w.setnchannels(2); w.setsampwidth(2); w.setframerate(SR)
-w.writeframes((st * 32767).astype("<i2").tobytes()); w.close()
+    sig = press + click_rel
+
+    # Paneo estéreo suave (potencia constante)
+    angle = (pan + 1.0) * (np.pi / 4)
+    g_l = np.cos(angle)
+    g_r = np.sin(angle)
+
+    out_l[start:end] += sig * g_l
+    out_r[start:end] += sig * g_r
+
+# Cola corta de sala (sin reverberación larga)
+ir_len = int(0.04 * SR)
+tir = np.arange(ir_len) / SR
+ir = rng.standard_normal(ir_len) * np.exp(-tir / 0.012)
+ir /= np.sum(np.abs(ir)) + 1e-9
+out_l = out_l + 0.12 * np.convolve(out_l, ir, mode="full")[:n]
+out_r = out_r + 0.12 * np.convolve(out_r, ir, mode="full")[:n]
+
+# Desvanecimiento en los últimos 30 ms
+fade_len = int(0.03 * SR)
+out_l[-fade_len:] *= np.linspace(1, 0, fade_len)
+out_r[-fade_len:] *= np.linspace(1, 0, fade_len)
+
+st = np.stack([out_l, out_r], axis=1)
+peak = np.max(np.abs(st))
+st = st / peak * 0.70
+
+w = wave.open("desbloqueo.wav", "wb")
+w.setnchannels(2)
+w.setsampwidth(2)
+w.setframerate(SR)
+w.writeframes((st * 32767).astype("<i2").tobytes())
+w.close()
 print("desbloqueo.wav", T, "s")

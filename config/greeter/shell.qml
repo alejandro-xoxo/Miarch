@@ -234,27 +234,6 @@ ShellRoot {
                         font { family: root.fuente; pixelSize: pantalla.height * 0.02; weight: Font.Normal; letterSpacing: 5 }
                     }
                 }
-                Item {   // destello anamórfico
-                    visible: pantalla.p > 0.66 && pantalla.p < 0.9
-                    anchors.fill: parent
-                    opacity: Math.sin(Math.PI * Math.max(0, Math.min(1, (pantalla.p - 0.66) / 0.22)))
-                    Rectangle {
-                        width: parent.width * pantalla.suave((pantalla.p - 0.66) / 0.16); height: pantalla.height * 0.07
-                        x: (parent.width - width) / 2; y: parent.height / 2 - height / 2
-                        gradient: Gradient { orientation: Gradient.Vertical
-                            GradientStop { position: 0; color: "transparent" }
-                            GradientStop { position: 0.5; color: Qt.alpha("#ffe9c8", 0.10) }
-                            GradientStop { position: 1; color: "transparent" } }
-                    }
-                    Rectangle {
-                        width: parent.width * pantalla.suave((pantalla.p - 0.66) / 0.16); height: 3
-                        x: (parent.width - width) / 2; y: parent.height / 2 - 1.5
-                        gradient: Gradient { orientation: Gradient.Horizontal
-                            GradientStop { position: 0; color: "transparent" }
-                            GradientStop { position: 0.5; color: "#fff3e0" }
-                            GradientStop { position: 1; color: "transparent" } }
-                    }
-                }
                 Repeater {   // barras de cine
                     model: [ true, false ]
                     Rectangle {
