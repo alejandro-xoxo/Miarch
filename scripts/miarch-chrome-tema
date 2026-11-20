@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Miarch · quita de Chrome el tema de color propio del perfil (por ejemplo un color rojo que sobre fondo oscuro se ve marrón)
+# y deja que Chrome siga el tema oscuro del sistema.
+# Uso:  miarch-chrome-tema              (todos los perfiles de ~/.config/google-chrome)
+#       miarch-chrome-tema CARPETA      (un perfil concreto, por ejemplo ~/.config/google-chrome/Default)
+# Chrome debe estar CERRADO por completo: si lo tienes abierto, el script se detiene sin tocar nada.
+# Antes de cambiar nada guarda una copia: Preferences.bak-miarch-FECHA.
+set -uo pipefail
+
+RAIZ="${MIARCH_CHROME_DIR:-$HOME/.config/google-chrome}"
+if [ -n "${1:-}" ]; then PERFILES=("$1"); else PERFILES=(); for d in "$RAIZ"/Default "$RAIZ"/Profile\ *; do [ -f "$d/Preferences" ] && PERFILES+=("$d"); done; fi
+[ "${#PERFILES[@]}" -gt 0 ] || { echo "[ERROR] No encontré ningún perfil de Chrome en $RAIZ"; exit 1; }
+
+python3 -I - "${PERFILES[@]}" <<'PY'
+import json, os, shutil, sys, time
+
+def en_uso(perfil):
+    """Chrome deja un enlace SingletonLock ('equipo-PID') en la carpeta del perfil mientras está abierto."""
+    cerrojo = os.path.join(os.path.dirname(os.path.abspath(perfil)), "SingletonLock")
+    try:
+        destino = os.readlink(cerrojo)
+        return os.path.exists("/proc/" + destino.rsplit("-", 1)[1])
+    except (OSError, IndexError):
+        return False
+
+hubo_error = False
+for perfil in sys.argv[1:]:
+    ruta = os.path.join(perfil, "Preferences")
+    nombre = os.path.basename(os.path.normpath(perfil))
+    if not os.path.isfile(ruta):
+        print(f"[ERROR] {nombre}: no hay archivo Preferences"); hubo_error = True; continue
+    if en_uso(perfil):
+        print(f"[ERROR] {nombre}: Chrome está abierto con este perfil. Ciérralo por completo (también desde la bandeja) y vuelve a ejecutar."); hubo_error = True; continue
+    try:
+        datos = json.load(open(ruta, encoding="utf-8"))
+    except ValueError:
+        print(f"[ERROR] {nombre}: Preferences no se puede leer; no se toca"); hubo_error = True; continue
+    tema = datos.setdefault("browser", {}).setdefault("theme", {})
+    ext = datos.get("extensions", {}).get("theme", {})
+    cambios = []
+    for k in ("user_color2", "color_variant2", "saved_local_theme", "is_grayscale2"):
+        if k in tema: tema.pop(k); cambios.append(k)
+    if tema.get("color_scheme2") != 0:
+        tema["color_scheme2"] = 0; cambios.append("color_scheme2=0 (seguir al sistema)")
+    if ext.get("id") == "user_color_theme_id":
+        ext.pop("id"); cambios.append("extensions.theme.id (tema de color propio)")
+    elif ext.get("id"):
+        print(f"[!] {nombre}: tienes un tema de la tienda de Chrome ({ext['id']}); quítalo en chrome://settings/appearance si quieres el del sistema")
+    if not cambios:
+        print(f"[OK] {nombre}: ya seguía el tema del sistema, no hubo nada que cambiar"); continue
+    copia = f"{ruta}.bak-miarch-{time.strftime('%Y%m%d-%H%M%S')}"
+    shutil.copy2(ruta, copia)
+    tmp = ruta + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(datos, f, ensure_ascii=False, separators=(",", ":"))
+    json.load(open(tmp, encoding="utf-8"))          # comprueba que quedó válido antes de reemplazar
+    os.replace(tmp, ruta)
+    print(f"[OK] {nombre}: tema restablecido ({len(cambios)} ajuste(s)). Copia: {os.path.basename(copia)}")
+sys.exit(1 if hubo_error else 0)
+PY
+RC=$?
+[ "$RC" -eq 0 ] && echo "Listo. Abre Chrome: seguirá el tema oscuro del sistema (si algo no te gusta, la copia de seguridad está junto a Preferences)."
+exit "$RC"

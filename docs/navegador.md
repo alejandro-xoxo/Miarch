@@ -14,6 +14,6 @@ Miarch usa **Google Chrome** (`Super + B`). Antes de decidirlo se midió contra 
 
 ## Tema oscuro
 
-Miarch deja el sistema en modo oscuro (`xdg-desktop-portal-gtk`, `gsettings color-scheme prefer-dark` y la opción de GTK) y Chrome lo sigue. Si tu Chrome se ve de otro color (por ejemplo marrón o rojizo), es un **tema de color propio del perfil**, no el sistema: en Chrome ve a `chrome://settings/appearance`, abre **Color y tema** y pulsa **Restablecer a los valores predeterminados**; deja **Modo** en **Dispositivo**.
+Miarch deja el sistema en modo oscuro (`xdg-desktop-portal-gtk`, `gsettings color-scheme prefer-dark` y la opción de GTK) y Chrome lo sigue. Si tu Chrome se ve de otro color (por ejemplo marrón o rojizo), es un **tema de color propio del perfil**, no el sistema. Con **Chrome cerrado por completo** ejecuta `miarch-chrome-tema` (guarda una copia y se niega si Chrome sigue abierto). O con clics: en Chrome ve a `chrome://settings/appearance`, abre **Color y tema** y pulsa **Restablecer a los valores predeterminados**; deja **Modo** en **Dispositivo**.
 
 Es una prueba con 6 pestañas y un perfil limpio: con extensiones, muchas pestañas o páginas pesadas (por ejemplo Teams) los números cambian. Lo que más consume en el día a día son esas páginas, no el navegador.
