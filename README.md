@@ -237,3 +237,12 @@ Cada tema tiene su propio archivo en [`docs/`](docs/README.md):
 | [Capturas](docs/capturas.md) | Cómo regenerar las imágenes de este README |
 
 Atajos básicos: `Super + Enter` terminal · `Super + Espacio` lanzador · `Super + Esc` ajustes · `Super + Shift + Esc` menú de energía (apagar, reiniciar…) · `Super + L` bloquear · `Super + W` cambiar wallpaper.
+
+---
+
+## 📄 Licencia
+
+Este proyecto está bajo la licencia Apache-2.0. Consulta los archivos [LICENSE](LICENSE) y [NOTICE](NOTICE) para más detalles.
+
+Los logotipos y marcas comerciales de terceros (incluidos Anthropic, OpenAI, Google, Nous Research y Ollama) son propiedad de sus respectivos dueños y no están cubiertos por esta licencia.
+
