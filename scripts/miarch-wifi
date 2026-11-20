@@ -181,7 +181,11 @@ def main():
     if cmd not in ("list", "scan"):                            # rastro de lo que se pidió y lo que pasó, para depurar
         try:
             d = os.path.expanduser("~/.cache/miarch"); os.makedirs(d, exist_ok=True)
-            with open(d + "/wifi.log", "a") as f:
+            ruta = d + "/wifi.log"
+            if os.path.exists(ruta) and os.path.getsize(ruta) > 100_000:      # se recorta para que no crezca sin límite
+                with open(ruta) as f: resto = f.readlines()[-200:]
+                with open(ruta, "w") as f: f.writelines(resto)
+            with open(ruta, "a") as f:
                 f.write("%s %s %s -> %s\n" % (time.strftime("%F %T"), cmd, a, json.dumps(res, ensure_ascii=False)))
         except OSError:
             pass

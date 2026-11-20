@@ -1821,28 +1821,28 @@ ShellRoot {
                         property real resta: 1
                         visible: index < 5
                         width: colNotif.width
-                        height: visible ? tarjeta.height : 0
+                        height: visible ? tarjetaN.height : 0
                         Component.onCompleted: entrada = 1
                         Behavior on entrada { NumberAnimation { duration: 420; easing.type: Easing.OutCubic } }
                         NumberAnimation { id: cuenta; target: tj; property: "resta"; from: 1; to: 0; duration: Math.max(1, tj.dur)
-                                          running: tj.dur > 0; paused: hov.hovered; onFinished: tj.modelData.expire() }
+                                          running: tj.dur > 0; paused: hovN.hovered; onFinished: tj.modelData.expire() }
                         Connections {   // si la app reemplaza la notificación (volumen, brillo…), vuelve a empezar la cuenta atrás
                             target: tj.modelData
                             function onBodyChanged() { if (tj.dur > 0) cuenta.restart() }
                             function onSummaryChanged() { if (tj.dur > 0) cuenta.restart() }
                         }
-                        HoverHandler { id: hov }
+                        HoverHandler { id: hovN }
 
                         Rectangle {
-                            id: tarjeta
+                            id: tarjetaN
                             width: parent.width
                             x: (1 - tj.entrada) * 80
                             opacity: Math.min(1, tj.entrada)
-                            height: cuerpo.implicitHeight + 34
+                            height: cuerpoN.implicitHeight + 34
                             radius: 18
                             color: Qt.alpha(Qt.lighter(root.fondo, 1.3), 0.95)
                             border.width: 1
-                            border.color: tj.critica ? Qt.alpha("#b8665f", 0.85) : Qt.alpha(root.arena, hov.hovered ? 0.28 : 0.13)
+                            border.color: tj.critica ? Qt.alpha("#b8665f", 0.85) : Qt.alpha(root.arena, hovN.hovered ? 0.28 : 0.13)
                             Behavior on border.color { ColorAnimation { duration: 200 } }
                             Rectangle {   // franja de color a la izquierda: acento, o rojo mate si es crítica
                                 x: 0; y: 18; width: 3; height: parent.height - 36; radius: 1.5
@@ -1861,7 +1861,7 @@ ShellRoot {
                                 }
                             }
                             Row {
-                                id: cuerpo
+                                id: cuerpoN
                                 x: 20; y: 17
                                 width: parent.width - 36
                                 spacing: 14
@@ -1916,7 +1916,7 @@ ShellRoot {
                                         visible: tj.modelData.body !== ""
                                         width: parent.width; wrapMode: Text.Wrap; maximumLineCount: 3; elide: Text.ElideRight
                                         textFormat: Text.StyledText
-                                        text: tj.modelData.body
+                                        text: tj.modelData.body.replace(/<img[^>]*>/gi, "")
                                         color: Qt.alpha(root.arena, 0.72)
                                         font { family: root.fuente; pixelSize: 13 * root.esc; weight: Font.Light }
                                     }
@@ -1955,7 +1955,7 @@ ShellRoot {
                                 visible: tj.dur > 0
                                 x: 20; y: parent.height - 5
                                 width: (parent.width - 40) * tj.resta; height: 2; radius: 1
-                                color: Qt.alpha(root.terracota, hov.hovered ? 0.8 : 0.45)
+                                color: Qt.alpha(root.terracota, hovN.hovered ? 0.8 : 0.45)
                             }
                         }
                     }
@@ -2562,6 +2562,7 @@ ShellRoot {
         tPorSiNoHayLog.start()
     }
     function arrancarApertura() {
+        if (!root.accesoOk) return                     // se volvió a bloquear mientras tanto: no se desbloquea nada
         Quickshell.execDetached(["pw-play", "--volume=0.6", Quickshell.env("HOME") + "/.config/quickshell/miarch/sonidos/desbloqueo.wav"])
         animApertura.restart()                         // el sonido y la animación empiezan a la vez: el golpe cae con el destello
     }
@@ -2581,7 +2582,7 @@ ShellRoot {
     NumberAnimation {
         id: animApertura
         target: root; property: "apertura"; from: 0; to: 1; duration: 5600
-        onFinished: { sesion.locked = false; root.accesoOk = false; root.apertura = 0 }
+        onFinished: { if (!root.accesoOk) return; sesion.locked = false; root.accesoOk = false; root.apertura = 0 }   // solo si la contraseña fue correcta y sigue vigente
     }
     function intentar() {
         if (root.clave.length === 0 || root.verificando) return
@@ -2591,7 +2592,7 @@ ShellRoot {
 
     IpcHandler {
         target: "lock"
-        function lock(): void { root.clave = ""; root.errorClave = false; root.accesoOk = false; root.apertura = 0; sesion.locked = true }
+        function lock(): void { animApertura.stop(); tPorSiNoHayLog.stop(); root.clave = ""; root.errorClave = false; root.accesoOk = false; root.apertura = 0; sesion.locked = true }   // un bloqueo nuevo cancela cualquier desbloqueo a medias
     }
 
     // Solo para pruebas: MIARCH_LOCK_TEST=1 qs -c miarch  → se desbloquea solo a los 9 s
