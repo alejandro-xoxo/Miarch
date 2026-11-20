@@ -12,7 +12,6 @@
 | `openai-codex` | pacman | CLI de Codex |
 | `claude-code` | AUR | CLI de Claude Code |
 | `antigravity` | AUR | App de escritorio de Antigravity 2.0 (Google) |
-| `antigravity-ide` | AUR | IDE de Antigravity (Google) |
 | `openai-chatgpt` | AUR | App de ChatGPT con Codex (vista previa oficial de OpenAI para Linux; reempaqueta su `.deb`, unos 350 MB) |
 | `antigravity-cli` | AUR | CLI de Antigravity (`agy`) |
 
