@@ -80,6 +80,30 @@ def escribir_kde(base, acentos, fg):
         subprocess.run(["kwriteconfig6", "--file", "kdeglobals", "--group", "General", "--key", "MiarchActualizado", str(int(time.time()))],
                        capture_output=True, timeout=5)
 
+def escribir_dunst(out):
+    """Colores de las notificaciones (dunst): mismo fondo y acento que el escritorio. Se escriben en dunstrc.d y dunst
+    los recarga en vivo (dunstctl reload)."""
+    def rgb(h): return tuple(int(h[i:i+2], 16) for i in (1, 3, 5))
+    def mezcla(h1, h2, t):
+        a, b = rgb(h1), rgb(h2)
+        return "#%02x%02x%02x" % tuple(round(a[i] + (b[i] - a[i]) * t) for i in range(3))
+    fondo, texto, acento = out["fondo"], out["arena"], out["terracota"]
+    tarjeta = mezcla(fondo, texto, 0.07)                 # un punto más claro que el fondo, para que destaque
+    rojo = "#b8665f"
+    def seccion(nombre, marco, fg=texto):
+        return ("[%s]\n    background = \"%sf2\"\n    foreground = \"%s\"\n    frame_color = \"%s\"\n    highlight = \"%s\"\n"
+                % (nombre, tarjeta, fg, marco, marco))
+    cuerpo = ("# Generado por miarch-colors a partir del wallpaper. No editar.\n[global]\n    separator_color = frame\n"
+              + seccion("urgency_low", mezcla(tarjeta, texto, 0.25), mezcla(texto, tarjeta, 0.15))
+              + seccion("urgency_normal", acento + "cc")
+              + seccion("urgency_critical", rojo))
+    d = os.path.expanduser("~/.config/dunst/dunstrc.d")
+    os.makedirs(d, exist_ok=True)
+    with open(d + "/50-miarch-colores.conf.tmp", "w") as f:
+        f.write(cuerpo)
+    os.replace(d + "/50-miarch-colores.conf.tmp", d + "/50-miarch-colores.conf")
+    subprocess.run(["dunstctl", "reload"], stderr=subprocess.DEVNULL, timeout=5)
+
 def escribir_qt6ct(base, acentos, fg):
     """Tema para las apps de Qt (Dolphin y demás) a través de qt6ct: paleta propia, tipografía e íconos.
     Hyprland define QT_QPA_PLATFORMTHEME=qt6ct. Si qt6ct no está instalado, las apps lo ignoran."""
@@ -215,6 +239,10 @@ def main(path):
         escribir_qt6ct(base, acentos, fg)
     except Exception as e:                      # nunca debe romper el cambio de wallpaper
         print("aviso: no se pudo escribir el tema de Qt/KDE:", e, file=sys.stderr)
+    try:
+        escribir_dunst(out)
+    except Exception as e:
+        print("aviso: no se pudo escribir el tema de las notificaciones:", e, file=sys.stderr)
     d = os.path.expanduser("~/.cache/miarch")
     os.makedirs(d, exist_ok=True)
     tmp = d + "/colors.json.tmp"

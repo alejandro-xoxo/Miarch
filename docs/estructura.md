@@ -15,6 +15,7 @@
 | `skills/instalar-configurar/` | Skill para agentes de IA (Claude Code): cómo instalar y configurar cosas en este sistema de la mejor forma. `install.sh` la copia a `~/.claude/skills/` si el agente existe |
 | `skills/instalar-configurar/` | Skill para agentes de IA (Claude Code, Codex, Antigravity…): cómo instalar y configurar cosas en este sistema de la mejor forma. `install.sh` la copia a la carpeta de skills de cada agente que tengas |
 | `AGENTS.md` | Instrucciones para cualquier agente de IA que trabaje dentro del repositorio (`CLAUDE.md` lo importa) |
+| `config/dunst/` | Notificaciones (dunst): forma y tamaño. Los colores los genera `miarch-colors` desde el fondo de pantalla |
 | `lib/ui.sh` | Barra de progreso y animación de los scripts de instalación |
 | `scripts/` | Herramientas ([lista](scripts.md)) |
 | `wallpapers/` | Fondos |

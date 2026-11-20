@@ -3,6 +3,9 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-20.06 · Notificaciones con el estilo de Miarch
+Las notificaciones salen arriba a la derecha, bajo la barra, con esquinas redondeadas, el color de tu fondo de pantalla, icono grande, nombre de la app en pequeño y barra de progreso para volumen y brillo. Las críticas se marcan en rojo mate. Clic izquierdo las cierra y clic derecho las cierra todas.
+
 ## 2026-11-20.05 · Menú de IA por niveles y solo lo que está a tu alcance
 En el menú de IA (Super + C) eliges una herramienta y, si tiene varias formas de abrirse, salen sus opciones: Claude Code (terminal) o Claude Desktop, Codex CLI o la app de Codex (nueva, se instala al actualizar). Wi-Fi y Bluetooth ya no llenan la lista con redes o dispositivos guardados que no están cerca; en Bluetooth hay un botón para verlos.
 

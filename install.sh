@@ -171,6 +171,7 @@ fi
 # alias gs="git status"
 EJ
 copy_config "$CONFIG_DIR/kitty"             "$HOME/.config/kitty"
+copy_config "$CONFIG_DIR/dunst"             "$HOME/.config/dunst"       # notificaciones (los colores los genera miarch-colors)
 copy_config "$CONFIG_DIR/nvim"              "$HOME/.config/nvim"
 copy_config "$CONFIG_DIR/quickshell/miarch" "$HOME/.config/quickshell/miarch"
 copy_config "$DOTFILES_DIR/home/.zshrc"     "$HOME/.zshrc"
