@@ -189,6 +189,10 @@ ui_etapa "Aplicando el wallpaper y los colores"
 if git -C "$DOTFILES_DIR" rev-parse HEAD >/dev/null 2>&1; then
     mkdir -p "$HOME/.cache/miarch"; git -C "$DOTFILES_DIR" rev-parse HEAD > "$HOME/.cache/miarch/configs-aplicadas"
 fi
+# una instalación nueva no necesita ver las novedades anteriores: se anota la última como vista (solo si aún no hay marca)
+if [ ! -s "$HOME/.cache/miarch/novedades-vistas" ] && [ -f "$DOTFILES_DIR/NOVEDADES.md" ]; then
+    mkdir -p "$HOME/.cache/miarch"; grep -m1 '^## ' "$DOTFILES_DIR/NOVEDADES.md" | awk '{print $2}' > "$HOME/.cache/miarch/novedades-vistas"
+fi
 
 if [ -z "${MIARCH_UI_SUB:-}" ]; then     # solo si no lo lanza setup.sh o miarch-update (que muestra su propio resumen)
     ui_resumen "Configuraciones aplicadas"

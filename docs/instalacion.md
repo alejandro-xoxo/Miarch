@@ -42,7 +42,7 @@ y reinicia: vuelves al inicio de sesión de texto.
 
 ## Actualizar
 **Con clics:** al encender el sistema, Miarch revisa una vez si hay cambios nuevos en GitHub. Si los hay, la **nube de la barra** se pone de color con el número de novedades y sale una notificación. Haz clic en la nube: se abre una ventana que
-1. baja los cambios y te dice cuáles son,
+1. antes de nada te muestra **qué trae** (las novedades, escritas en español en `NOVEDADES.md`) y **qué partes de tu equipo cambian** (escritorio, Hyprland, terminal, herramientas, lista de paquetes…), y solo después pide confirmar; baja los cambios,
 2. aplica las configuraciones nuevas **conservando tus ajustes** (animaciones, desenfoque, escala, teclado…) **y tu fondo**,
 3. si cambió la lista de paquetes, te pregunta antes de instalarlos (pide tu contraseña),
 4. te pregunta si actualizas también el sistema (`yay -Syu`),
