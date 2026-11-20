@@ -26,7 +26,7 @@ PAQUETES=(
     brightnessctl playerctl xdg-user-dirs
 
     # Gráficos y audio
-    mesa intel-media-driver pipewire pipewire-pulse wireplumber
+    mesa intel-media-driver pipewire pipewire-pulse wireplumber sound-theme-freedesktop   # el pitido del volumen
 
     # Red, Bluetooth y energía
     iwd bluez bluez-utils power-profiles-daemon

@@ -331,7 +331,9 @@ ShellRoot {
                   "f=0; grep -q -- --faltantes \"$d/packages.sh\" 2>/dev/null && f=$(bash \"$d/packages.sh\" --faltantes 2>/dev/null | grep -c .); " +
                   // paquetes que Miarch ya no usa y siguen instalados (se quitan al actualizar)
                   "s=0; grep -q -- --sobran \"$d/packages.sh\" 2>/dev/null && s=$(bash \"$d/packages.sh\" --sobran 2>/dev/null | grep -c .); " +
-                  "echo $((n + c + f + s))"]
+                  // pantalla de inicio de sesión de Miarch (greetd) aún sin instalar, salvo que se haya rechazado
+                  "g=0; [ -e \"$HOME/.config/miarch/sin-greeter\" ] || [ \"$(systemctl is-enabled greetd 2>/dev/null)\" = enabled ] || g=1; " +
+                  "echo $((n + c + f + s + g))"]
         stdout: StdioCollector {
             onStreamFinished: {
                 const t = text.trim()
@@ -1762,8 +1764,13 @@ ShellRoot {
                         height: visible ? tarjeta.height : 0
                         Component.onCompleted: entrada = 1
                         Behavior on entrada { NumberAnimation { duration: 420; easing.type: Easing.OutCubic } }
-                        NumberAnimation { target: tj; property: "resta"; from: 1; to: 0; duration: Math.max(1, tj.dur)
+                        NumberAnimation { id: cuenta; target: tj; property: "resta"; from: 1; to: 0; duration: Math.max(1, tj.dur)
                                           running: tj.dur > 0; paused: hov.hovered; onFinished: tj.modelData.expire() }
+                        Connections {   // si la app reemplaza la notificación (volumen, brillo…), vuelve a empezar la cuenta atrás
+                            target: tj.modelData
+                            function onBodyChanged() { if (tj.dur > 0) cuenta.restart() }
+                            function onSummaryChanged() { if (tj.dur > 0) cuenta.restart() }
+                        }
                         HoverHandler { id: hov }
 
                         Rectangle {

@@ -3,6 +3,12 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-20.10 · Pantalla de inicio de sesión por defecto
+Al actualizar (y en una instalación nueva), Miarch instala la pantalla de inicio de sesión gráfica con el estilo del bloqueo, para que al reiniciar no salga la terminal. Si falla, sigues entrando por la terminal. Si no la quieres: `touch ~/.config/miarch/sin-greeter`.
+
+## 2026-11-20.09 · Sonido al subir y bajar el volumen
+Las teclas de volumen ahora hacen un pitido corto y muestran una barra de volumen que se actualiza sin apilarse. En silencio no suena.
+
 ## 2026-11-20.08 · Pantalla de bloqueo más futurista, con sonido
 La pantalla de bloqueo gana marcos de esquina, una regla con un destello que la recorre y una contraseña en celdas con cursor ("AUTENTICACIÓN", "ACCESO CONCEDIDO" o "ACCESO DENEGADO"). Al acertar suena un sonido épico (subida de tensión, golpe grave y acorde con eco), mientras un barrido de escaneo recorre la pantalla y el log real del sistema se teclea; después el fondo nítido se abre como una franja desde el centro, con ondas de choque, antes de entrar al escritorio (unos 2,3 segundos).
 

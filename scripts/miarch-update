@@ -88,6 +88,13 @@ RUTAS_CFG=(config scripts home lib install.sh setup.sh packages.sh skills AGENTS
 MARCA_ANT="$(cat "$CFG_MARCA" 2>/dev/null)"
 CFG_PENDIENTES=1
 if [ -n "$MARCA_ANT" ] && git cat-file -e "$MARCA_ANT^{commit}" 2>/dev/null && git diff --quiet "$MARCA_ANT" HEAD -- "${RUTAS_CFG[@]}"; then CFG_PENDIENTES=0; fi
+# Pantalla de inicio de sesión gráfica (greetd): por defecto. Pendiente si no está activa, o si sus archivos cambiaron.
+# Quien no la quiere: touch ~/.config/miarch/sin-greeter
+GREETER_PEND=0
+if [ ! -e "$HOME/.config/miarch/sin-greeter" ]; then
+    [ "$(systemctl is-enabled greetd 2>/dev/null)" = "enabled" ] || GREETER_PEND=1
+    [ "$GREETER_PEND" = 0 ] && [ -n "$MARCA_ANT" ] && ! git diff --quiet "$MARCA_ANT" "${UP:-HEAD}" -- config/greeter 2>/dev/null && GREETER_PEND=1
+fi
 PAQ_CAMBIA=0; [ "$NUEVOS" -gt 0 ] && ! git diff --quiet HEAD "$UP" -- packages.sh && PAQ_CAMBIA=1
 
 # un packages.sh antiguo no conoce --faltantes y ejecutaría la instalación completa: solo se pregunta si lo soporta
@@ -132,6 +139,7 @@ elif [ "$PAQ_CAMBIA" = 1 ]; then
 else
     ui_ok "Paquetes de Miarch: no falta ninguno"
 fi
+[ "$GREETER_PEND" = 1 ] && ui_info "Se instalará la pantalla de inicio de sesión de Miarch (la verás al reiniciar)"
 if [ "$N_SIS" -gt 0 ]; then
     ui_info "Sistema: ${#SIS_OFI[@]} oficiales y ${#SIS_AUR[@]} de AUR por actualizar:"
     printf '%s\n' "${SIS_OFI[@]}" "${SIS_AUR[@]}" | grep -v '^$' | head -10 | sed 's/^/        - /'
@@ -145,7 +153,8 @@ HACER_MIARCH=0; { [ "$NUEVOS" -gt 0 ] && [ "$SUCIO" = 0 ]; } && HACER_MIARCH=1
 { [ "$FORZAR" = 1 ] || [ "$CFG_PENDIENTES" = 1 ]; } && HACER_MIARCH=1
 HACER_PAQ=0; { [ "${#FALTAN[@]}" -gt 0 ] || [ "${#SOBRAN[@]}" -gt 0 ] || [ "$PAQ_CAMBIA" = 1 ]; } && HACER_PAQ=1
 HACER_SIS=0; [ "$N_SIS" -gt 0 ] && HACER_SIS=1
-if [ "$HACER_MIARCH$HACER_PAQ$HACER_SIS" = "000" ]; then
+HACER_GREET=$GREETER_PEND
+if [ "$HACER_MIARCH$HACER_PAQ$HACER_SIS$HACER_GREET" = "0000" ]; then
     echo
     ui_ok "Todo está al día. No hay nada que descargar ni instalar."
     ui_resumen "Todo al día"
@@ -155,14 +164,15 @@ fi
 PLAN=()
 [ "$HACER_MIARCH" = 1 ] && PLAN+=("$([ "$NUEVOS" -gt 0 ] && echo "descargar y aplicar los cambios de Miarch" || echo "aplicar las configuraciones de Miarch")")
 [ "$HACER_PAQ" = 1 ]    && PLAN+=("instalar los paquetes de Miarch que faltan")
+[ "$HACER_GREET" = 1 ]  && PLAN+=("instalar la pantalla de inicio de sesión")
 [ "$HACER_SIS" = 1 ]    && PLAN+=("actualizar $N_SIS $(plural "$N_SIS" paquete paquetes) del sistema")
 echo
 si "Se va a: $(unir "${PLAN[@]}"). ¿Continuar? (pide tu contraseña si hace falta)" || { ui_info "No se hizo ningún cambio."; fin 0; }
 
 # etapas reales = las tareas elegidas (la barra del total muestra solo lo que de verdad se hará)
 UI_ACTUAL=0
-UI_TOTAL=$(( HACER_MIARCH * 2 + HACER_PAQ + HACER_SIS ))
-{ [ "$HACER_PAQ" = 1 ] || [ "$HACER_SIS" = 1 ]; } && { sudo -v || { ui_error "Sin permiso de administrador: no se instala nada."; fin 1; }; }
+UI_TOTAL=$(( HACER_MIARCH * 2 + HACER_PAQ + HACER_SIS + HACER_GREET ))
+{ [ "$HACER_PAQ" = 1 ] || [ "$HACER_SIS" = 1 ] || [ "$HACER_GREET" = 1 ]; } && { sudo -v || { ui_error "Sin permiso de administrador: no se instala nada."; fin 1; }; }
 
 # =====================================================================================================
 # 2) HACER solo lo que hace falta
@@ -223,6 +233,16 @@ if [ "$HACER_PAQ" = 1 ]; then
     else
         ui_etapa "Revisando los paquetes de Miarch"
         ui_ok "No falta ningún paquete: no se instala nada"
+    fi
+fi
+
+if [ "$HACER_GREET" = 1 ]; then
+    ui_etapa "Instalando la pantalla de inicio de sesión (se ve al reiniciar)"
+    if [ -x ./scripts/miarch-greeter-install ]; then
+        MIARCH_SUDO_VIVO=1 ui_ejecutar "Instalando greetd y la pantalla de Miarch" bash ./scripts/miarch-greeter-install \
+            || ui_aviso "No se pudo instalar la pantalla de inicio de sesión. Sigues entrando por la terminal; reintenta con ./scripts/miarch-greeter-install"
+    else
+        ui_aviso "Este Miarch aún no trae la pantalla de inicio de sesión: descarga los cambios y vuelve a intentarlo."
     fi
 fi
 
