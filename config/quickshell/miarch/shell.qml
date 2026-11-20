@@ -2577,7 +2577,7 @@ ShellRoot {
     Timer { id: tPorSiNoHayLog; interval: 600; onTriggered: { if (!animApertura.running) { root.lineasLog = ["[    0.000000] miarch: sesión desbloqueada"]; animApertura.restart() } } }
     NumberAnimation {
         id: animApertura
-        target: root; property: "apertura"; from: 0; to: 1; duration: 2300
+        target: root; property: "apertura"; from: 0; to: 1; duration: 3600
         onFinished: { sesion.locked = false; root.accesoOk = false; root.apertura = 0 }
     }
     function intentar() {
@@ -2615,7 +2615,11 @@ ShellRoot {
                 Behavior on entrada { NumberAnimation { duration: 1500; easing.type: Easing.OutQuint } }
 
                 // 0 durante el log y 0→1 cuando la pantalla se despeja (último 38 % de la secuencia)
-                readonly property real abre: { const x = Math.max(0, Math.min(1, (root.apertura - 0.55) / 0.45)); return x * x * (3 - 2 * x) }   // suavizada
+                // Secuencia de cine (3,6 s): p = progreso 0..1. El golpe del sonido cae en p = 0.76.
+                readonly property real p: root.apertura
+                function suave(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x) }
+                readonly property real abre: suave((p - 0.80) / 0.20)             // llega el fondo nítido
+                readonly property real barras: p < 0.86 ? suave(p / 0.12) : 1 - suave((p - 0.86) / 0.14)   // barras de cine
 
                 Keys.onPressed: event => {
                     if (root.verificando || root.accesoOk) return
@@ -2640,7 +2644,7 @@ ShellRoot {
                     anchors.fill: parent
                     source: imgFondo
                     blurEnabled: true; blurMax: 64; blur: 1.0
-                    opacity: 1 - candado.abre; scale: 1 + candado.abre * 0.10
+                    opacity: 1 - candado.abre; scale: 1 + 0.12 * candado.p
                     autoPaddingEnabled: false
                 }
                 Rectangle { anchors.fill: parent; color: root.fondo; opacity: 0.58 * (1 - candado.abre) }
@@ -2652,7 +2656,83 @@ ShellRoot {
                     asynchronous: true
                     visible: candado.abre > 0
                     opacity: candado.abre
-                    scale: 1.18 - 0.18 * (1 - Math.pow(1 - candado.abre, 3))
+                    scale: 1 + 0.12 * (1 - candado.abre)               // sigue el avance lento y se asienta en escala 1, igual que el escritorio
+                }
+
+                // ── Secuencia de cine ──
+                // Viñeta: los bordes se oscurecen mientras dura
+                Repeater {
+                    model: [ { l: true }, { l: false } ]
+                    Rectangle {
+                        required property var modelData
+                        visible: root.accesoOk
+                        x: modelData.l ? 0 : parent.width - width; width: parent.width * 0.22; height: parent.height
+                        opacity: 0.55 * candado.suave(candado.p / 0.2) * (1 - candado.abre)
+                        gradient: Gradient { orientation: Gradient.Horizontal
+                            GradientStop { position: 0; color: modelData.l ? "black" : "transparent" }
+                            GradientStop { position: 1; color: modelData.l ? "transparent" : "black" } }
+                    }
+                }
+                // Título: MIARCH, letras muy separadas que se abren despacio
+                Column {
+                    visible: root.accesoOk && candado.p > 0.45
+                    anchors.centerIn: parent
+                    spacing: candado.height * 0.012
+                    opacity: candado.suave((candado.p - 0.46) / 0.14) * (1 - candado.suave((candado.p - 0.84) / 0.08))
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: "MIARCH"
+                        color: root.arena
+                        font { family: root.fuente; pixelSize: candado.height * 0.085; weight: Font.Thin
+                               letterSpacing: candado.height * (0.012 + 0.03 * candado.suave((candado.p - 0.46) / 0.4)) }
+                    }
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: "ACCESO CONCEDIDO"
+                        color: root.terracota
+                        opacity: 0.85
+                        font { family: root.fuente; pixelSize: candado.height * 0.016; weight: Font.Medium; letterSpacing: 9 }
+                    }
+                }
+                // Destello anamórfico: una línea de luz horizontal que cruza la pantalla en el golpe del sonido
+                Item {
+                    visible: candado.p > 0.66 && candado.p < 0.9
+                    anchors.fill: parent
+                    opacity: Math.sin(Math.PI * Math.max(0, Math.min(1, (candado.p - 0.66) / 0.22)))
+                    Rectangle {   // resplandor suave
+                        width: parent.width * candado.suave((candado.p - 0.66) / 0.16); height: candado.height * 0.07
+                        x: (parent.width - width) / 2; y: parent.height / 2 - height / 2
+                        gradient: Gradient { orientation: Gradient.Vertical
+                            GradientStop { position: 0; color: "transparent" }
+                            GradientStop { position: 0.5; color: Qt.alpha("#ffe9c8", 0.22) }
+                            GradientStop { position: 1; color: "transparent" } }
+                    }
+                    Rectangle {   // el filo brillante
+                        width: parent.width * candado.suave((candado.p - 0.66) / 0.16); height: 3
+                        x: (parent.width - width) / 2; y: parent.height / 2 - 1.5
+                        gradient: Gradient { orientation: Gradient.Horizontal
+                            GradientStop { position: 0; color: "transparent" }
+                            GradientStop { position: 0.5; color: "#fff3e0" }
+                            GradientStop { position: 1; color: "transparent" } }
+                    }
+                }
+                // Luz: todo se aclara tras el golpe y se disuelve en el escritorio
+                Rectangle {
+                    anchors.fill: parent
+                    color: "#fff3e0"
+                    visible: opacity > 0
+                    opacity: 0.62 * candado.suave((candado.p - 0.76) / 0.12) * (1 - candado.suave((candado.p - 0.90) / 0.10))
+                }
+                // Barras de cine arriba y abajo
+                Repeater {
+                    model: [ true, false ]
+                    Rectangle {
+                        required property bool modelData
+                        visible: candado.barras > 0
+                        color: "black"
+                        width: parent.width; height: candado.height * 0.128 * candado.barras
+                        y: modelData ? 0 : parent.height - height
+                    }
                 }
 
                 // Música (solo si hay un reproductor): tarjeta grande a la derecha del reloj
@@ -2768,9 +2848,9 @@ ShellRoot {
                     x: candado.width * 0.05; width: candado.width * 0.9
                     anchors.verticalCenter: parent.verticalCenter
                     height: colLog.implicitHeight
-                    opacity: Math.min(1, root.apertura * 10) * (1 - candado.abre)
+                    opacity: Math.min(1, root.apertura * 10) * (1 - candado.suave((candado.p - 0.42) / 0.10))
                     readonly property int n: root.lineasLog.length
-                    readonly property int visibles: Math.floor(Math.min(1, root.apertura / 0.58) * (n + 1))
+                    readonly property int visibles: Math.floor(Math.min(1, root.apertura / 0.38) * (n + 1))
                     Column {
                         id: colLog
                         width: parent.width

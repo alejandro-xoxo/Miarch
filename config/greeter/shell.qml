@@ -102,7 +102,7 @@ ShellRoot {
     }
     NumberAnimation {
         id: animApertura
-        target: root; property: "apertura"; from: 0; to: 1; duration: 1900; easing.type: Easing.InOutSine
+        target: root; property: "apertura"; from: 0; to: 1; duration: 3600
         onFinished: {
             if (root.prueba) { Qt.quit(); return }
             // shell de login: así se carga tu entorno (~/.zprofile, PATH) como en un inicio normal
@@ -145,7 +145,11 @@ ShellRoot {
                 Component.onCompleted: { forceActiveFocus(); entrada = 1 }
                 property real entrada: 0
                 Behavior on entrada { NumberAnimation { duration: 1500; easing.type: Easing.OutQuint } }
-                readonly property real abre: { const x = root.apertura; return x * x * (3 - 2 * x) }   // suavizada
+                // Secuencia de cine (3,6 s): p = progreso 0..1
+                readonly property real p: root.apertura
+                function suave(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x) }
+                readonly property real abre: suave((p - 0.80) / 0.20)             // llega el fondo nítido
+                readonly property real barras: p < 0.86 ? suave(p / 0.12) : 1 - suave((p - 0.86) / 0.14)
 
                 Keys.onPressed: event => {
                     if (event.key === Qt.Key_Escape) { if (root.prueba) Qt.quit(); else root.clave = ""; return }
@@ -173,7 +177,7 @@ ShellRoot {
                     visible: img.status === Image.Ready
                     blurEnabled: true; blurMax: 64; blur: 1.0
                     autoPaddingEnabled: false
-                    opacity: 1 - pantalla.abre; scale: 1 + pantalla.abre * 0.10
+                    opacity: 1 - pantalla.abre; scale: 1 + 0.12 * pantalla.p
                 }
                 Rectangle { anchors.fill: parent; color: root.fondo; opacity: (img.status === Image.Ready ? 0.58 : 0) * (1 - pantalla.abre) }
                 Image {   // el fondo nítido llega desde más cerca y se asienta en escala 1
@@ -183,7 +187,77 @@ ShellRoot {
                     asynchronous: true
                     visible: pantalla.abre > 0
                     opacity: pantalla.abre
-                    scale: 1.18 - 0.18 * (1 - Math.pow(1 - pantalla.abre, 3))
+                    scale: 1 + 0.12 * (1 - pantalla.abre)
+                }
+                // ── Secuencia de cine ──
+                Repeater {   // viñeta
+                    model: [ { l: true }, { l: false } ]
+                    Rectangle {
+                        required property var modelData
+                        visible: root.accesoOk
+                        x: modelData.l ? 0 : parent.width - width; width: parent.width * 0.22; height: parent.height
+                        opacity: 0.55 * pantalla.suave(pantalla.p / 0.2) * (1 - pantalla.abre)
+                        gradient: Gradient { orientation: Gradient.Horizontal
+                            GradientStop { position: 0; color: modelData.l ? "black" : "transparent" }
+                            GradientStop { position: 1; color: modelData.l ? "transparent" : "black" } }
+                    }
+                }
+                Column {   // título
+                    visible: root.accesoOk && pantalla.p > 0.3
+                    anchors.centerIn: parent
+                    spacing: pantalla.height * 0.012
+                    opacity: pantalla.suave((pantalla.p - 0.32) / 0.14) * (1 - pantalla.suave((pantalla.p - 0.84) / 0.08))
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: "MIARCH"
+                        color: root.arena
+                        font { family: root.fuente; pixelSize: pantalla.height * 0.085; weight: Font.Thin
+                               letterSpacing: pantalla.height * (0.012 + 0.03 * pantalla.suave((pantalla.p - 0.32) / 0.5)) }
+                    }
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: "BIENVENIDO, " + root.usuario.toUpperCase()
+                        color: root.terracota
+                        opacity: 0.85
+                        font { family: root.fuente; pixelSize: pantalla.height * 0.016; weight: Font.Medium; letterSpacing: 9 }
+                    }
+                }
+                Item {   // destello anamórfico
+                    visible: pantalla.p > 0.66 && pantalla.p < 0.9
+                    anchors.fill: parent
+                    opacity: Math.sin(Math.PI * Math.max(0, Math.min(1, (pantalla.p - 0.66) / 0.22)))
+                    Rectangle {
+                        width: parent.width * pantalla.suave((pantalla.p - 0.66) / 0.16); height: pantalla.height * 0.07
+                        x: (parent.width - width) / 2; y: parent.height / 2 - height / 2
+                        gradient: Gradient { orientation: Gradient.Vertical
+                            GradientStop { position: 0; color: "transparent" }
+                            GradientStop { position: 0.5; color: Qt.alpha("#ffe9c8", 0.22) }
+                            GradientStop { position: 1; color: "transparent" } }
+                    }
+                    Rectangle {
+                        width: parent.width * pantalla.suave((pantalla.p - 0.66) / 0.16); height: 3
+                        x: (parent.width - width) / 2; y: parent.height / 2 - 1.5
+                        gradient: Gradient { orientation: Gradient.Horizontal
+                            GradientStop { position: 0; color: "transparent" }
+                            GradientStop { position: 0.5; color: "#fff3e0" }
+                            GradientStop { position: 1; color: "transparent" } }
+                    }
+                }
+                Rectangle {   // luz
+                    anchors.fill: parent
+                    color: "#fff3e0"
+                    visible: opacity > 0
+                    opacity: 0.62 * pantalla.suave((pantalla.p - 0.76) / 0.12) * (1 - pantalla.suave((pantalla.p - 0.90) / 0.10))
+                }
+                Repeater {   // barras de cine
+                    model: [ true, false ]
+                    Rectangle {
+                        required property bool modelData
+                        visible: pantalla.barras > 0
+                        color: "black"
+                        width: parent.width; height: pantalla.height * 0.128 * pantalla.barras
+                        y: modelData ? 0 : parent.height - height
+                    }
                 }
 
                 Column {
