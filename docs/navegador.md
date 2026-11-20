@@ -12,4 +12,8 @@ Miarch usa **Google Chrome** (`Super + B`). Antes de decidirlo se midió contra 
 - **Chromium** gasta ~110 MB más pero está en los repos oficiales (firmado por Arch). Si prefieres eso, cambia `google-chrome` por `chromium` en `packages.sh` y `google-chrome-stable` por `chromium` en `config/hypr/hyprland.lua`.
 - **Firefox** gastó el doble de RAM y cinco veces más CPU en esta prueba. Es más privado, pero no más liviano aquí.
 
+## Tema oscuro
+
+Miarch deja el sistema en modo oscuro (`xdg-desktop-portal-gtk`, `gsettings color-scheme prefer-dark` y la opción de GTK) y Chrome lo sigue. Si tu Chrome se ve de otro color (por ejemplo marrón o rojizo), es un **tema de color propio del perfil**, no el sistema: en Chrome ve a `chrome://settings/appearance`, abre **Color y tema** y pulsa **Restablecer a los valores predeterminados**; deja **Modo** en **Dispositivo**.
+
 Es una prueba con 6 pestañas y un perfil limpio: con extensiones, muchas pestañas o páginas pesadas (por ejemplo Teams) los números cambian. Lo que más consume en el día a día son esas páginas, no el navegador.

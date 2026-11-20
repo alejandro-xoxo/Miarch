@@ -111,8 +111,15 @@ ui_barra() {   # $1 = porcentaje
     lleno=$(( pct * ancho / 100 ))
     printf '%s%s%s%s%s' "$C_ACENTO" "$(ui_repetir "$lleno" "$S_LLENO")" "$C_TENUE" "$(ui_repetir $(( ancho - lleno )) "$S_VACIO")" "$C_R"
 }
+# título de una sección que no cuenta como etapa (por ejemplo, la revisión previa)
+ui_titulo() {
+    if [ "$UI_TTY" = 0 ]; then printf '\n==> %s\n' "$*"; return; fi
+    printf '\n  %s%s%s %s%s%s\n' "$C_ACENTO" "$S_ETAPA" "$C_R" "$C_NEG" "$*" "$C_R"
+}
 ui_etapa() {
     local msg="$*" pct paso
+    # modo compacto: un script lanzado por miarch-update no dibuja su propia barra (ya hay una del actualizador)
+    if [ -n "${MIARCH_UI_COMPACTO:-}" ]; then printf '\n  %s· %s%s\n' "$C_TENUE" "$msg" "$C_R"; return; fi
     UI_ACTUAL=$(( UI_ACTUAL + 1 ))
     [ "$UI_TOTAL" -gt 0 ] || UI_TOTAL=1
     pct=$(( UI_ACTUAL * 100 / UI_TOTAL )); [ "$pct" -gt 100 ] && pct=100

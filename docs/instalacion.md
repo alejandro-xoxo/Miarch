@@ -50,6 +50,14 @@ y reinicia: vuelves al inicio de sesión de texto.
 
 Clic derecho en la nube: vuelve a aplicar las configuraciones aunque no haya cambios nuevos (`miarch-update --forzar`). Si tienes cambios propios sin guardar en `~/Miarch`, no los pisa. Solo se conservan las 2 copias de seguridad más recientes de lo que se reemplaza.
 
+**Si tu versión es antigua y no tiene la nube de actualización**, ejecuta esto una sola vez en una terminal (instala el actualizador y recarga el escritorio):
+
+```bash
+cd ~/Miarch && git pull --ff-only && bash install.sh && hyprctl reload && (qs kill -c miarch; setsid qs -c miarch >/dev/null 2>&1 &)
+```
+
+Desde ahí la nube de la barra avisa sola de las novedades. Si clonaste Miarch en otra carpeta, cambia `~/Miarch` por esa ruta. Si `git pull` se queja de cambios locales, guárdalos o descártalos (`git stash`) y repite. Con la nube nueva, al hacer clic revisa qué falta (paquetes nuevos de Miarch incluidos) y los instala con una sola confirmación.
+
 **Con comandos** (equivale a lo anterior pero más completo):
 ```bash
 cd ~/Miarch && git pull && ./setup.sh
