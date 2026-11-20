@@ -3,6 +3,9 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-20.98 · Entrada limpia después del login (otra vez, bien hecho)
+Entre el login y el escritorio ya no se ve la consola de texto con el arranque de Hyprland: se borra la pantalla, se oculta el cursor y el texto va al registro `~/.cache/miarch/sesion.log`. Esta vez el arranque está en un script propio y el login tiene una red de seguridad: si el script faltara, usa el comando de siempre.
+
 ## 2026-11-20.99 · Arreglo: bucle al iniciar sesión
 Un cambio reciente del inicio de sesión hacía que, tras escribir la contraseña, volviera a aparecer el login una y otra vez. Ya está corregido: el comando que arranca tu sesión vuelve a ser el de siempre. El texto que a veces se ve un instante en la consola entre el login y el escritorio se queda como estaba.
 
