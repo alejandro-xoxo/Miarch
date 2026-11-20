@@ -309,6 +309,31 @@ ShellRoot {
     }
     Timer { interval: 1200000; running: true; repeat: true; triggeredOnStart: true; onTriggered: pActualiz.running = true }
 
+    // Cambios nuevos de Miarch en GitHub: se revisan una vez al encender el sistema (y se reintenta si aún no hay internet).
+    // El clic en la nube abre miarch-update, que los baja y los aplica.
+    property int cambiosRepo: 0
+    property int _intentosRepo: 0
+    readonly property int pendientes: root.actualizaciones + root.cambiosRepo
+    Process {
+        id: pRepo
+        command: ["sh", "-c", "d=\"${MIARCH_DIR:-$HOME/Miarch}\"; [ -d \"$d/.git\" ] || { echo 0; exit; }; " +
+                  "git -C \"$d\" fetch -q origin 2>/dev/null || { echo x; exit; }; " +
+                  "u=$(git -C \"$d\" rev-parse -q --verify '@{u}' 2>/dev/null || echo \"origin/$(git -C \"$d\" rev-parse --abbrev-ref HEAD)\"); " +
+                  "git -C \"$d\" rev-list --count \"HEAD..$u\" 2>/dev/null || echo 0"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const t = text.trim()
+                if (t === "x") { if (root._intentosRepo < 5) tReintentoRepo.restart(); return }   // sin internet todavía
+                const n = parseInt(t) || 0
+                if (n > 0 && root.cambiosRepo === 0)
+                    Quickshell.execDetached(["sh", "-c", "command -v notify-send >/dev/null && notify-send -a Miarch 'Miarch tiene una actualización' 'Haz clic en la nube de la barra para aplicarla.'"])
+                root.cambiosRepo = n
+            }
+        }
+    }
+    Timer { id: tInicioRepo; interval: 20000; running: true; onTriggered: { root._intentosRepo++; pRepo.running = true } }
+    Timer { id: tReintentoRepo; interval: 60000; onTriggered: { root._intentosRepo++; pRepo.running = true } }
+
     Process {
         id: pWifi
         command: ["sh", "-c", "iwctl station wlan0 show 2>/dev/null | sed 's/\\x1b\\[[0-9;]*m//g' | awk '/Connected network/ { sub(/.*Connected network[ ]+/, \"\"); print }'"]
@@ -413,10 +438,11 @@ ShellRoot {
                         onClicDerecho: if (root.jugador) root.jugador.next()
                     }
                     Modulo {   // actualizaciones
-                        icono: ""; acento: root.actualizaciones > 0 ? root.terracota : root.arena
-                        texto: root.actualizaciones.toString()
-                        atenuado: root.actualizaciones === 0
-                        onClic: root.lanzar(["kitty", "sh", "-c", "yay -Syu; echo; echo 'Listo. Enter para cerrar'; read"])
+                        icono: ""; acento: root.pendientes > 0 ? root.terracota : root.arena
+                        texto: root.pendientes.toString()
+                        atenuado: root.pendientes === 0
+                        onClic: root.lanzar(["kitty", "--class", "miarch-update", Quickshell.env("HOME") + "/.local/bin/miarch-update"])
+                        onClicDerecho: root.lanzar(["kitty", "--class", "miarch-update", Quickshell.env("HOME") + "/.local/bin/miarch-update", "--forzar"])
                     }
                     Modulo {   // bluetooth
                         icono: ""
