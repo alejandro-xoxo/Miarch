@@ -67,6 +67,11 @@ AUR_PAQUETES=(
 # setup.sh pregunta cuántas etapas tiene este script para dibujar la barra del total
 ETAPAS=$(( 6 + ${#AUR_PAQUETES[@]} ))
 [ "${1:-}" = "--etapas" ] && { echo "$ETAPAS"; exit 0; }
+# miarch-update pregunta qué paquetes de esta lista aún no están instalados (no instala ni cambia nada)
+if [ "${1:-}" = "--faltantes" ]; then
+    for paquete in "${PAQUETES[@]}" "${AUR_PAQUETES[@]}"; do pacman -Q "$paquete" >/dev/null 2>&1 || echo "$paquete"; done
+    exit 0
+fi
 
 ui_total "$ETAPAS"
 [ -n "${MIARCH_UI_SUB:-}" ] || ui_banner "paquetes"   # solo si no lo lanza setup.sh
