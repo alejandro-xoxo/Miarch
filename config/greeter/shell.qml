@@ -221,6 +221,14 @@ ShellRoot {
                         opacity: 0.85
                         font { family: root.fuente; pixelSize: pantalla.height * 0.016; weight: Font.Medium; letterSpacing: 9 }
                     }
+                    Text {   // firma: aparece un poco después del título
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        topPadding: pantalla.height * 0.03
+                        text: "by alejandro-xoxo"
+                        color: root.arena
+                        opacity: 0.7 * pantalla.suave((pantalla.p - 0.46) / 0.12)
+                        font { family: root.fuente; pixelSize: pantalla.height * 0.02; weight: Font.Light; letterSpacing: 5 }
+                    }
                 }
                 Item {   // destello anamórfico
                     visible: pantalla.p > 0.66 && pantalla.p < 0.9
