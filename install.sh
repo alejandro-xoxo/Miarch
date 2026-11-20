@@ -68,6 +68,32 @@ copy_config "$DOTFILES_DIR/home/.zshrc"     "$HOME/.zshrc"
 install -Dm644 "$CONFIG_DIR/chrome/chrome-flags.conf" "$HOME/.config/chrome-flags.conf"
 
 # =========================
+# VS CODE: la terminal necesita la fuente con íconos (sin ella el prompt y el logo se deforman)
+# Se fusiona con tus ajustes: solo se tocan las claves de config/vscode/settings.json y nunca se borra nada tuyo.
+# =========================
+python3 -I - "$CONFIG_DIR/vscode/settings.json" "$HOME/.config/Code/User/settings.json" <<'PY' || echo "[!] No se pudo ajustar la fuente de la terminal de VS Code"
+import json, os, sys
+origen, destino = sys.argv[1:3]
+nuevos = json.load(open(origen, encoding="utf-8"))
+actual = {}
+if os.path.exists(destino):
+    try:
+        actual = json.load(open(destino, encoding="utf-8"))
+    except ValueError:
+        print("[!] settings.json de VS Code tiene comentarios o errores: no se toca. Pon a mano terminal.integrated.fontFamily = 'JetBrainsMono Nerd Font Mono'")
+        sys.exit(0)
+if all(actual.get(k) == v for k, v in nuevos.items()):
+    sys.exit(0)
+actual.update(nuevos)
+os.makedirs(os.path.dirname(destino), exist_ok=True)
+tmp = destino + ".tmp"
+json.dump(actual, open(tmp, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
+open(tmp, "a").write("\n")
+os.replace(tmp, destino)
+print("VS Code: fuente de la terminal ajustada")
+PY
+
+# =========================
 # WALLPAPERS
 # =========================
 if [ -d "$DOTFILES_DIR/wallpapers" ]; then
