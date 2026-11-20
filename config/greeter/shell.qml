@@ -220,26 +220,43 @@ ShellRoot {
                     spacing: pantalla.height * 0.012
                     opacity: pantalla.suave((pantalla.p - 0.32) / 0.14) * (1 - pantalla.suave((pantalla.p - 0.84) / 0.08))
                     Text {
+                        id: txtTituloGreeter
                         anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.horizontalCenterOffset: txtTituloGreeter.espacio / 2
+                        width: Math.min(implicitWidth, pantalla.width * 0.8)
+                        elide: Text.ElideRight
                         text: "MIARCH"
                         color: root.arena
-                        font { family: root.fuente; pixelSize: pantalla.height * 0.085; weight: Font.Normal
-                               letterSpacing: pantalla.height * (0.012 + 0.03 * pantalla.suave((pantalla.p - 0.32) / 0.5)) }
+                        readonly property real tam: Math.min(pantalla.height * 0.085, pantalla.width * 0.11)
+                        readonly property real deseado: pantalla.height * (0.012 + 0.03 * pantalla.suave((pantalla.p - 0.32) / 0.5))
+                        readonly property real topeSpacing: Math.max(0, (pantalla.width * 0.8 - 6 * tam * 0.62) / 6)
+                        readonly property real espacio: Math.min(deseado, topeSpacing)
+                        font { family: root.fuente; pixelSize: txtTituloGreeter.tam; weight: Font.Normal; letterSpacing: txtTituloGreeter.espacio }
                     }
                     Text {
+                        id: txtEstadoGreeter
                         anchors.horizontalCenter: parent.horizontalCenter
+                        width: Math.min(implicitWidth, pantalla.width * 0.8)
+                        elide: Text.ElideRight
                         text: "BIENVENIDO, " + root.usuario.toUpperCase()
                         color: root.terracota
                         opacity: 0.85
-                        font { family: root.fuente; pixelSize: pantalla.height * 0.016; weight: Font.Medium; letterSpacing: 9 }
+                        readonly property real tam: Math.min(pantalla.height * 0.016, pantalla.width * 0.022)
+                        readonly property real topeSpacing: Math.max(0, (pantalla.width * 0.8 - text.length * tam * 0.62) / Math.max(1, text.length))
+                        font { family: root.fuente; pixelSize: txtEstadoGreeter.tam; weight: Font.Medium; letterSpacing: Math.min(9, txtEstadoGreeter.topeSpacing) }
                     }
                     Text {   // firma: aparece un poco después del título
+                        id: txtFirmaGreeter
                         anchors.horizontalCenter: parent.horizontalCenter
                         topPadding: pantalla.height * 0.03
+                        width: Math.min(implicitWidth, pantalla.width * 0.8)
+                        elide: Text.ElideRight
                         text: "by alejandro-xoxo"
                         color: root.arena
                         opacity: 0.7 * pantalla.suave((pantalla.p - 0.46) / 0.12)
-                        font { family: root.fuente; pixelSize: pantalla.height * 0.02; weight: Font.Normal; letterSpacing: 5 }
+                        readonly property real tam: Math.min(pantalla.height * 0.02, pantalla.width * 0.028)
+                        readonly property real topeSpacing: Math.max(0, (pantalla.width * 0.8 - text.length * tam * 0.62) / text.length)
+                        font { family: root.fuente; pixelSize: txtFirmaGreeter.tam; weight: Font.Normal; letterSpacing: Math.min(5, txtFirmaGreeter.topeSpacing) }
                     }
                 }
                 Repeater {   // barras de cine

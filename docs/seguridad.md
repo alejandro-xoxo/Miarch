@@ -32,7 +32,7 @@ La pantalla de bloqueo está implementada en Quickshell (`config/quickshell/miar
 * **Validación PAM sincrónica**: Todo flujo de desbloqueo requiere un resultado afirmativo en vivo de PAM (`system-auth`). No existe ningún desbloqueo automático de pruebas.
 * **Cancelación de carrera en rebloqueo**: Si se emite un nuevo evento de bloqueo mientras una animación de desbloqueo autenticada está en progreso, la secuencia se invalida inmediatamente y el sistema regresa al estado bloqueado sin liberar la sesión.
 * **Ciclo de vida de la contraseña**: la variable con lo tecleado se vacía en cuanto se usa (también si PAM no llega a arrancar). QML no permite garantizar el borrado físico de esa memoria.
-* **Secuencia de desbloqueo controlada**: La transición visual dura 5.6 segundos (barras cinematográficas del 12.8% de altura, desplazamiento del fondo de +12%, viñeta, texto MIARCH "by alejandro-xoxo", sonido de teclado mecánico generado por código, sin muestras de terceros acompañando la salida de `journalctl` mecanografiada). Si la autenticación falla en cualquier punto previo a la concesión PAM, la animación no se ejecuta.
+* **Secuencia de desbloqueo controlada**: La transición visual dura 5.6 segundos (barras cinematográficas del 12.8% de altura, desplazamiento del fondo de +12%, viñeta, texto MIARCH "by alejandro-xoxo", sonido de teclado mecánico con perfil de switches rojos lineales sintetizado por código sin muestras de terceros acompañando la salida de `journalctl` mecanografiada). Si la autenticación falla en cualquier punto previo a la concesión PAM, la animación no se ejecuta.
 
 ---
 

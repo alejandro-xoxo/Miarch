@@ -120,7 +120,7 @@ Un panel con clics para todo: red, sonido, pantalla, apariencia (fondos, animaci
 ### Bloqueo (`Super + L`) e inicio de sesión
 Mismo estilo en las dos pantallas: wallpaper desenfocado, reloj grande y la contraseña con puntos. Con música sonando, el bloqueo muestra la portada y los controles junto al reloj.
 
-**Entrar es una pequeña película** (unos 5,6 s): barras de cine arriba y abajo, el fondo avanza despacio, aparece el título MIARCH con la firma *by alejandro-xoxo* y todo se aclara hasta quedar igual que tu escritorio. Al desbloquear suena un sonido de teclado mecánico generado por código, sin muestras de terceros y se teclea el **log real del sistema** (`journalctl`). La contraseña se verifica con PAM; un bloqueo nuevo cancela cualquier desbloqueo a medias.
+**Entrar es una pequeña película** (unos 5,6 s): barras de cine arriba y abajo, el fondo avanza despacio, aparece el título MIARCH con la firma *by alejandro-xoxo* y todo se aclara hasta quedar igual que tu escritorio. Al desbloquear suena un sonido de teclado mecánico con switches rojos (Cherry MX Red) generado por síntesis de código, sin muestras de terceros y se teclea el **log real del sistema** (`journalctl`). La contraseña se verifica con PAM; un bloqueo nuevo cancela cualquier desbloqueo a medias.
 
 | Pantalla de bloqueo | Inicio de sesión |
 |---|---|

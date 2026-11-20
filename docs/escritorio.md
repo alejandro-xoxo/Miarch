@@ -78,7 +78,7 @@ Tras la validación correcta de credenciales, se dispara una secuencia de transi
 6. Transición hacia el fondo nítido a escala 1:1 coincidente con la geometría del escritorio.
 
 ### Síntesis de Audio
-El diseño sonoro se genera sintéticamente sin muestras externas mediante el script `config/quickshell/miarch/sonidos/generar-desbloqueo.py` utilizando `numpy`. Es un sonido de teclado mecánico generado por código, sin muestras de terceros, que acompaña la salida mecanografiada del registro del sistema con pulsaciones sintetizadas (clic filtrado, golpe tipo thock y retorno).
+El diseño sonoro se genera sintéticamente sin muestras externas mediante el script `config/quickshell/miarch/sonidos/generar-desbloqueo.py` utilizando `numpy`. Es un sonido de teclado mecánico con perfil de switches rojos (Cherry MX Red: lineales, sin clic metálico agudo, golpe de fondo grave tipo thock de 90-190 Hz con segundo modo armónico de carcasa y placa, tap amortiguado de 700-1600 Hz y retorno suave al soltar) sintetizado íntegramente mediante código sin grabaciones de terceros, que acompaña la salida mecanografiada del registro del sistema.
 
 ### Parámetros de Seguridad
 - Una orden de bloqueo posterior interrumpe y anula cualquier animación de desbloqueo en progreso.

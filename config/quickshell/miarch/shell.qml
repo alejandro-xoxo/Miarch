@@ -3045,26 +3045,43 @@ ShellRoot {
                     spacing: candado.height * 0.012
                     opacity: candado.suave((candado.p - 0.46) / 0.14) * (1 - candado.suave((candado.p - 0.84) / 0.08))
                     Text {
+                        id: txtTituloLock
                         anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.horizontalCenterOffset: txtTituloLock.espacio / 2
+                        width: Math.min(implicitWidth, candado.width * 0.8)
+                        elide: Text.ElideRight
                         text: "MIARCH"
                         color: root.arena
-                        font { family: root.fuente; pixelSize: candado.height * 0.085; weight: Font.Normal
-                               letterSpacing: candado.height * (0.012 + 0.03 * candado.suave((candado.p - 0.46) / 0.4)) }
+                        readonly property real tam: Math.min(candado.height * 0.085, candado.width * 0.11)
+                        readonly property real deseado: candado.height * (0.012 + 0.03 * candado.suave((candado.p - 0.46) / 0.4))
+                        readonly property real topeSpacing: Math.max(0, (candado.width * 0.8 - 6 * tam * 0.62) / 6)
+                        readonly property real espacio: Math.min(deseado, topeSpacing)
+                        font { family: root.fuente; pixelSize: txtTituloLock.tam; weight: Font.Normal; letterSpacing: txtTituloLock.espacio }
                     }
                     Text {
+                        id: txtEstadoLock
                         anchors.horizontalCenter: parent.horizontalCenter
+                        width: Math.min(implicitWidth, candado.width * 0.8)
+                        elide: Text.ElideRight
                         text: "ACCESO CONCEDIDO"
                         color: root.terracota
                         opacity: 0.85
-                        font { family: root.fuente; pixelSize: candado.height * 0.016; weight: Font.Medium; letterSpacing: 9 }
+                        readonly property real tam: Math.min(candado.height * 0.016, candado.width * 0.022)
+                        readonly property real topeSpacing: Math.max(0, (candado.width * 0.8 - text.length * tam * 0.62) / text.length)
+                        font { family: root.fuente; pixelSize: txtEstadoLock.tam; weight: Font.Medium; letterSpacing: Math.min(9, txtEstadoLock.topeSpacing) }
                     }
                     Text {   // firma: aparece un poco después del título
+                        id: txtFirmaLock
                         anchors.horizontalCenter: parent.horizontalCenter
                         topPadding: candado.height * 0.03
+                        width: Math.min(implicitWidth, candado.width * 0.8)
+                        elide: Text.ElideRight
                         text: "by alejandro-xoxo"
                         color: root.arena
                         opacity: 0.7 * candado.suave((candado.p - 0.56) / 0.12)
-                        font { family: root.fuente; pixelSize: candado.height * 0.02; weight: Font.Normal; letterSpacing: 5 }
+                        readonly property real tam: Math.min(candado.height * 0.02, candado.width * 0.028)
+                        readonly property real topeSpacing: Math.max(0, (candado.width * 0.8 - text.length * tam * 0.62) / text.length)
+                        font { family: root.fuente; pixelSize: txtFirmaLock.tam; weight: Font.Normal; letterSpacing: Math.min(5, txtFirmaLock.topeSpacing) }
                     }
                 }
                 // Barras de cine arriba y abajo

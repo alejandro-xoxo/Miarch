@@ -107,7 +107,7 @@ flowchart TD
 | :--- | :--- |
 | `config/quickshell/miarch/shell.qml` | Definición íntegra del shell de escritorio en Qt6/QML. Implementa la barra superior, el escritorio (reloj, fecha, anillos de CPU/RAM/batería, tarjeta de música), lanzador `Super+Espacio`, servidor de notificaciones, pantalla de bloqueo bajo protocolo `WlSessionLock` con integración PAM, panel de control `Super+Esc`, menú de energía `Super+Shift+Esc` y selector de aplicaciones IA `Super+C`. |
 | `config/quickshell/miarch/icons/` | Logos del menú de IA (LobeHub Icons, licencia MIT). |
-| `config/quickshell/miarch/sonidos/` | Almacena utilidades sonoras del escritorio, incluyendo el generador algorítmico `generar-desbloqueo.py` implementado con `numpy` (sonido de teclado mecánico generado por código, sin muestras de terceros). |
+| `config/quickshell/miarch/sonidos/` | Almacena utilidades sonoras del escritorio, incluyendo el generador algorítmico `generar-desbloqueo.py` implementado con `numpy` (síntesis de sonido de teclado mecánico con perfil de switches rojos lineales Cherry MX Red, sin muestras de terceros). |
 | `config/hypr/` | Contiene `hyprland.lua`, base de configuración de Hyprland 0.57. Enlaza los atajos de teclado del compositor con las utilidades de `scripts/` y gestiona las reglas de ventanas y arranque. |
 | `config/greeter/` | Entorno del gestor de inicio gráfico operado por `greetd`. Ejecuta una sesión aislada de Hyprland con una versión dedicada de Quickshell para autenticación. |
 | `config/{chrome,kitty,nvim,vscode,waybar}` | Perfiles de configuración para aplicaciones auxiliares, emulador de terminal, editor y configuraciones heredadas. |
