@@ -58,6 +58,12 @@ ShellRoot {
     property string mensaje: ""
     property bool listoParaClave: root.prueba     // en real, true cuando greetd pide la contraseña
     signal sacudir()
+    property bool sesionOk: false                    // el script de arranque de sesión existe y es ejecutable
+    Process {
+        running: !root.prueba
+        command: ["test", "-x", "/usr/share/miarch/greeter/sesion.sh"]
+        onExited: code => root.sesionOk = (code === 0)
+    }
     property bool accesoOk: false                    // contraseña correcta: el fondo se acerca y se enfoca, y luego arranca la sesión
     property real apertura: 0
     property bool lanzar: false                      // greetd ya está listo para lanzar la sesión
@@ -108,10 +114,11 @@ ShellRoot {
         onFinished: {
             if (root.prueba) { Qt.quit(); return }
             // shell de login: así se carga tu entorno (~/.zprofile, PATH) como en un inicio normal
-            // OJO: greetd une los argumentos con espacios SIN comillas y los pasa a un shell (`... exec <args>`). Por eso lo que
-            // lleva espacios va en UN solo argumento y entre comillas simples. Un comando largo con `{ }`, `;` o redirecciones
-            // se rompe, la sesión muere al instante y vuelves al login en bucle.
-            Greetd.launch(["zsh", "-lc", "'exec start-hyprland'"], [], true)
+            // greetd une los argumentos con espacios SIN comillas y los pasa a un shell (`... exec <args>`): cualquier cosa con
+            // espacios, `;`, llaves o redirecciones rompe la sesión y vuelves al login en bucle. Por eso la orden es SOLO este
+            // script, que ya se encarga de la consola limpia y de arrancar Hyprland (ver sesion.sh).
+            // red de seguridad: si el script no está instalado (instalación a medias), se usa la orden antigua, que sí funciona
+            Greetd.launch(root.sesionOk ? ["/usr/share/miarch/greeter/sesion.sh"] : ["zsh", "-lc", "'exec start-hyprland'"], [], true)
         }
     }
     Timer { id: reintento; interval: 1300; onTriggered: { if (!root.prueba) Greetd.cancelSession(); root.iniciarSesion() } }

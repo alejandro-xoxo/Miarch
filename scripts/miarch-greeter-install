@@ -17,7 +17,7 @@ if [ "${1:-}" = "--pendiente" ]; then
     # hyprland.lua lleva el teclado sustituido: se compara ya con el valor de este equipo
     KBP="$(grep -oP '^local KB *= *"\K[^"]+' "$HOME/.config/hypr/hyprland.lua" 2>/dev/null || echo latam)"
     sed "s|__KB__|${KBP//|/_}|" "$R/hyprland.lua" | cmp -s - /usr/share/miarch/greeter/hyprland.lua || exit 0
-    for f in shell.qml start.sh config.toml; do
+    for f in shell.qml start.sh sesion.sh config.toml; do
         cmp -s "$R/$f" "/usr/share/miarch/greeter/$f" || { [ "$f" = config.toml ] && cmp -s "$R/$f" /etc/greetd/config.toml && continue; exit 0; }
     done
     exit 1
@@ -29,7 +29,7 @@ SRC="$REPO/config/greeter"
 DEST=/usr/share/miarch/greeter
 DATOS=/var/lib/miarch-greeter
 
-for f in shell.qml hyprland.lua start.sh config.toml; do
+for f in shell.qml hyprland.lua start.sh sesion.sh config.toml; do
     [ -f "$SRC/$f" ] || { echo "[ERROR] Falta $SRC/$f"; exit 1; }
 done
 command -v qs >/dev/null || { echo "[ERROR] Falta quickshell (ejecuta ./packages.sh primero)"; exit 1; }
@@ -40,6 +40,7 @@ sudo pacman -S --needed --noconfirm greetd
 echo "==> Copiando la pantalla de inicio de sesión a $DEST ..."
 KB="$(grep -oP '^local KB *= *"\K[^"]+' "$HOME/.config/hypr/hyprland.lua" 2>/dev/null || echo latam)"
 sudo install -d -m 755 "$DEST"
+sudo install -m 755 "$SRC/sesion.sh" "$DEST/sesion.sh"      # primero: el login nuevo lo necesita y el viejo no lo usa
 sudo install -m 644 "$SRC/shell.qml" "$DEST/shell.qml"
 sed "s|__KB__|${KB//|/_}|" "$SRC/hyprland.lua" | sudo tee "$DEST/hyprland.lua" >/dev/null
 sudo chmod 644 "$DEST/hyprland.lua"
