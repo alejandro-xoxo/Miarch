@@ -328,7 +328,9 @@ ShellRoot {
                   "git -C \"$d\" diff --quiet \"$m\" HEAD -- config scripts home lib install.sh setup.sh packages.sh skills AGENTS.md && c=0; " +
                   // paquetes de Miarch que faltan en este equipo
                   "f=0; grep -q -- --faltantes \"$d/packages.sh\" 2>/dev/null && f=$(bash \"$d/packages.sh\" --faltantes 2>/dev/null | grep -c .); " +
-                  "echo $((n + c + f))"]
+                  // paquetes que Miarch ya no usa y siguen instalados (se quitan al actualizar)
+                  "s=0; grep -q -- --sobran \"$d/packages.sh\" 2>/dev/null && s=$(bash \"$d/packages.sh\" --sobran 2>/dev/null | grep -c .); " +
+                  "echo $((n + c + f + s))"]
         stdout: StdioCollector {
             onStreamFinished: {
                 const t = text.trim()
