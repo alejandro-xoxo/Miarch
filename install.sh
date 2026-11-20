@@ -186,6 +186,26 @@ copy_flags "$CONFIG_DIR/vscode/code-flags.conf"                   "$HOME/.config
 copy_flags "$CONFIG_DIR/claude-desktop/claude-desktop-flags.conf" "$HOME/.config/claude-desktop-flags.conf"
 copy_flags "$CONFIG_DIR/electron/electron-flags.conf"             "$HOME/.config/electron-flags.conf"
 
+# Lanzadores (.desktop) con Wayland nativo para apps Electron (ChatGPT, Antigravity, Claude Desktop)
+if [ -d "$CONFIG_DIR/applications" ]; then
+    mkdir -p "$HOME/.local/share/applications"
+    for app in "$CONFIG_DIR/applications"/*.desktop; do
+        [ -f "$app" ] || continue
+        dest="$HOME/.local/share/applications/$(basename "$app")"
+        if [ -f "$dest" ]; then
+            if ! cmp -s "$app" "$dest"; then
+                backup "$dest"
+                install -Dm644 "$app" "$dest"
+            fi
+        else
+            install -Dm644 "$app" "$dest"
+        fi
+    done
+    if command -v update-desktop-database &>/dev/null; then
+        update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
+    fi
+fi
+
 # =========================
 # VS CODE: la terminal necesita la fuente con íconos (sin ella el prompt y el logo se deforman)
 # Se fusiona con tus ajustes: solo se tocan las claves de config/vscode/settings.json y nunca se borra nada tuyo.
