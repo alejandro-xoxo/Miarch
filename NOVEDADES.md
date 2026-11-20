@@ -3,6 +3,9 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-20.100 · Título y firma dentro del marco y sonido de switches rojos
+El bloque de título "MIARCH", firma "by alejandro-xoxo" y texto de estado en la secuencia de desbloqueo y en la pantalla de inicio de sesión ahora escala dinámicamente sin salirse en ninguna resolución (pantallas verticales, estrechas o panorámicas) manteniendo un centrado visual exacto. Además, el sonido que acompaña al registro del sistema adopta el perfil acústico de switches rojos mecánicos (Cherry MX Red: lineales, sin clic metálico agudo, con thock grave y tap amortiguado), generado por síntesis algorítmica sin grabaciones de terceros.
+
 ## 2026-11-20.98 · Entrada limpia después del login (otra vez, bien hecho)
 Entre el login y el escritorio ya no se ve la consola de texto con el arranque de Hyprland: se borra la pantalla, se oculta el cursor y el texto va al registro `~/.cache/miarch/sesion.log`. Esta vez el arranque está en un script propio y el login tiene una red de seguridad: si el script faltara, usa el comando de siempre.
 

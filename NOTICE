@@ -7,4 +7,6 @@ Las copias del proyecto obtenidas antes de este cambio de licencia (publicadas b
 
 Este producto incluye iconos de LobeHub Icons (https://github.com/lobehub/lobe-icons) para config/quickshell/miarch/icons/, bajo licencia MIT.
 
+El efecto de audio de desbloqueo (config/quickshell/miarch/sonidos/desbloqueo.wav) ha sido generado por síntesis algorítmica de código con numpy modelando el perfil acústico de switches rojos lineales Cherry MX Red, sin muestras ni grabaciones de audio de terceros.
+
 Los logotipos y marcas comerciales de terceros (incluidos Anthropic, OpenAI, Google, Nous Research y Ollama) son marcas de sus respectivos dueños y no quedan cubiertos por esta licencia.
