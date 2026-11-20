@@ -1,6 +1,6 @@
 # Juegos en Miarch (Steam)
 
-`packages.sh` deja el equipo listo para jugar con Steam. Esta guía explica qué hace por ti, cómo empezar y qué opciones de lanzamiento conviene usar, con atención especial a las **gráficas integradas** (el equipo de pruebas tiene una Intel UHD 620).
+`packages.sh` deja el equipo listo para jugar con Steam. Los juegos son opcionales: en una instalación interactiva nueva `setup.sh` te pregunta si quieres instalarlos, y en cualquier momento puedes omitirlos creando `touch ~/.config/miarch/sin-juegos` (así ni `packages.sh` ni el actualizador intentarán instalarlos ni requerirán multilib). Esta guía explica qué hace por ti, cómo empezar y qué opciones de lanzamiento conviene usar, con atención especial a las **gráficas integradas** (el equipo de pruebas tiene una Intel UHD 620).
 
 ## Qué hace Miarch por ti
 | Qué | Para qué |

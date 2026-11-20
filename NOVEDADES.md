@@ -3,6 +3,9 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-20.17 · Steam y juegos opcionales
+Steam y las herramientas de juego ahora son opcionales: al instalar con `setup.sh` se pregunta si se desean instalar, y en cualquier momento se pueden omitir con `touch ~/.config/miarch/sin-juegos`, evitando la instalación de Steam, multilib y controladores adicionales.
+
 ## 2026-11-20.16 · Entrada limpia después del login
 Al terminar la animación del inicio de sesión, la consola de texto que aparecía unos instantes (con el cursor parpadeando y texto de arranque) ahora sale en negro y sin cursor; el texto de arranque va al registro `~/.cache/miarch/sesion.log`.
 

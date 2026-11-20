@@ -19,4 +19,4 @@ Instalados por `packages.sh` (etapa "Preparando el equipo para jugar"). Necesita
 | `protonup-qt` | AUR | Gestor gráfico de Proton-GE |
 | `zram-generator` | extra | Solo si el equipo no tiene swap: memoria comprimida |
 
-`packages.sh --faltantes` indica cuáles de estos faltan en tu equipo.
+`packages.sh --faltantes` indica cuáles de estos faltan en tu equipo. Si existe `~/.config/miarch/sin-juegos`, este grupo se omite por completo y `--faltantes` no los solicita.

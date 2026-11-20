@@ -67,7 +67,11 @@ AUR_PAQUETES=(
 
 # =========================
 # JUEGOS: Steam y lo necesario. Steam es de 32 bits, así que necesita el repositorio multilib.
+# Si existe ~/.config/miarch/sin-juegos se omiten todos los juegos y multilib.
 # =========================
+SIN_JUEGOS=0
+[ -e "$HOME/.config/miarch/sin-juegos" ] && SIN_JUEGOS=1
+
 gpu_juegos() {   # controladores Vulkan (64 y 32 bits) según la tarjeta gráfica del equipo (Intel, AMD, NVIDIA)
     local f v pk=()
     for f in "${MIARCH_DRM_DIR:-/sys/class/drm}"/card[0-9]*/device/vendor; do
@@ -82,18 +86,22 @@ gpu_juegos() {   # controladores Vulkan (64 y 32 bits) según la tarjeta gráfic
     [ "${#pk[@]}" -gt 0 ] || pk=(vulkan-swrast lib32-vulkan-swrast)   # tarjeta no reconocida (por ejemplo máquina virtual): por software
     printf '%s\n' "${pk[@]}" | sort -u
 }
-mapfile -t JUEGOS_GPU < <(gpu_juegos)
-JUEGOS=(
-    steam                                       # Steam (multilib); trae las reglas udev de los mandos
-    vulkan-icd-loader lib32-vulkan-icd-loader   # cargador de Vulkan (64 y 32 bits)
-    lib32-mesa lib32-pipewire lib32-libpulse    # gráficos y audio de 32 bits para los juegos
-    ttf-liberation                              # tipografías que Steam necesita
-    gamemode lib32-gamemode                     # sube la prioridad del juego y pone el modo de energía "rendimiento"
-    mangohud lib32-mangohud                     # contador de FPS y temperaturas (Shift derecho + F12)
-    gamescope                                   # reescalado FSR para tarjetas integradas (ver docs/juegos.md)
-    xorg-xwayland                               # los juegos de Steam corren sobre XWayland
-    "${JUEGOS_GPU[@]}"                          # controladores Vulkan de TU tarjeta
-)
+JUEGOS=()
+JUEGOS_GPU=()
+if [ "$SIN_JUEGOS" = 0 ]; then
+    mapfile -t JUEGOS_GPU < <(gpu_juegos)
+    JUEGOS=(
+        steam                                       # Steam (multilib); trae las reglas udev de los mandos
+        vulkan-icd-loader lib32-vulkan-icd-loader   # cargador de Vulkan (64 y 32 bits)
+        lib32-mesa lib32-pipewire lib32-libpulse    # gráficos y audio de 32 bits para los juegos
+        ttf-liberation                              # tipografías que Steam necesita
+        gamemode lib32-gamemode                     # sube la prioridad del juego y pone el modo de energía "rendimiento"
+        mangohud lib32-mangohud                     # contador de FPS y temperaturas (Shift derecho + F12)
+        gamescope                                   # reescalado FSR para tarjetas integradas (ver docs/juegos.md)
+        xorg-xwayland                               # los juegos de Steam corren sobre XWayland
+        "${JUEGOS_GPU[@]}"                          # controladores Vulkan de TU tarjeta
+    )
+fi
 
 # setup.sh pregunta cuántas etapas tiene este script para dibujar la barra del total
 # Paquetes que Miarch instaló antes y ya no usa: se quitan en cada equipo al actualizar (solo si están instalados)
@@ -103,7 +111,11 @@ OBSOLETOS=(
     dunst                          # las notificaciones ahora las dibuja Quickshell; dunst competiría por el servicio
     alpaka-desktop-bin             # cliente de terceros de Ollama: Ollama no tiene app oficial para Linux (solo CLI y servicio)
 )
-ETAPAS=$(( 9 + ${#AUR_PAQUETES[@]} ))
+if [ "$SIN_JUEGOS" = 1 ]; then
+    ETAPAS=$(( 8 + ${#AUR_PAQUETES[@]} ))
+else
+    ETAPAS=$(( 9 + ${#AUR_PAQUETES[@]} ))
+fi
 [ "${1:-}" = "--etapas" ] && { echo "$ETAPAS"; exit 0; }
 # miarch-update pregunta qué paquetes de esta lista aún no están instalados (no instala ni cambia nada)
 if [ "${1:-}" = "--faltantes" ]; then
@@ -157,17 +169,21 @@ ui_total "$ETAPAS"
 [ -n "${MIARCH_UI_SUB:-}" ] || ui_banner "paquetes"   # solo si no lo lanza setup.sh
 ui_sudo
 ui_etapa "Actualizando el sistema e instalando los paquetes oficiales"
-JUEGOS_OK=1; habilitar_multilib || JUEGOS_OK=0     # antes del -Syu, para que se sincronice multilib
+if [ "$SIN_JUEGOS" = 0 ]; then
+    JUEGOS_OK=1; habilitar_multilib || JUEGOS_OK=0     # antes del -Syu, para que se sincronice multilib
+fi
 ui_ejecutar "Actualizando el sistema (pacman -Syu)" sudo pacman -Syu --noconfirm
 ui_ejecutar "Instalando ${#PAQUETES[@]} paquetes oficiales" sudo pacman -S --noconfirm --needed "${PAQUETES[@]}"
 
-ui_etapa "Preparando el equipo para jugar (Steam)"
-if [ "$JUEGOS_OK" = 1 ]; then
-    ui_ejecutar "Instalando Steam y las herramientas para jugar (${#JUEGOS[@]} paquetes)" sudo pacman -S --noconfirm --needed "${JUEGOS[@]}" \
-        || ui_aviso "No se pudo instalar Steam y sus herramientas (revisa el registro). El resto de la instalación sigue."
-    configurar_juegos
-else
-    ui_aviso "No se pudo activar multilib: se omite Steam. Actívalo a mano y vuelve a ejecutar packages.sh."
+if [ "$SIN_JUEGOS" = 0 ]; then
+    ui_etapa "Preparando el equipo para jugar (Steam)"
+    if [ "$JUEGOS_OK" = 1 ]; then
+        ui_ejecutar "Instalando Steam y las herramientas para jugar (${#JUEGOS[@]} paquetes)" sudo pacman -S --noconfirm --needed "${JUEGOS[@]}" \
+            || ui_aviso "No se pudo instalar Steam y sus herramientas (revisa el registro). El resto de la instalación sigue."
+        configurar_juegos
+    else
+        ui_aviso "No se pudo activar multilib: se omite Steam. Actívalo a mano y vuelve a ejecutar packages.sh."
+    fi
 fi
 
 # =========================
