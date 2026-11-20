@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Crunchyroll
+Comment=Anime en streaming (web en una ventana propia de Chrome)
+Exec=google-chrome-stable --app=https://www.crunchyroll.com --class=crunchyroll --name=crunchyroll
+Terminal=false
+Categories=AudioVideo;Video;Player;
+StartupWMClass=crunchyroll
+Icon=crunchyroll
