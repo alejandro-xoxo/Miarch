@@ -74,6 +74,7 @@ ShellRoot {
         root.iniciarSesion()
     }
     function fallar(texto) {
+        animApertura.stop(); root.accesoOk = false; root.apertura = 0      // si falla tras acertar, el login no se queda bloqueado sin teclado
         root.verificando = false; root.clave = ""; root.hayError = true
         root.mensaje = texto
         root.sacudir()
