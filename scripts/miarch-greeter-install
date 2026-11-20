@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Miarch · instala la pantalla de inicio de sesión gráfica (greetd + Quickshell).
 # Ejecútalo con tu usuario normal (pide sudo). NO la activa hasta el próximo reinicio.
 #

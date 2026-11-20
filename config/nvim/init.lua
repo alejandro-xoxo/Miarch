@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: Apache-2.0
 
 
 -- Opciones básicas (equivalente a tu init.vim)

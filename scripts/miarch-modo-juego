@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Miarch · modo juego: GameMode lo llama al empezar y al terminar un juego (ver ~/.config/gamemode.ini).
 #   start  guarda el perfil de energía actual y pone "performance" (más rendimiento, el equipo debe estar conectado)
 #   end    devuelve el perfil que tenías

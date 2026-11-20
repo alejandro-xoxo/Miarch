@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 // Miarch · escritorio propio con Quickshell
 // v1: sin barra. Reloj grande + anillos de datos sobre el wallpaper. Colores mate.
 import Quickshell

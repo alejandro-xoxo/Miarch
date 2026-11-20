@@ -3,6 +3,10 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-20.22 · Licencia Apache 2.0 y avisos de copyright
+El repositorio se publica bajo licencia Apache-2.0: se incluye el archivo `NOTICE` con derechos de autor y atribución a componentes de terceros (iconos de LobeHub), identificadores SPDX en los scripts y configuraciones del sistema, y la sección de licencia en el README clarificando los términos y la titularidad de marcas registradas.
+
+
 ## 2026-11-20.21 · Migración automática ante mudanza de repositorio
 El actualizador ahora detecta si el proyecto se trasladó a un nuevo repositorio mediante un archivo `MUDANZA` en el remoto. Si existe, avisa con la nueva dirección, solicita confirmación, verifica que no tengas cambios locales sin guardar y conmuta la copia al nuevo repositorio de forma segura tras crear una rama de respaldo (`respaldo-antes-de-mudanza-AAAAMMDD`). La nube de la barra también avisa de la mudanza sumándola al conteo de cambios pendientes.
 

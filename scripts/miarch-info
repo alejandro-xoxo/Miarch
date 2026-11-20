@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
 """Miarch · información del equipo en JSON (para la página Sistema del panel de Ajustes)."""
 import json, os, platform, shutil, socket, subprocess
 
