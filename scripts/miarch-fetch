@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Miarch · fastfetch que se adapta al tamaño de la ventana.
-#   ancha y alta  → logo grande + datos completos
-#   mediana       → logo pequeño + datos principales
-#   angosta       → solo datos, sin logo
-#   diminuta      → no muestra nada (no estorba)
+#   ancha y alta  -> logo grande + datos completos
+#   mediana       -> logo pequeño + datos principales
+#   angosta       -> solo datos, sin logo
+#   diminuta      -> no muestra nada (no estorba)
 command -v fastfetch >/dev/null 2>&1 || exit 0
 
 medir() { read -r filas cols < <(stty size 2>/dev/null </dev/tty) || true; filas=${filas:-24}; cols=${cols:-80}; }
@@ -12,7 +12,7 @@ sleep 0.1     # Hyprland acomoda la ventana justo al abrirla: se vuelve a medir 
 medir
 
 # Colores del escritorio (los escribe miarch-colors en la config de kitty). Si no están, usa azul.
-leer_color() {   # $1 = "color16" | "color17"  →  "38;2;R;G;B"
+leer_color() {   # $1 = "color16" | "color17"  ->  "38;2;R;G;B"
     local hex; hex="$(awk -v k="$1" '$1==k {print $2; exit}' "$HOME/.config/kitty/miarch-colors.conf" 2>/dev/null)"
     [[ "$hex" =~ ^#[0-9a-fA-F]{6}$ ]] && printf '38;2;%d;%d;%d' "$((16#${hex:1:2}))" "$((16#${hex:3:2}))" "$((16#${hex:5:2}))"
 }

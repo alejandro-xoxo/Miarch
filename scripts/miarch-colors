@@ -112,7 +112,7 @@ def escribir_qt6ct(base, acentos, fg):
     esquema = d + "/colors/miarch.conf"
     with open(esquema + ".tmp", "w", encoding="utf-8") as f: f.write(colores)
     os.replace(esquema + ".tmp", esquema)
-    # hoja de estilo: los paneles laterales (Lugares de Dolphin…) con ancho suficiente para no cortar los nombres
+    # hoja de estilo: los paneles laterales (Lugares de Dolphin...) con ancho suficiente para no cortar los nombres
     os.makedirs(d + "/qss", exist_ok=True)
     qss = d + "/qss/miarch.qss"
     with open(qss, "w", encoding="utf-8") as f: f.write("QDockWidget { min-width: 190px; }\n")
@@ -174,7 +174,7 @@ def main(path):
         }
     out["claro"] = claro
 
-    # ── Esquema de kitty: siempre oscuro (legible), teñido con el tono del wallpaper ──
+    # -- Esquema de kitty: siempre oscuro (legible), teñido con el tono del wallpaper --
     def tono(hue, sat, val):
         # acerca el tono ANSI al del wallpaper (con tope) y baja la saturación: la terminal combina con
         # el resto y no se ve multicolor, pero rojo/verde/azul siguen distinguiéndose
@@ -209,7 +209,7 @@ def main(path):
     os.replace(kd + "/miarch-colors.conf.tmp", kd + "/miarch-colors.conf")
     os.system("pkill -USR1 -x kitty 2>/dev/null")   # kitty recarga la config en vivo
 
-    # ── Esquema de colores de KDE (Dolphin y demás apps de KDE): mismo acento y neutro, siempre oscuro ──
+    # -- Esquema de colores de KDE (Dolphin y demás apps de KDE): mismo acento y neutro, siempre oscuro --
     try:
         escribir_kde(base, acentos, fg)
         escribir_qt6ct(base, acentos, fg)
