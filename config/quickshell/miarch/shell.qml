@@ -2456,6 +2456,9 @@ ShellRoot {
     property string clave: ""
     property bool verificando: false
     property bool errorClave: false
+    property bool accesoOk: false                    // la contraseña fue correcta: suena, sale el log y se abre
+    property real apertura: 0                        // 0 → 1 durante la secuencia de desbloqueo
+    property var lineasLog: []
     property string wallpaperRuta: ""
     signal sacudir()
 
@@ -2476,7 +2479,7 @@ ShellRoot {
             root.clave = ""
             if (result === PamResult.Success) {
                 root.errorClave = false
-                sesion.locked = false
+                root.iniciarApertura()
             } else {
                 root.errorClave = true
                 root.sacudir()
@@ -2485,6 +2488,33 @@ ShellRoot {
         onError: err => { root.verificando = false; root.clave = ""; root.errorClave = true; root.sacudir() }
     }
 
+    // Desbloqueo: suena, aparece el log real del sistema tecleándose y luego se despeja la pantalla (se ve el fondo nítido)
+    function iniciarApertura() {
+        if (root.accesoOk) return
+        root.accesoOk = true
+        root.apertura = 0
+        Quickshell.execDetached(["pw-play", "--volume=0.6", Quickshell.env("HOME") + "/.config/quickshell/miarch/sonidos/desbloqueo.wav"])
+        pLog.running = true
+        tPorSiNoHayLog.start()
+    }
+    Process {
+        id: pLog
+        command: ["sh", "-c", "journalctl -b -n 26 --no-pager -o short-monotonic 2>/dev/null || journalctl --user -b -n 26 --no-pager -o short-monotonic 2>/dev/null"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const l = text.split("\n").map(x => x.trim()).filter(x => x.length > 0)
+                root.lineasLog = l.length > 0 ? l : ["[    0.000000] miarch: sesión desbloqueada"]
+                tPorSiNoHayLog.stop()
+                animApertura.restart()
+            }
+        }
+    }
+    Timer { id: tPorSiNoHayLog; interval: 600; onTriggered: { if (!animApertura.running) { root.lineasLog = ["[    0.000000] miarch: sesión desbloqueada"]; animApertura.restart() } } }
+    NumberAnimation {
+        id: animApertura
+        target: root; property: "apertura"; from: 0; to: 1; duration: 2300
+        onFinished: { sesion.locked = false; root.accesoOk = false; root.apertura = 0 }
+    }
     function intentar() {
         if (root.clave.length === 0 || root.verificando) return
         root.verificando = true
@@ -2493,7 +2523,7 @@ ShellRoot {
 
     IpcHandler {
         target: "lock"
-        function lock(): void { root.clave = ""; root.errorClave = false; sesion.locked = true }
+        function lock(): void { root.clave = ""; root.errorClave = false; root.accesoOk = false; root.apertura = 0; sesion.locked = true }
     }
 
     // Solo para pruebas: MIARCH_LOCK_TEST=1 qs -c miarch  → se desbloquea solo a los 9 s
@@ -2519,8 +2549,11 @@ ShellRoot {
                 Component.onCompleted: { forceActiveFocus(); entrada = 1 }
                 Behavior on entrada { NumberAnimation { duration: 1200; easing.type: Easing.OutBack; easing.overshoot: 1.3 } }
 
+                // 0 durante el log y 0→1 cuando la pantalla se despeja (último 38 % de la secuencia)
+                readonly property real abre: Math.max(0, Math.min(1, (root.apertura - 0.62) / 0.38))
+
                 Keys.onPressed: event => {
-                    if (root.verificando) return
+                    if (root.verificando || root.accesoOk) return
                     if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) { root.intentar(); return }
                     if (event.key === Qt.Key_Backspace) root.clave = root.clave.slice(0, -1)
                     else if (event.key === Qt.Key_Escape) root.clave = ""
@@ -2541,10 +2574,34 @@ ShellRoot {
                 MultiEffect {
                     anchors.fill: parent
                     source: imgFondo
-                    blurEnabled: true; blurMax: 64; blur: 1.0
+                    blurEnabled: true; blurMax: 64; blur: 1.0 - candado.abre
                     autoPaddingEnabled: false
                 }
-                Rectangle { anchors.fill: parent; color: root.fondo; opacity: 0.58 }
+                Rectangle { anchors.fill: parent; color: root.fondo; opacity: 0.58 * (1 - candado.abre) }
+
+                // Marcos de esquina (estilo panel de control): al abrir se alejan y salen de la pantalla
+                Repeater {
+                    model: [ { sx: -1, sy: -1 }, { sx: 1, sy: -1 }, { sx: -1, sy: 1 }, { sx: 1, sy: 1 } ]
+                    Item {
+                        required property var modelData
+                        readonly property real m: candado.height * 0.04 - candado.abre * candado.height * 0.08
+                        readonly property real brazo: candado.height * 0.045
+                        x: modelData.sx < 0 ? m : candado.width - m - brazo
+                        y: modelData.sy < 0 ? m : candado.height - m - brazo
+                        width: brazo; height: brazo
+                        opacity: Math.min(1, candado.entrada) * 0.45 * (1 - candado.abre)
+                        Rectangle { y: modelData.sy < 0 ? 0 : parent.height - 1; width: parent.width; height: 1; color: root.arena }
+                        Rectangle { x: modelData.sx < 0 ? 0 : parent.width - 1; width: 1; height: parent.height; color: root.arena }
+                    }
+                }
+                Text {
+                    x: candado.height * 0.04 + candado.height * 0.012
+                    y: candado.height - candado.height * 0.04 - candado.height * 0.045 - implicitHeight - candado.height * 0.01
+                    opacity: Math.min(1, candado.entrada) * 0.5 * (1 - candado.abre)
+                    text: "MIARCH  ·  SESIÓN BLOQUEADA"
+                    color: root.arena
+                    font { family: root.fuente; pixelSize: candado.height * 0.013; weight: Font.Medium; letterSpacing: 5 }
+                }
 
                 // Música (solo si hay un reproductor): tarjeta grande a la derecha del reloj
                 Item {
@@ -2652,11 +2709,48 @@ ShellRoot {
                     }
                 }
 
+                // Log del sistema (el de verdad, de journalctl) tecleándose al desbloquear, y luego se despeja todo
+                Item {
+                    id: capaLog
+                    visible: root.accesoOk
+                    x: candado.width * 0.05; width: candado.width * 0.9
+                    anchors.verticalCenter: parent.verticalCenter
+                    height: colLog.implicitHeight
+                    opacity: Math.min(1, root.apertura * 10) * (1 - candado.abre)
+                    readonly property int n: root.lineasLog.length
+                    readonly property int visibles: Math.floor(Math.min(1, root.apertura / 0.58) * (n + 1))
+                    Column {
+                        id: colLog
+                        width: parent.width
+                        spacing: candado.height * 0.004
+                        Text {
+                            text: "MIARCH  ::  ACCESO CONCEDIDO  ::  CARGANDO SESIÓN"
+                            color: root.salvia
+                            font { family: root.fuente; pixelSize: candado.height * 0.02; weight: Font.Medium; letterSpacing: 6 }
+                            bottomPadding: candado.height * 0.014
+                        }
+                        Repeater {
+                            model: root.lineasLog
+                            Text {
+                                required property string modelData
+                                required property int index
+                                width: parent.width; elide: Text.ElideRight
+                                visible: index < capaLog.visibles
+                                text: modelData
+                                // la línea más reciente en el acento; las anteriores se apagan hacia arriba
+                                color: index === capaLog.visibles - 1 ? root.terracota : root.arena
+                                opacity: index === capaLog.visibles - 1 ? 1 : 0.35 + 0.4 * (index / Math.max(1, capaLog.n))
+                                font { family: root.fuente; pixelSize: candado.height * 0.0165; weight: Font.Light }
+                            }
+                        }
+                    }
+                }
+
                 Column {
                     x: parent.width * 0.05
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.verticalCenterOffset: (1 - candado.entrada) * 60
-                    opacity: Math.min(1, candado.entrada)
+                    opacity: Math.min(1, candado.entrada) * (1 - Math.min(1, root.apertura * 6))
                     spacing: 6
 
                     Text {
@@ -2670,7 +2764,28 @@ ShellRoot {
                         font { family: root.fuente; pixelSize: Math.round(candado.height * 0.024); weight: Font.Medium; letterSpacing: 6 }
                         leftPadding: 6
                     }
-                    Item { width: 1; height: candado.height * 0.05 }
+                    Item {   // regla con marcas y un destello que la recorre despacio
+                        id: regla
+                        width: candado.width * 0.34; height: candado.height * 0.03
+                        Rectangle { y: parent.height / 2; width: parent.width; height: 1; color: Qt.alpha(root.arena, 0.2) }
+                        Repeater {
+                            model: Math.floor(regla.width / 14)
+                            Rectangle {
+                                required property int index
+                                x: index * 14; y: parent.height / 2 - (index % 5 === 0 ? 5 : 2); width: 1; height: index % 5 === 0 ? 5 : 2
+                                color: Qt.alpha(root.arena, index % 5 === 0 ? 0.4 : 0.22)
+                            }
+                        }
+                        Rectangle {
+                            id: destello
+                            y: parent.height / 2 - 1; width: 70; height: 2; radius: 1
+                            gradient: Gradient { orientation: Gradient.Horizontal
+                                GradientStop { position: 0; color: "transparent" }
+                                GradientStop { position: 1; color: root.terracota } }
+                            NumberAnimation on x { from: -70; to: regla.width; duration: 4200; loops: Animation.Infinite; running: sesion.locked && !root.accesoOk }
+                        }
+                    }
+                    Item { width: 1; height: candado.height * 0.03 }
                     Row {
                         spacing: candado.height * 0.045
                         leftPadding: 4
@@ -2680,10 +2795,10 @@ ShellRoot {
                     }
                     Item { width: 1; height: candado.height * 0.07 }
 
-                    // Contraseña: puntos que aparecen con rebote
+                    // Contraseña: línea fina con celdas que aparecen al teclear y un cursor que parpadea
                     Item {
                         id: zonaClave
-                        width: candado.width * 0.4; height: candado.height * 0.08
+                        width: candado.width * 0.4; height: candado.height * 0.1
                         property real temblor: 0
                         Connections {
                             target: root
@@ -2699,26 +2814,64 @@ ShellRoot {
                         }
                         Column {
                             x: zonaClave.temblor
-                            spacing: 14
-                            Text {
-                                text: root.verificando ? "VERIFICANDO…" : root.errorClave ? "CONTRASEÑA INCORRECTA" : (root.clave.length ? "" : "ESCRIBE TU CONTRASEÑA")
-                                color: root.errorClave ? root.terracota : Qt.alpha(root.arena, 0.55)
-                                font { family: root.fuente; pixelSize: candado.height * 0.018; weight: Font.Medium; letterSpacing: 5 }
-                                leftPadding: 4
-                                height: root.clave.length ? 0 : implicitHeight
-                            }
-                            Row {
-                                spacing: 12
-                                leftPadding: 4
-                                Repeater {
-                                    model: root.clave.length
-                                    Rectangle {
-                                        width: candado.height * 0.016; height: width; radius: width / 2
-                                        color: root.errorClave ? root.terracota : root.arena
-                                        scale: 0
-                                        Component.onCompleted: scale = 1
-                                        Behavior on scale { NumberAnimation { duration: 320; easing.type: Easing.OutBack; easing.overshoot: 2.5 } }
+                            width: parent.width
+                            spacing: 12
+                            Row {   // estado: rombo + texto
+                                spacing: 10
+                                leftPadding: 2
+                                Rectangle {
+                                    width: 6; height: 6; rotation: 45
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    color: root.accesoOk ? root.salvia : (root.errorClave ? "#b8665f" : root.terracota)
+                                    SequentialAnimation on opacity {
+                                        running: sesion.locked && !root.accesoOk && !root.errorClave && !root.verificando
+                                        loops: Animation.Infinite
+                                        NumberAnimation { to: 0.25; duration: 900 }
+                                        NumberAnimation { to: 1; duration: 900 }
                                     }
+                                }
+                                Text {
+                                    text: root.accesoOk ? "ACCESO CONCEDIDO" : root.verificando ? "VERIFICANDO…" : root.errorClave ? "ACCESO DENEGADO" : "AUTENTICACIÓN"
+                                    color: root.accesoOk ? root.salvia : (root.errorClave ? "#b8665f" : Qt.alpha(root.arena, 0.55))
+                                    font { family: root.fuente; pixelSize: candado.height * 0.016; weight: Font.Medium; letterSpacing: 5 }
+                                }
+                            }
+                            Item {   // celdas de lo que llevas escrito
+                                width: parent.width; height: candado.height * 0.034
+                                Row {
+                                    spacing: 7
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    leftPadding: 2
+                                    Repeater {
+                                        model: root.clave.length
+                                        Rectangle {
+                                            width: 3; height: candado.height * 0.026; radius: 1.5
+                                            color: root.errorClave ? "#b8665f" : root.arena
+                                            opacity: 0; scale: 0.4
+                                            Component.onCompleted: { opacity = 1; scale = 1 }
+                                            Behavior on opacity { NumberAnimation { duration: 180 } }
+                                            Behavior on scale { NumberAnimation { duration: 260; easing.type: Easing.OutBack; easing.overshoot: 2.5 } }
+                                        }
+                                    }
+                                    Rectangle {   // cursor
+                                        visible: !root.accesoOk && !root.verificando
+                                        width: 3; height: candado.height * 0.026; color: root.terracota
+                                        SequentialAnimation on opacity {
+                                            running: sesion.locked && !root.accesoOk
+                                            loops: Animation.Infinite
+                                            NumberAnimation { to: 0.1; duration: 550 }
+                                            NumberAnimation { to: 1; duration: 550 }
+                                        }
+                                    }
+                                }
+                            }
+                            Rectangle {   // línea base que se llena con lo escrito, y del todo al acertar
+                                width: parent.width; height: 1; color: Qt.alpha(root.arena, 0.22)
+                                Rectangle {
+                                    height: 1
+                                    width: root.accesoOk ? parent.width : Math.min(parent.width, root.clave.length * 10)
+                                    color: root.errorClave ? "#b8665f" : (root.accesoOk ? root.salvia : root.terracota)
+                                    Behavior on width { NumberAnimation { duration: root.accesoOk ? 450 : 150; easing.type: Easing.OutCubic } }
                                 }
                             }
                         }
