@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Miarch · modo juego: GameMode lo llama al empezar y al terminar un juego (ver ~/.config/gamemode.ini).
+#   start  guarda el perfil de energía actual y pone "performance" (más rendimiento, el equipo debe estar conectado)
+#   end    devuelve el perfil que tenías
+set -uo pipefail
+GUARDADO="${XDG_RUNTIME_DIR:-/tmp}/miarch-perfil-previo"
+perfil_actual() { busctl --system get-property net.hadess.PowerProfiles /net/hadess/PowerProfiles net.hadess.PowerProfiles ActiveProfile 2>/dev/null | awk '{gsub(/"/,"",$2); print $2}'; }
+poner() { busctl --system set-property net.hadess.PowerProfiles /net/hadess/PowerProfiles net.hadess.PowerProfiles ActiveProfile s "$1" 2>/dev/null; }
+
+case "${1:-}" in
+    start)
+        # si ya hay uno guardado (otro juego en marcha), no se pisa: así al terminar se restaura el original
+        [ -s "$GUARDADO" ] || perfil_actual > "$GUARDADO"
+        poner performance ;;
+    end)
+        if [ -s "$GUARDADO" ]; then poner "$(cat "$GUARDADO")"; rm -f "$GUARDADO"; fi ;;
+    *)  echo "Uso: miarch-modo-juego start|end" >&2; exit 1 ;;
+esac

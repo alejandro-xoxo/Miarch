@@ -93,6 +93,9 @@ Cuando algo suena (Spotify, el navegador…), aparece sola una tarjeta bajo los 
 ### Dolphin y apps de Qt
 Dolphin y cualquier app de Qt siguen la paleta del wallpaper (mismo acento y neutro), con la tipografía del escritorio e íconos oscuros, a través de `qt6ct` y `kdeglobals` (Dolphin, al ser de KDE, lee sus colores de ahí). Dolphin además es ligeramente translúcido para tomar el desenfoque, como la terminal.
 
+### Juegos
+Steam listo para jugar: controladores Vulkan de tu tarjeta, GameMode (sube el rendimiento mientras juegas y lo devuelve después), MangoHud, Gamescope con FSR para gráficas integradas y ProtonUp-Qt. Guía y opciones de lanzamiento en [docs/juegos.md](docs/juegos.md).
+
 ### Wi‑Fi y Bluetooth con clics
 En la barra, un clic en el Wi‑Fi o el Bluetooth abre un panel para ver las redes y dispositivos, y conectarte escribiendo la contraseña ahí mismo. *(No hay capturas de estos paneles porque muestran las redes y los dispositivos de quien las toma.)*
 
@@ -111,6 +114,7 @@ Cada tema tiene su propio archivo en [`docs/`](docs/README.md):
 | [Servicios](docs/servicios.md) | `iwd`, `bluetooth`, `power-profiles-daemon`, `docker`, `ollama` |
 | [Zsh](docs/zsh.md) | Oh My Zsh, plugins, prompt y alias |
 | [El escritorio](docs/escritorio.md) | Hyprland, Quickshell, colores del wallpaper, terminal, Neovim, Chrome |
+| [Juegos](docs/juegos.md) | Steam: qué se instala, primer uso y opciones de lanzamiento |
 | [Atajos](docs/atajos.md) | Todos los atajos de teclado |
 | [Scripts](docs/scripts.md) | Qué hace cada herramienta |
 | [Estructura](docs/estructura.md) | Mapa de carpetas del repositorio |

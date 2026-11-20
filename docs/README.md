@@ -8,6 +8,7 @@
 | [Zsh](zsh.md) | Oh My Zsh, plugins, prompt y alias |
 | [El escritorio](escritorio.md) | Hyprland, Quickshell, colores, terminal, Neovim, Chrome, inicio de sesión |
 | [Navegador](navegador.md) | Por qué Chrome: medición contra Chromium y Firefox |
+| [Juegos](juegos.md) | Steam: qué se instala, primer uso, opciones de lanzamiento y consejos para gráficas integradas |
 | [Atajos](atajos.md) | Todos los atajos de teclado |
 | [Scripts](scripts.md) | Qué hace cada herramienta de `scripts/` |
 | [Estructura](estructura.md) | Mapa de carpetas del repositorio |
