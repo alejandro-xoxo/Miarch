@@ -19,7 +19,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib/ui.sh"
 # =========================
 PAQUETES=(
     # Escritorio (Hyprland + utilidades; la barra, el lanzador y los paneles son Quickshell)
-    hyprland xdg-desktop-portal-hyprland polkit
+    hyprland xdg-desktop-portal-hyprland xdg-desktop-portal-gtk polkit   # el portal gtk avisa a Chrome y a las apps de que el sistema es oscuro
     awww                      # fondos animados (antes se llamaba swww)
     dunst                     # notificaciones
     rofi                      # lanzador de respaldo (Super+Shift+Espacio)

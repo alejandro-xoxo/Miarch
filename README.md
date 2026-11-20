@@ -36,6 +36,12 @@ Te pide la contraseña. Si tu tarjeta no se llama `wlan0`, mira su nombre con `i
 
 Si descargaste el ZIP de GitHub en vez de usar `git clone`, los permisos de ejecución se pierden: usa `bash setup.sh`.
 
+**¿Ya lo tenías instalado de antes y no tiene la nube para actualizar?** Una sola vez:
+
+```bash
+cd ~/Miarch && git pull --ff-only && bash install.sh && hyprctl reload && (qs kill -c miarch; setsid qs -c miarch >/dev/null 2>&1 &)
+```
+
 Más detalle (por pasos, pantalla de inicio de sesión gráfica, seguridad): [docs/instalacion.md](docs/instalacion.md).
 
 > La primera vez, inicia sesión en `claude`, `codex`, `agy` y `gh auth login`.
