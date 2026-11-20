@@ -3,11 +3,11 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
-## 2026-11-19.10 · La actualización te dice qué trae
+## 2026-11-19.10 · La actualización explica qué trae
 Antes de pedirte confirmar, la ventana de actualización muestra en español qué trae cada novedad y qué partes de tu equipo cambian.
 Verás solo lo que aún no has visto; las novedades se escriben en este archivo (NOVEDADES.md).
 
-## 2026-11-19.09 · La nube avisa de más cosas
+## 2026-11-19.09 · La nube cuenta configuraciones y paquetes pendientes
 La nube de la barra ahora cuenta también las configuraciones de Miarch que tu equipo aún no tiene y los paquetes de Miarch que faltan,
 no solo los cambios de GitHub y las actualizaciones del sistema.
 
@@ -15,7 +15,7 @@ no solo los cambios de GitHub y las actualizaciones del sistema.
 El indicador ya no repite el mensaje en ventanas estrechas. La duración del resumen ya no se acumula entre actualizaciones.
 Se detectan configuraciones del repositorio que tu equipo aún no tiene (por ejemplo las de GameMode y MangoHud).
 
-## 2026-11-19.07 · Steam y juegos
+## 2026-11-19.07 · Steam y juegos (GameMode, MangoHud, FSR)
 Se instala Steam con los controladores Vulkan de tu tarjeta, GameMode (sube el rendimiento mientras juegas), MangoHud (FPS y temperaturas),
 Gamescope (reescalado FSR para gráficas integradas) y ProtonUp-Qt. Guía y opciones de lanzamiento en docs/juegos.md.
 
@@ -30,8 +30,8 @@ y pide una sola confirmación. Si no hay nada, lo dice y termina.
 ## 2026-11-19.04 · Instalación con aspecto nuevo
 Los scripts tienen logo animado, barra del avance total, resultados con su duración y un resumen final, con la paleta morada del portafolio.
 
-## 2026-11-19.03 · Menú de energía
+## 2026-11-19.03 · Menú de energía (Super + Shift + Esc)
 Super + Shift + Esc abre un menú para bloquear, suspender, cerrar sesión, reiniciar y apagar. Super + Esc abre los Ajustes.
 
-## 2026-11-19.02 · Actualizar con clics
+## 2026-11-19.02 · Actualizar con un clic en la nube
 La nube de la barra avisa cuando hay novedades y, al hacer clic, las descarga y las aplica conservando tus ajustes y tu fondo.
