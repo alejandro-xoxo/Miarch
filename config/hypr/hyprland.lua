@@ -406,9 +406,9 @@ hl.bind(mainMod .. " + W",      hl.dsp.exec_cmd("~/.local/bin/wallpaper.sh"))
 hl.bind(mainMod .. " + period", hl.dsp.exec_cmd('grim -g "$(slurp)" - | wl-copy'))
 
 -- Laptop multimedia keys for volume and LCD brightness
-hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("miarch-volumen up"),   { locked = true, repeating = true })   -- sube con sonido y aviso
-hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("miarch-volumen down"), { locked = true, repeating = true })
-hl.bind("XF86AudioMute",        hl.dsp.exec_cmd("miarch-volumen mute"), { locked = true, repeating = true })
+hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("~/.local/bin/miarch-volumen up"),   { locked = true, repeating = true })   -- sube con sonido y aviso
+hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("~/.local/bin/miarch-volumen down"), { locked = true, repeating = true })
+hl.bind("XF86AudioMute",        hl.dsp.exec_cmd("~/.local/bin/miarch-volumen mute"), { locked = true, repeating = true })
 hl.bind("XF86AudioMicMute",     hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"),   { locked = true, repeating = true })
 hl.bind("XF86MonBrightnessUp",  hl.dsp.exec_cmd("brightnessctl -e4 -n2 set 5%+"),                  { locked = true, repeating = true })
 hl.bind("XF86MonBrightnessDown",hl.dsp.exec_cmd("brightnessctl -e4 -n2 set 5%-"),                  { locked = true, repeating = true })
