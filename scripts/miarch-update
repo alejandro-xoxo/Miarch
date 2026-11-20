@@ -24,27 +24,6 @@ si()  { local r; read -rp "  ? $1 [S/n] " r; [[ -z "$r" || "$r" =~ ^[sSyY] ]]; }
 unir() { local s="" x; for x in "$@"; do s+="${s:+, }$x"; done; printf "%s" "$s"; }
 plural() { [ "$1" = 1 ] && echo "$2" || echo "$3"; }
 
-es_url_mudanza_valida() {
-    local u="$1"
-    if [[ "$u" =~ ^https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(\.git)?$ ]]; then
-        return 0
-    fi
-    if [ "${MIARCH_MUDANZA_PRUEBA:-0}" = "1" ]; then
-        if [[ "$u" =~ ^file:// ]] && [[ "$u" != "file:///etc"* ]] && [[ "$u" != "file:///etc" ]]; then
-            return 0
-        fi
-    fi
-    return 1
-}
-
-es_misma_url() {
-    local a="${1%/}"
-    local b="${2%/}"
-    a="${a%.git}"
-    b="${b%.git}"
-    [ "$a" = "$b" ]
-}
-
 # Lee NOVEDADES.md por la entrada estándar y muestra solo el TÍTULO de las entradas que aún no has visto (marca = id de la última
 # vista), una línea cada una y como máximo 3. El detalle de cada una está en NOVEDADES.md.
 NOV_MARCA="$HOME/.cache/miarch/novedades-vistas"
@@ -104,62 +83,6 @@ UP="@{u}"; git rev-parse -q --verify "$UP" >/dev/null 2>&1 || UP="origin/$RAMA"
 NUEVOS="$(git rev-list --count "HEAD..$UP" 2>/dev/null || echo 0)"
 SUCIO=0; [ -n "$(git status --porcelain --untracked-files=no)" ] && SUCIO=1
 CFG_MARCA="$HOME/.cache/miarch/configs-aplicadas"   # guarda el commit cuyas configuraciones se aplicaron por última vez
-
-# Comprobación de mudanza a otro repositorio
-if [ "${MIARCH_MUDADO:-0}" != "1" ] && git cat-file -e "$UP:MUDANZA" 2>/dev/null; then
-    MUDANZA_RAW="$(git show "$UP:MUDANZA" 2>/dev/null || true)"
-    MUDANZA_URL="$(printf '%s\n' "$MUDANZA_RAW" | tr -d '\r' | sed -e 's/#.*//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' | grep -v '^$' | head -n 1)"
-    ORIGIN_ACTUAL="$(git remote get-url origin 2>/dev/null || true)"
-    if [ -n "$MUDANZA_URL" ] && es_url_mudanza_valida "$MUDANZA_URL" && ! es_misma_url "$MUDANZA_URL" "$ORIGIN_ACTUAL"; then
-        echo
-        ui_aviso "Miarch se mudó a un repositorio nuevo: $MUDANZA_URL. Se moverá tu copia; se guarda una copia de seguridad."
-        si "¿Continuar con la mudanza?" || { ui_info "Mudanza cancelada. No se hizo ningún cambio."; fin 0; }
-        if [ "$SUCIO" = 1 ]; then
-            ui_aviso "Tienes cambios sin guardar en $REPO: no se puede migrar sin pisarlos. Guárdalos (commit) o descártalos y vuelve a intentarlo."
-            fin 1
-        fi
-
-        RAMA_RESPALDO="respaldo-antes-de-mudanza-$(date +%Y%m%d)"
-        ui_info "Creando rama de respaldo $RAMA_RESPALDO..."
-        if ! git branch "$RAMA_RESPALDO" 2>/dev/null; then
-            if ! git rev-parse --verify "$RAMA_RESPALDO" >/dev/null 2>&1; then
-                ui_error "No se pudo crear la rama de respaldo $RAMA_RESPALDO."
-                fin 1
-            fi
-        fi
-
-        VIEJO_ORIGIN="$ORIGIN_ACTUAL"
-        ui_info "Cambiando origen a $MUDANZA_URL..."
-        if ! git remote set-url origin "$MUDANZA_URL"; then
-            ui_error "No se pudo actualizar la URL del remoto origin."
-            fin 1
-        fi
-
-        ui_info "Descargando nuevo repositorio..."
-        if ! git fetch origin --tags --force --prune; then
-            ui_error "Falló la descarga del nuevo repositorio ($MUDANZA_URL). Se restauró la dirección original."
-            git remote set-url origin "$VIEJO_ORIGIN" 2>/dev/null || true
-            fin 1
-        fi
-
-        git remote set-head origin -a 2>/dev/null || true
-        RAMA_NUEVA="$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's@^origin/@@')"
-        [ -z "$RAMA_NUEVA" ] && RAMA_NUEVA="$(git remote show origin 2>/dev/null | awk '/HEAD branch/ {print $NF}')"
-        { [ -z "$RAMA_NUEVA" ] || [ "$RAMA_NUEVA" = "(unknown)" ]; } && RAMA_NUEVA="main"
-
-        ui_info "Cambiando a la rama $RAMA_NUEVA..."
-        if ! git checkout -B "$RAMA_NUEVA" "origin/$RAMA_NUEVA"; then
-            ui_error "Falló el checkout a origin/$RAMA_NUEVA. Se restauró la dirección original."
-            git remote set-url origin "$VIEJO_ORIGIN" 2>/dev/null || true
-            fin 1
-        fi
-
-        rm -f "$CFG_MARCA"
-        ui_ok "Mudanza completada. Continuando con la actualización..."
-        export MIARCH_MUDADO=1
-        exec bash ./scripts/miarch-update "$@"
-    fi
-fi
 # Pendientes solo si cambió algo que se instala entre el commit anotado y el actual: un commit de documentación o de
 # novedades no vuelve a marcar nada como pendiente.
 RUTAS_CFG=(config scripts home lib install.sh setup.sh packages.sh skills AGENTS.md)
