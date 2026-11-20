@@ -115,7 +115,7 @@ def listar(IF):
         if nombre not in vistas:
             redes.append({"nombre": nombre, "seguridad": seg, "senal": 0, "conectada": False,
                           "conocida": True, "visible": False})
-    redes.sort(key=lambda r: (not r["conectada"], not r["visible"], not r["conocida"], -r["senal"], r["nombre"].lower()))
+    redes.sort(key=lambda r: (not r["conectada"], not r["conocida"], not r["visible"], -r["senal"], r["nombre"].lower()))
     return {"power": encendido, "iface": IF, "redes": redes}
 
 def es_conocida(nombre):
@@ -176,11 +176,26 @@ def main():
     elif cmd == "disconnect":
         rc, _ = iw("station", IF, "disconnect"); res = {"ok": rc == 0}
     elif cmd == "power":
-        rc, _ = iw("device", IF, "set-property", "Powered", "on" if a == "on" else "off"); res = {"ok": rc == 0}
+        quiere = a == "on"
+        if not quiere:
+            iw("station", IF, "disconnect")                    # se corta la conexión antes de apagar
+        rc, out = iw("device", IF, "set-property", "Powered", "on" if quiere else "off")
+        time.sleep(0.6)
+        _, pw = iw("device", IF, "show")
+        real = bool(re.search(r"Powered\s+on", pw))            # se comprueba lo que quedó, no lo que se pidió
+        res = {"ok": real == quiere, "power": real, "msg": out.strip()[-80:] if rc else ""}
     elif cmd == "forget":
-        rc, _ = iw("known-networks", a, "forget"); res = {"ok": rc == 0}
+        iw("known-networks", a, "forget")
+        res = {"ok": not es_conocida(a)}                       # ok solo si la red ya no está guardada
     else:
         sys.exit(__doc__)
+    if cmd not in ("list", "scan"):                            # rastro de lo que se pidió y lo que pasó, para depurar
+        try:
+            d = os.path.expanduser("~/.cache/miarch"); os.makedirs(d, exist_ok=True)
+            with open(d + "/wifi.log", "a") as f:
+                f.write("%s %s %s -> %s\n" % (time.strftime("%F %T"), cmd, a, json.dumps(res, ensure_ascii=False)))
+        except OSError:
+            pass
     print(json.dumps(res, ensure_ascii=False))
 
 if __name__ == "__main__":
