@@ -5,14 +5,13 @@
 #   Sistema:    perfil | brillo | uso (contador de apps del lanzador)
 set -u
 HYPR="$HOME/.config/hypr/hyprland.lua"
-REPO="$HOME/Miarch/config/hypr/hyprland.lua"
 AJ="$HOME/.config/miarch/ajustes.json"
 
 valido() { case " $2 " in *" $1 "*) return 0 ;; *) echo "Valor inválido '$1'. Opciones: $2"; exit 1 ;; esac; }
 poner_lua() {   # $1 = variable  $2 = valor
-    for f in "$HYPR" "$REPO"; do
-        [ -f "$f" ] && sed -i "s/^local $1 *= *\"[^\"]*\"/local $1 = \"$2\"/" "$f"
-    done
+    # solo la configuración en uso: tocar también el repositorio lo dejaba "modificado" y rompía git pull y el actualizador.
+    # install.sh y miarch-update conservan estos valores al reaplicar la configuración.
+    [ -f "$HYPR" ] && sed -i "s/^local $1 *= *\"[^\"]*\"/local $1 = \"$2\"/" "$HYPR"
     hyprctl reload >/dev/null
 }
 poner_json() {  # $1 = clave  $2 = valor (se guarda como texto)

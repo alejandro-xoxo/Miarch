@@ -9,6 +9,7 @@
 | [El escritorio](escritorio.md) | Hyprland, Quickshell, colores, terminal, Neovim, Chrome, inicio de sesión |
 | [Navegador](navegador.md) | Por qué Chrome: medición contra Chromium y Firefox |
 | [Juegos](juegos.md) | Steam: qué se instala, primer uso, opciones de lanzamiento y consejos para gráficas integradas |
+| [Personalizar](personalizar.md) | Dónde poner tus cambios para que ninguna actualización los borre |
 | [Atajos](atajos.md) | Todos los atajos de teclado |
 | [Scripts](scripts.md) | Qué hace cada herramienta de `scripts/` |
 | [Estructura](estructura.md) | Mapa de carpetas del repositorio |

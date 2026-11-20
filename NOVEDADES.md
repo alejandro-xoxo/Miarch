@@ -3,6 +3,10 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-19.12 · Tus cambios personales no se pierden
+Hay una carpeta solo tuya (~/.config/miarch/personal) para atajos, reglas, terminal y shell: ninguna actualización la borra.
+Y cambiar algo en Ajustes ya no impide actualizar.
+
 ## 2026-11-19.11 · Pestaña de atajos en el menú de energía
 Super + Shift + Esc ahora tiene dos pestañas: Energía y Atajos. Atajos lista todos los atajos de teclado, de más a menos útil, con lo que hace cada uno.
 
