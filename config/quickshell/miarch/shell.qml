@@ -709,12 +709,20 @@ ShellRoot {
                                 topPadding: 8; bottomPadding: 8
                             }
                             Flickable {
+                                id: listaWifi
                                 width: parent.width
                                 height: Math.min(filas.implicitHeight, 360)
                                 contentHeight: filas.implicitHeight
                                 clip: true
                                 visible: root.wifiEncendido && root.redes.length > 0
                                 boundsBehavior: Flickable.StopAtBounds
+                                // al abrir el panel siempre se empieza arriba (la red conectada primero); antes conservaba
+                                // el desplazamiento anterior y la red conectada quedaba oculta
+                                Connections {
+                                    target: root
+                                    function onConexionesAbiertoChanged() { listaWifi.contentY = 0 }
+                                    function onConexionesModoChanged() { listaWifi.contentY = 0 }
+                                }
                                 Column {
                                     id: filas
                                     width: parent.width
