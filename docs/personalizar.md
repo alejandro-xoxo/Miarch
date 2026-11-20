@@ -34,6 +34,7 @@ Es una copia gestionada por Miarch: se refresca al actualizar, así que no la ed
 | Alias o variables del shell | `personal/zshrc` |
 | Colores del sistema | Cambia el fondo (`Super + W`): los colores salen de él |
 | Más programas | Añádelos a `packages.sh` (y a `docs/paquetes/`) |
+| Icono de Crunchyroll | `~/.config/miarch/personal/crunchyroll.png` (o `.svg`, `.jpg`, `.webp`): imagen propia para el icono de Crunchyroll; se aplica al ejecutar `install.sh` o al actualizar. Puedes usar la imagen que quieras (se queda en tu equipo, no se sube al repositorio) |
 
 Si algo falla, `hyprctl configerrors` dice la línea del error de Hyprland. Un error en `personal/hyprland.lua` no rompe el resto de la configuración.
 

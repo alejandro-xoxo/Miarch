@@ -10,4 +10,6 @@
 | `visual-studio-code-bin` | AUR | VS Code (`Super + V`) |
 | `claude-desktop` | AUR | Claude Desktop (se abre desde el menú de IA, `Super + C`) |
 
+> **Crunchyroll**: no hay paquete; es una ventana de Chrome con la web (usa Widevine de Chrome); aparece en el lanzador `Super + Espacio`.
+
 Los paquetes de AUR son de la comunidad y **no están firmados por Arch**. Ver [instalación](../instalacion.md#seguridad).
