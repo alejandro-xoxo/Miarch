@@ -1893,6 +1893,7 @@ ShellRoot {
                                         Text {
                                             id: nombreApp
                                             width: parent.width - 24; elide: Text.ElideRight
+                                            textFormat: Text.PlainText
                                             text: tj.modelData.appName.toUpperCase()
                                             color: Qt.alpha(root.arena, 0.5)
                                             font { family: root.fuente; pixelSize: 10 * root.esc; weight: Font.Medium; letterSpacing: 3 }
@@ -1908,6 +1909,7 @@ ShellRoot {
                                     }
                                     Text {
                                         width: parent.width; wrapMode: Text.Wrap; maximumLineCount: 2; elide: Text.ElideRight
+                                        textFormat: Text.PlainText
                                         text: tj.modelData.summary
                                         color: root.arena
                                         font { family: root.fuente; pixelSize: 15 * root.esc; weight: Font.Medium }
@@ -2587,19 +2589,12 @@ ShellRoot {
     function intentar() {
         if (root.clave.length === 0 || root.verificando) return
         root.verificando = true
-        if (!pam.start()) { root.verificando = false; root.errorClave = true; root.sacudir() }
+        if (!pam.start()) { root.verificando = false; root.clave = ""; root.errorClave = true; root.sacudir() }
     }
 
     IpcHandler {
         target: "lock"
         function lock(): void { animApertura.stop(); tPorSiNoHayLog.stop(); root.clave = ""; root.errorClave = false; root.accesoOk = false; root.apertura = 0; sesion.locked = true }   // un bloqueo nuevo cancela cualquier desbloqueo a medias
-    }
-
-    // Solo para pruebas: MIARCH_LOCK_TEST=1 qs -c miarch  → se desbloquea solo a los 9 s
-    Timer {
-        running: sesion.locked && Quickshell.env("MIARCH_LOCK_TEST") === "1"
-        interval: 9000
-        onTriggered: sesion.locked = false
     }
 
     WlSessionLock {
