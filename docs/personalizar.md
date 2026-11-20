@@ -47,3 +47,8 @@ hl.window_rule({ name = "mpv-flotante", match = { class = "^mpv$" }, float = tru
 # personal/kitty.conf
 font_size 13
 ```
+
+## Cosas que puedes apagar
+| Archivo | Efecto |
+|---|---|
+| `~/.config/miarch/sin-greeter` | Miarch no instala ni actualiza la pantalla de inicio de sesión gráfica; entras por la terminal. Se crea con `mkdir -p ~/.config/miarch && touch ~/.config/miarch/sin-greeter`. |

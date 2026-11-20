@@ -1,3 +1,25 @@
+<div align="center">
+
+```text
+███╗   ███╗██╗ █████╗ ██████╗  ██████╗██╗  ██╗
+████╗ ████║██║██╔══██╗██╔══██╗██╔════╝██║  ██║
+██╔████╔██║██║███████║██████╔╝██║     ███████║
+██║╚██╔╝██║██║██╔══██║██╔══██╗██║     ██╔══██║
+██║ ╚═╝ ██║██║██║  ██║██║  ██║╚██████╗██║  ██║
+╚═╝     ╚═╝╚═╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
+```
+
+**Arch Linux + Hyprland** &nbsp;·&nbsp; escritorio propio en Quickshell &nbsp;·&nbsp; **v1.0**
+
+![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?style=flat&logo=archlinux&logoColor=white)
+![Hyprland](https://img.shields.io/badge/Hyprland-0.57-58E1FF?style=flat)
+![Quickshell](https://img.shields.io/badge/Quickshell-Qt6_%2F_QML-41CD52?style=flat&logo=qt&logoColor=white)
+![Shell](https://img.shields.io/badge/Bash_%2B_Python-scripts-4EAA25?style=flat&logo=gnubash&logoColor=white)
+
+*by alejandro-xoxo*
+
+</div>
+
 # 🧰 Miarch · Arch Linux + Hyprland
 
 **La idea de este repositorio: dejar un Arch Linux mínimo convertido en este escritorio con un solo comando, sin configurar nada a mano.**
@@ -5,6 +27,21 @@
 Un escritorio personal sobre **Hyprland**, con un entorno propio hecho en **Quickshell**: reloj y anillos de datos sobre el fondo, barra, lanzador de apps, paneles de Wi‑Fi y Bluetooth, ajustes del equipo, pantalla de bloqueo y pantalla de inicio de sesión. Los colores son mate y salen del wallpaper.
 
 ![Escritorio](docs/screenshots/escritorio-oscuro.jpg)
+
+---
+
+## ✨ Lo más destacado
+
+| Componente / Característica | Descripción |
+| :--- | :--- |
+| **Shell unificado en Quickshell** | Entorno declarativo en `shell.qml` (Qt6/QML) que consolida barra, lanzador, ajustes, notificaciones y bloqueo sin demonios independientes. |
+| **Bloqueo y login cinemáticos** | Desbloqueo mediante WlSessionLock y PAM con secuencia de 5,6 s y pista sonora original generada algorítmicamente con `numpy`. |
+| **Extracción adaptativa de color** | `wallpaper.sh` y `miarch-colors` generan una paleta mate sincronizada en Quickshell, kitty, aplicaciones KDE, qt6ct y la pantalla de acceso. |
+| **Actualizador en dos fases** | `miarch-update` analiza commits, configuraciones pendientes y paquetes en una fase de revisión previa a la confirmación de aplicación. |
+| **Pila de herramientas de IA** | Acceso directo a interfaces de escritorio y CLI para Claude, Codex, Antigravity y Hermes, junto con la skill estándar `skills/instalar-configurar`. |
+| **Hyprland en Lua y ajustes que sobreviven** | Hyprland 0.57 configurado en Lua; el panel de Ajustes cambia variables que las actualizaciones conservan, y `~/.config/miarch/personal/` guarda tus cambios propios. |
+| **Optimización para videojuegos** | Pila configurada con GameMode, MangoHud, Gamescope, Steam con escala de interfaz, zram, ntsync y controladores Vulkan según la GPU. |
+| **Servicios y utilidades nativas** | Servidor de notificaciones en Quickshell, OSD de volumen mediante `wpctl` y puente Wi-Fi seguro conectado a `iwd`. |
 
 ---
 
@@ -22,7 +59,7 @@ Pide tu contraseña de `sudo` una sola vez. Tarda unos 30 minutos (compila Quick
 sudo reboot
 ```
 
-Inicia sesión en la terminal (tty1) y el escritorio arranca solo.
+Verás la **pantalla de inicio de sesión de Miarch**: escribe tu contraseña y entras al escritorio. (Si prefieres entrar por la terminal: `touch ~/.config/miarch/sin-greeter` antes de instalar.)
 
 <details>
 <summary>¿Sin internet? Conéctate al Wi‑Fi primero</summary>
@@ -83,6 +120,8 @@ Un panel con clics para todo: red, sonido, pantalla, apariencia (fondos, animaci
 ### Bloqueo (`Super + L`) e inicio de sesión
 Mismo estilo en las dos pantallas: wallpaper desenfocado, reloj grande y la contraseña con puntos. Con música sonando, el bloqueo muestra la portada y los controles junto al reloj.
 
+**Entrar es una pequeña película** (unos 5,6 s): barras de cine arriba y abajo, el fondo avanza despacio, aparece el título MIARCH con la firma *by alejandro-xoxo*, un destello horizontal cruza la pantalla y todo se aclara hasta quedar igual que tu escritorio. Al desbloquear suena una pieza de tráiler generada por código (sin muestras de terceros) y se teclea el **log real del sistema** (`journalctl`). La contraseña se verifica con PAM; un bloqueo nuevo cancela cualquier desbloqueo a medias.
+
 | Pantalla de bloqueo | Inicio de sesión |
 |---|---|
 | ![Bloqueo](docs/screenshots/bloqueo.jpg) | ![Inicio de sesión](docs/screenshots/inicio-de-sesion.jpg) |
@@ -93,13 +132,87 @@ Cuando algo suena (Spotify, el navegador…), aparece sola una tarjeta bajo los 
 ### Dolphin y apps de Qt
 Dolphin y cualquier app de Qt siguen la paleta del wallpaper (mismo acento y neutro), con la tipografía del escritorio e íconos oscuros, a través de `qt6ct` y `kdeglobals` (Dolphin, al ser de KDE, lee sus colores de ahí). Dolphin además es ligeramente translúcido para tomar el desenfoque, como la terminal.
 
+### Menú de IA (`Super + C`)
+Un menú solo con las apps de escritorio de IA: **Claude Desktop, Codex App, Antigravity y Hermes Desktop**, cada una con su logo. Las que no estén instaladas salen apagadas. Todas se instalan con el resto de paquetes.
+
+### Notificaciones propias
+El propio escritorio es el servidor de notificaciones: se deslizan arriba a la derecha con el estilo de los paneles, con icono, barra de progreso, botones de acción y una cuenta atrás que se pausa al pasar el ratón. Las críticas no se van solas. Clic cierra una, clic derecho las cierra todas.
+
+### Volumen con sonido
+Las teclas de volumen hacen un pitido corto y muestran una barra sencilla abajo que se va sola.
+
+### Actualizador (la nube de la barra)
+Un clic en la nube **revisa primero** (cambios nuevos en GitHub, paquetes que faltan o sobran, actualizaciones del sistema y de AUR), te enseña las novedades en español y pide **una sola confirmación**. Después hace solo lo necesario, conserva tus ajustes y tu fondo, y recarga el escritorio al final. Interfaz con barra de progreso y logo propios. Más en [docs/actualizador.md](docs/actualizador.md).
+
+### Skill para agentes de IA
+Si usas Claude Code, Codex o Antigravity, la instalación les deja una skill (`instalar-configurar`) que enseña al agente a instalar y configurar cosas en este sistema de la mejor forma: opción más ligera y nativa, midiendo cuando importa, y guardando los cambios donde ninguna actualización los borra. Más en [docs/ia.md](docs/ia.md).
+
 ### Juegos
 Steam listo para jugar: controladores Vulkan de tu tarjeta, GameMode (sube el rendimiento mientras juegas y lo devuelve después), MangoHud, Gamescope con FSR para gráficas integradas y ProtonUp-Qt. Guía y opciones de lanzamiento en [docs/juegos.md](docs/juegos.md).
 
 ### Wi‑Fi y Bluetooth con clics
-En la barra, un clic en el Wi‑Fi o el Bluetooth abre un panel para ver las redes y dispositivos, y conectarte escribiendo la contraseña ahí mismo. *(No hay capturas de estos paneles porque muestran las redes y los dispositivos de quien las toma.)*
+En la barra, un clic en el Wi‑Fi o el Bluetooth abre un panel para ver las redes y dispositivos, y conectarte escribiendo la contraseña ahí mismo. En el Wi‑Fi puedes **conectar, desconectar, olvidar** una red, entrar a una **red oculta** y escribir la clave nueva si una red guardada la cambió; solo se listan las redes que están a tu alcance. En Bluetooth, los emparejados que no se detectan cerca quedan escondidos tras un botón. *(No hay capturas de estos paneles porque muestran las redes y los dispositivos de quien las toma.)*
 
 ---
+
+## 🏗️ Cómo está hecho
+
+La arquitectura de Miarch desacopla la instalación del sistema, la sincronización de temas visuales y la ejecución de la interfaz de usuario. Los instaladores base despliegan dependencias y configuraciones preservando copias de seguridad y ajustes personales; el subsistema de fondos de pantalla calcula paletas de color mate que se distribuyen hacia las aplicaciones y el gestor de inicio de sesión (`greetd`); un único archivo central en Quickshell gobierna los paneles y la interacción de escritorio, mientras que el actualizador coordina revisiones y migraciones del sistema en etapas controladas.
+
+```mermaid
+flowchart TD
+    subgraph Instalacion["Instalación del sistema"]
+        setup["setup.sh"] --> packages["packages.sh (pacman / yay)"]
+        setup --> install["install.sh (configuraciones y enlaces)"]
+        setup --> greeter_inst["scripts/miarch-greeter-install"]
+    end
+
+    subgraph Colorimetria["Sincronización de color"]
+        wall["wallpaper.sh (awww)"] --> colors["miarch-colors"]
+        colors --> paleta["Paleta mate: Quickshell, kitty, KDE, qt6ct, greeter"]
+    end
+
+    subgraph Shell["Entorno de escritorio (Quickshell / shell.qml)"]
+        bar["Barra de estado"]
+        launcher["Lanzador (Super+Space)"]
+        settings["Panel de ajustes (miarch-set)"]
+        notif["Servidor de notificaciones"]
+        lock["Bloqueo (WlSessionLock + PAM)"]
+    end
+
+    subgraph Acceso["Control de acceso"]
+        greetd["greetd"] --> qs_greeter["Quickshell Greeter (instancia Hyprland propia)"]
+    end
+
+    subgraph Actualizador["Mantenimiento (miarch-update)"]
+        rev["Fase 1: Revisión (git, configs, paquetes, sistema)"] --> conf{"Confirmación"}
+        conf --> apl["Fase 2: Aplicación (pull, install.sh, yay -Syu, recarga)"]
+    end
+```
+
+## 🧰 Tecnologías
+
+| Categoría | Herramienta / Paquete | Rol técnico |
+| :--- | :--- | :--- |
+| **Sistema base** | Arch Linux | Base del sistema operativo y gestión de dependencias. |
+| **Compositor Wayland** | Hyprland 0.57 | Gestor de ventanas y composición gráfica, configurado mediante `hyprland.lua`. |
+| **Shell y escritorio** | Quickshell (Qt6, QML) | Implementación de barra, paneles, notificaciones, menús y bloqueo en `shell.qml`. |
+| **Inicio de sesión** | greetd, PAM | Gestor de autenticación gráfica con fallback a `agreety` y políticas `system-auth`. |
+| **Terminal y entorno** | kitty, zsh, Oh My Zsh | Emulador de terminal acelerado por GPU y shell interactiva del usuario. |
+| **Editor de código** | Neovim (Lazy.nvim) | Entorno de edición y gestión de extensiones. |
+| **Navegador web** | Google Chrome | Navegador predeterminado configurado con flags nativas de Wayland y VA-API. |
+| **Red y conectividad** | iwd (`iwctl`) | Demonio inalámbrico gestionado sin intermediarios mediante `miarch-wifi`. |
+| **Pila de audio** | PipeWire, WirePlumber | Servidor de sonido y gestión de eventos multimedia mediante `wpctl`. |
+| **Automatización** | Bash, Python 3, numpy | Lógica de scripts del sistema, interfaz `lib/ui.sh` y síntesis matemática de audio. |
+| **Gaming** | Steam, GameMode, MangoHud, Gamescope | Pila de soporte para juegos con Vulkan específico de fabricante, ntsync y zram. |
+
+## 🔒 Calidad y seguridad
+
+- **Comprobaciones:** todos los scripts pasan `bash -n` y el análisis de Python, el QML se revisa con `qmllint`, y los flujos de instalación y actualización se prueban en entornos aislados (`$HOME` temporal y comandos privilegiados simulados).
+- **Revisión previa a la v1.0:** el instalador, el actualizador, el bloqueo y el login se revisaron con un modelo de IA (Antigravity, nivel medio) y cada hallazgo se verificó a mano. Se corrigieron fallos reales, como un desbloqueo posible al volver a bloquear durante la animación, y se descartaron los falsos positivos. Es una autorrevisión cuidadosa, no una auditoría formal de terceros.
+- **Bloqueo:** usa `WlSessionLock` y PAM; no existe desbloqueo automático de pruebas y un bloqueo nuevo cancela cualquier desbloqueo a medias.
+- **Código de terceros:** los paquetes de AUR no están firmados por Arch y se instalan con `--noconfirm`; Hermes Desktop se instala ejecutando su script oficial y Codex App es un reempaquetado de una vista previa. Audita su procedencia si tu entorno es sensible.
+- **Más detalle:** [docs/seguridad.md](docs/seguridad.md).
 
 ---
 
@@ -118,6 +231,9 @@ Cada tema tiene su propio archivo en [`docs/`](docs/README.md):
 | [Atajos](docs/atajos.md) | Todos los atajos de teclado |
 | [Scripts](docs/scripts.md) | Qué hace cada herramienta |
 | [Estructura](docs/estructura.md) | Mapa de carpetas del repositorio |
+| [Actualizador](docs/actualizador.md) | Cómo revisa, qué hace y cómo conserva tus ajustes |
+| [IA](docs/ia.md) | Menú de IA, skill para agentes y reglas del repositorio |
+| [Seguridad](docs/seguridad.md) | Bloqueo, inicio de sesión, qué se ejecuta y revisión previa a la v1 |
 | [Capturas](docs/capturas.md) | Cómo regenerar las imágenes de este README |
 
 Atajos básicos: `Super + Enter` terminal · `Super + Espacio` lanzador · `Super + Esc` ajustes · `Super + Shift + Esc` menú de energía (apagar, reiniciar…) · `Super + L` bloquear · `Super + W` cambiar wallpaper.

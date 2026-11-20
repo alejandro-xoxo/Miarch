@@ -8,4 +8,4 @@
 | `docker.socket` | Docker arranca solo cuando lo usas (no gasta memoria al encender) |
 | `ollama.service` | Modelos de IA locales |
 
-Opcional: `greetd` (pantalla de inicio de sesión gráfica), con `./scripts/miarch-greeter-install`. Ver [instalación](instalacion.md).
+`greetd` (pantalla de inicio de sesión gráfica): lo instala y activa `setup.sh` y el actualizador, con `./scripts/miarch-greeter-install`. Si no lo quieres, crea `~/.config/miarch/sin-greeter`. Ver [instalación](instalacion.md#pantalla-de-inicio-de-sesión-gráfica-greeter).
