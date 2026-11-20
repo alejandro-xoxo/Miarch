@@ -3,6 +3,9 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-20.05 · Menú de IA por niveles y solo lo que está a tu alcance
+En el menú de IA (Super + C) eliges una herramienta y, si tiene varias formas de abrirse, salen sus opciones: Claude Code (terminal) o Claude Desktop, Codex CLI o la app de Codex (nueva, se instala al actualizar). Wi-Fi y Bluetooth ya no llenan la lista con redes o dispositivos guardados que no están cerca; en Bluetooth hay un botón para verlos.
+
 ## 2026-11-20.04 · Wi-Fi más despejado y menú de IA con logos
 El panel de Wi-Fi tiene más aire: redes separadas en Conectada, Guardadas y Disponibles, con una línea que dice su estado; "Olvidar" aparece al pasar el ratón. Apagar el Wi-Fi y olvidar una red ahora se comprueban de verdad y no se pierden si pulsas rápido. En el menú de IA (Super + C) cada herramienta lleva su logo y una etiqueta APP o TERMINAL.
 

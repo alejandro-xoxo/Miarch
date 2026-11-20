@@ -91,11 +91,6 @@ def listar(IF):
     encendido = bool(re.search(r"Powered\s+on", pw))
     _, k = iw("known-networks", "list")
     conocidas = {columnas(f)[0] for f in tabla(k) if columnas(f)}
-    guardadas = {}
-    for f in tabla(k):
-        c = columnas(f)
-        if c:
-            guardadas[c[0]] = c[1] if len(c) > 1 else "psk"
     _, g = iw("station", IF, "get-networks")
     redes = []
     for ln in tabla(g):
@@ -109,12 +104,6 @@ def listar(IF):
                       "conectada": conectada, "conocida": nombre in conocidas})
     for r in redes:
         r["visible"] = True
-    vistas = {r["nombre"] for r in redes}
-    # redes guardadas que ahora no se ven (fuera de alcance u ocultas): hay que poder olvidarlas
-    for nombre, seg in guardadas.items():
-        if nombre not in vistas:
-            redes.append({"nombre": nombre, "seguridad": seg, "senal": 0, "conectada": False,
-                          "conocida": True, "visible": False})
     redes.sort(key=lambda r: (not r["conectada"], not r["conocida"], not r["visible"], -r["senal"], r["nombre"].lower()))
     return {"power": encendido, "iface": IF, "redes": redes}
 

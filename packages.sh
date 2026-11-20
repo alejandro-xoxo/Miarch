@@ -61,6 +61,7 @@ AUR_PAQUETES=(
     claude-code
     claude-desktop
     antigravity-cli
+    openai-chatgpt               # app de escritorio de ChatGPT con Codex (vista previa oficial de OpenAI; reempaqueta su .deb, ~350 MB)
     protonup-qt                  # instala y actualiza Proton-GE con clics (mejor compatibilidad de juegos de Windows)
 )
 
