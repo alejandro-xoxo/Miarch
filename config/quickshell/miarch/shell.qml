@@ -522,6 +522,8 @@ ShellRoot {
     property string wifiMensaje: ""
     property string redClave: ""                     // red que está pidiendo contraseña
     property string wifiClave: ""                    // lo que se lleva escrito (no se pierde al refrescar)
+    property bool ocultaAbierta: false               // formulario para conectar a una red oculta
+    property string ocultaNombre: ""
     property string _redesJson: ""
     property var btLista: []
     property var btPendiente: null
@@ -553,16 +555,24 @@ ShellRoot {
     Process {
         id: pAccion
         property string accion: ""
+        property string arg: ""
         stdout: StdioCollector {
             onStreamFinished: {
                 root.wifiOcupado = false
                 try {
                     const d = JSON.parse(text)
-                    if (pAccion.accion === "connect") {
+                    if (pAccion.accion === "connect" || pAccion.accion === "connect-hidden") {
                         root.wifiMensaje = d.ok ? "" : (d.msg || "No se pudo conectar")
-                        if (d.ok) root.redClave = ""
+                        if (d.ok) { root.redClave = ""; root.ocultaAbierta = false; root.wifiClave = "" }
+                        // red guardada con la contraseña cambiada: se abre el campo para escribir la nueva
+                        else if (d.pedir_clave) { root.wifiClave = ""; root.redClave = pAccion.arg }
+                    } else if (pAccion.accion === "forget") {
+                        root.wifiMensaje = d.ok ? "Red olvidada" : "No se pudo olvidar la red"
+                        if (d.ok && root.redClave === pAccion.arg) root.redClave = ""
+                    } else if (pAccion.accion === "disconnect") {
+                        root.wifiMensaje = d.ok ? "" : "No se pudo desconectar"
                     }
-                } catch (e) { root.wifiMensaje = "No se pudo conectar" }
+                } catch (e) { root.wifiMensaje = pAccion.accion === "forget" ? "No se pudo olvidar la red" : "No se pudo conectar" }
                 pLista.running = true
             }
         }
@@ -570,9 +580,10 @@ ShellRoot {
     function wifiAccion(accion, arg, clave) {
         if (pAccion.running) return
         pAccion.accion = accion
+        pAccion.arg = arg
         pAccion.environment = { "MIARCH_PASS": clave || "" }
         pAccion.command = arg !== "" ? [root.wifiBin, accion, arg] : [root.wifiBin, accion]
-        if (accion === "connect") { root.wifiOcupado = true; root.wifiMensaje = "" }
+        if (accion === "connect" || accion === "connect-hidden") { root.wifiOcupado = true; root.wifiMensaje = "" }
         pAccion.running = true
     }
     function conectarRed(r, clave) {
@@ -786,7 +797,7 @@ ShellRoot {
                                                 }
                                                 Text {
                                                     x: 44; anchors.verticalCenter: parent.verticalCenter
-                                                    width: parent.width - 110
+                                                    width: parent.width - 44 - (modelData.conectada ? 220 : (modelData.conocida ? 150 : 40))
                                                     elide: Text.ElideRight
                                                     text: modelData.nombre
                                                     color: root.arena
@@ -795,18 +806,42 @@ ShellRoot {
                                                 Text {
                                                     anchors.right: parent.right; anchors.rightMargin: 14
                                                     anchors.verticalCenter: parent.verticalCenter
-                                                    text: modelData.conectada ? "" : (modelData.seguridad !== "open" && !modelData.conocida ? "" : "")
-                                                    color: modelData.conectada ? root.terracota : Qt.alpha(root.arena, 0.5)
+                                                    visible: !modelData.conocida && modelData.seguridad !== "open"
+                                                    text: ""
+                                                    color: Qt.alpha(root.arena, 0.5)
                                                     font { family: root.fuente; pixelSize: 13 * root.esc }
                                                 }
                                                 Text {
-                                                    visible: root.wifiOcupado && root.redClave === "" && false
-                                                    text: ""
+                                                    visible: !modelData.visible
+                                                    anchors.right: botones.left; anchors.rightMargin: 10
+                                                    anchors.verticalCenter: parent.verticalCenter
+                                                    text: "fuera de alcance"
+                                                    color: Qt.alpha(root.arena, 0.4)
+                                                    font { family: root.fuente; pixelSize: 12 * root.esc; weight: Font.Light }
                                                 }
                                                 MouseArea {
                                                     id: filaZona
-                                                    anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                                                    onClicked: { if (modelData.conectada) root.wifiAccion("disconnect", "", ""); else root.conectarRed(modelData, "") }
+                                                    anchors.fill: parent; hoverEnabled: true
+                                                    cursorShape: modelData.visible && !modelData.conectada ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                                    onClicked: { if (modelData.visible && !modelData.conectada) root.conectarRed(modelData, "") }
+                                                }
+                                                // acciones de la red: desconectar (la conectada) y olvidar (las guardadas)
+                                                Row {
+                                                    id: botones
+                                                    anchors.right: parent.right; anchors.rightMargin: 8
+                                                    anchors.verticalCenter: parent.verticalCenter
+                                                    spacing: 6
+                                                    visible: modelData.conectada || modelData.conocida
+                                                    Opcion {
+                                                        visible: modelData.conectada
+                                                        implicitHeight: 30; texto: "Desconectar"
+                                                        onClic: root.wifiAccion("disconnect", "", "")
+                                                    }
+                                                    Opcion {
+                                                        visible: modelData.conocida
+                                                        implicitHeight: 30; texto: "Olvidar"
+                                                        onClic: root.wifiAccion("forget", modelData.nombre, "")
+                                                    }
                                                 }
                                             }
                                             // Contraseña (aparece bajo la red elegida)
@@ -870,6 +905,57 @@ ShellRoot {
                                 color: Qt.alpha(root.arena, 0.6)
                                 font { family: root.fuente; pixelSize: 12 * root.esc; weight: Font.Medium; letterSpacing: 2 }
                                 topPadding: 6
+                            }
+                            Text {
+                                visible: !root.wifiOcupado && root.redClave === "" && root.wifiMensaje !== "" && root.wifiEncendido && !root.ocultaAbierta
+                                text: root.wifiMensaje
+                                color: root.terracota
+                                font { family: root.fuente; pixelSize: 12 * root.esc; weight: Font.Medium; letterSpacing: 2 }
+                                topPadding: 6
+                            }
+                            // Red oculta: no sale en la lista; se conecta escribiendo su nombre (y la contraseña si lleva)
+                            Opcion {
+                                visible: root.wifiEncendido && !root.ocultaAbierta
+                                texto: "Red oculta…"
+                                onClic: { root.ocultaNombre = ""; root.wifiClave = ""; root.redClave = ""; root.wifiMensaje = ""; root.ocultaAbierta = true }
+                            }
+                            Column {
+                                visible: root.wifiEncendido && root.ocultaAbierta
+                                width: parent.width; spacing: 6; topPadding: 6
+                                Rectangle {
+                                    x: 8; width: parent.width - 16; height: 40; radius: 12
+                                    color: Qt.alpha(root.arena, 0.07); border.width: 1; border.color: Qt.alpha(root.arena, 0.25)
+                                    Text { visible: ocNombre.text.length === 0; x: 14; anchors.verticalCenter: parent.verticalCenter; text: "Nombre de la red"
+                                           color: Qt.alpha(root.arena, 0.35); font { family: root.fuente; pixelSize: 14 * root.esc; weight: Font.Light } }
+                                    TextInput { id: ocNombre; x: 14; width: parent.width - 28; anchors.verticalCenter: parent.verticalCenter; clip: true
+                                                color: root.arena; selectionColor: root.terracota; font { family: root.fuente; pixelSize: 15 * root.esc }
+                                                enabled: !root.wifiOcupado; onTextChanged: root.ocultaNombre = text
+                                                Component.onCompleted: forceActiveFocus()
+                                                Keys.onEscapePressed: root.ocultaAbierta = false }
+                                }
+                                Rectangle {
+                                    x: 8; width: parent.width - 16; height: 40; radius: 12
+                                    color: Qt.alpha(root.arena, 0.07); border.width: 1; border.color: Qt.alpha(root.arena, 0.25)
+                                    Text { visible: ocClave.text.length === 0; x: 14; anchors.verticalCenter: parent.verticalCenter; text: "Contraseña (vacía si es abierta)"
+                                           color: Qt.alpha(root.arena, 0.35); font { family: root.fuente; pixelSize: 14 * root.esc; weight: Font.Light } }
+                                    TextInput { id: ocClave; x: 14; width: parent.width - 28; anchors.verticalCenter: parent.verticalCenter; clip: true
+                                                echoMode: TextInput.Password; passwordCharacter: "•"
+                                                color: root.arena; selectionColor: root.terracota; font { family: root.fuente; pixelSize: 15 * root.esc }
+                                                enabled: !root.wifiOcupado; Keys.onEscapePressed: root.ocultaAbierta = false
+                                                onAccepted: if (ocNombre.text.length > 0) root.wifiAccion("connect-hidden", ocNombre.text, ocClave.text) }
+                                }
+                                Row {
+                                    x: 8; spacing: 8
+                                    Opcion { activo: ocNombre.text.length > 0; texto: root.wifiOcupado ? "…" : "Conectar"
+                                             onClic: if (ocNombre.text.length > 0) root.wifiAccion("connect-hidden", ocNombre.text, ocClave.text) }
+                                    Opcion { texto: "Cancelar"; onClic: root.ocultaAbierta = false }
+                                }
+                                Text {
+                                    visible: root.wifiOcupado || root.wifiMensaje !== ""
+                                    x: 12; text: root.wifiOcupado ? "Conectando…" : root.wifiMensaje
+                                    color: root.wifiOcupado ? Qt.alpha(root.arena, 0.6) : root.terracota
+                                    font { family: root.fuente; pixelSize: 12 * root.esc; weight: Font.Medium; letterSpacing: 2 }
+                                }
                             }
                         }
 
