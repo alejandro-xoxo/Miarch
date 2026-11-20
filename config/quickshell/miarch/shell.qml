@@ -7,6 +7,7 @@ import Quickshell.Services.Pam
 import Quickshell.Services.Mpris
 import Quickshell.Services.SystemTray
 import Quickshell.Services.Pipewire
+import Quickshell.Services.Notifications
 import Quickshell.Hyprland
 import Quickshell.Bluetooth
 import Quickshell.Widgets
@@ -1705,6 +1706,197 @@ ShellRoot {
         function search(texto: string): void { root.lanzadorAbierto = true; root.consultaLanz = texto }
     }
 
+    // ═════════════════ NOTIFICACIONES ═════════════════
+    // Quickshell es el servidor de notificaciones (reemplaza a dunst): arriba a la derecha, bajo la barra, con el mismo
+    // estilo que los paneles. Se deslizan al entrar, muestran una cuenta atrás (se pausa con el ratón encima), barra de
+    // progreso (volumen, brillo), botones de acción. Clic = abrir/cerrar, clic derecho = cerrar todas. Las críticas no se van solas.
+    NotificationServer {
+        id: servidorNotif
+        keepOnReload: false
+        bodySupported: true
+        bodyMarkupSupported: true
+        actionsSupported: true
+        imageSupported: true
+        persistenceSupported: true
+        onNotification: n => { n.tracked = true }
+    }
+    function notifCerrarTodas() { servidorNotif.trackedNotifications.values.slice().forEach(n => n.dismiss()) }
+    IpcHandler { target: "notif"; function cerrar(): void { root.notifCerrarTodas() } }
+    Variants {
+        model: Quickshell.screens
+        PanelWindow {
+            required property var modelData
+            screen: modelData
+            readonly property bool enEstaPantalla: Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name === modelData.name : modelData === Quickshell.screens[0]
+            visible: enEstaPantalla && servidorNotif.trackedNotifications.values.length > 0
+            anchors { top: true; right: true }
+            margins { top: 54; right: 16 }
+            implicitWidth: 392
+            implicitHeight: colNotif.implicitHeight
+            color: "transparent"
+            exclusionMode: ExclusionMode.Ignore
+            WlrLayershell.layer: WlrLayer.Overlay
+            WlrLayershell.namespace: "miarch-notif"
+            WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+
+            Column {
+                id: colNotif
+                width: parent.width
+                spacing: 10
+                Repeater {
+                    model: servidorNotif.trackedNotifications
+                    Item {
+                        id: tj
+                        required property var modelData
+                        required property int index
+                        readonly property bool critica: modelData.urgency === NotificationUrgency.Critical
+                        readonly property bool baja: modelData.urgency === NotificationUrgency.Low
+                        readonly property int dur: critica ? 0 : (modelData.expireTimeout > 0 ? Math.round(modelData.expireTimeout * 1000) : (baja ? 4000 : 7000))
+                        readonly property real valor: (modelData.hints && modelData.hints["value"] !== undefined) ? Number(modelData.hints["value"]) : -1
+                        readonly property string rutaIcono: modelData.image !== "" ? modelData.image
+                            : (modelData.appIcon === "" ? "" : (modelData.appIcon.startsWith("/") ? "file://" + modelData.appIcon : Quickshell.iconPath(modelData.appIcon, true)))
+                        property real entrada: 0
+                        property real resta: 1
+                        visible: index < 5
+                        width: colNotif.width
+                        height: visible ? tarjeta.height : 0
+                        Component.onCompleted: entrada = 1
+                        Behavior on entrada { NumberAnimation { duration: 420; easing.type: Easing.OutCubic } }
+                        NumberAnimation { target: tj; property: "resta"; from: 1; to: 0; duration: Math.max(1, tj.dur)
+                                          running: tj.dur > 0; paused: hov.hovered; onFinished: tj.modelData.expire() }
+                        HoverHandler { id: hov }
+
+                        Rectangle {
+                            id: tarjeta
+                            width: parent.width
+                            x: (1 - tj.entrada) * 80
+                            opacity: Math.min(1, tj.entrada)
+                            height: cuerpo.implicitHeight + 34
+                            radius: 18
+                            color: Qt.alpha(Qt.lighter(root.fondo, 1.3), 0.95)
+                            border.width: 1
+                            border.color: tj.critica ? Qt.alpha("#b8665f", 0.85) : Qt.alpha(root.arena, hov.hovered ? 0.28 : 0.13)
+                            Behavior on border.color { ColorAnimation { duration: 200 } }
+                            Rectangle {   // franja de color a la izquierda: acento, o rojo mate si es crítica
+                                x: 0; y: 18; width: 3; height: parent.height - 36; radius: 1.5
+                                color: tj.critica ? "#b8665f" : root.terracota
+                                opacity: tj.baja ? 0.35 : 0.9
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: mouse => {
+                                    if (mouse.button === Qt.RightButton) { root.notifCerrarTodas(); return }
+                                    for (let i = 0; i < tj.modelData.actions.length; i++)
+                                        if (tj.modelData.actions[i].identifier === "default") { tj.modelData.actions[i].invoke(); break }
+                                    tj.modelData.dismiss()
+                                }
+                            }
+                            Row {
+                                id: cuerpo
+                                x: 20; y: 17
+                                width: parent.width - 36
+                                spacing: 14
+                                Rectangle {   // icono de la app (o su inicial)
+                                    width: 46; height: 46; radius: 13
+                                    color: Qt.alpha(root.arena, 0.08)
+                                    Image {
+                                        id: ico
+                                        anchors.centerIn: parent
+                                        width: 30; height: 30
+                                        source: tj.rutaIcono
+                                        sourceSize: Qt.size(64, 64)
+                                        fillMode: Image.PreserveAspectFit; smooth: true
+                                        visible: status === Image.Ready
+                                    }
+                                    Text {
+                                        anchors.centerIn: parent
+                                        visible: !ico.visible
+                                        text: tj.modelData.appName !== "" ? tj.modelData.appName.charAt(0).toUpperCase() : "!"
+                                        color: tj.critica ? "#b8665f" : root.terracota
+                                        font { family: root.fuente; pixelSize: 20 * root.esc; weight: Font.Medium }
+                                    }
+                                }
+                                Column {
+                                    width: parent.width - 46 - 14
+                                    spacing: 4
+                                    Item {
+                                        width: parent.width; height: nombreApp.implicitHeight
+                                        Text {
+                                            id: nombreApp
+                                            width: parent.width - 24; elide: Text.ElideRight
+                                            text: tj.modelData.appName.toUpperCase()
+                                            color: Qt.alpha(root.arena, 0.5)
+                                            font { family: root.fuente; pixelSize: 10 * root.esc; weight: Font.Medium; letterSpacing: 3 }
+                                        }
+                                        Text {   // cerrar esta notificación
+                                            anchors.right: parent.right
+                                            text: "\u2715"
+                                            color: xz.containsMouse ? root.terracota : Qt.alpha(root.arena, 0.4)
+                                            font { family: root.fuente; pixelSize: 11 * root.esc }
+                                            MouseArea { id: xz; anchors.fill: parent; anchors.margins: -8; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                                                        onClicked: tj.modelData.dismiss() }
+                                        }
+                                    }
+                                    Text {
+                                        width: parent.width; wrapMode: Text.Wrap; maximumLineCount: 2; elide: Text.ElideRight
+                                        text: tj.modelData.summary
+                                        color: root.arena
+                                        font { family: root.fuente; pixelSize: 15 * root.esc; weight: Font.Medium }
+                                    }
+                                    Text {
+                                        visible: tj.modelData.body !== ""
+                                        width: parent.width; wrapMode: Text.Wrap; maximumLineCount: 3; elide: Text.ElideRight
+                                        textFormat: Text.StyledText
+                                        text: tj.modelData.body
+                                        color: Qt.alpha(root.arena, 0.72)
+                                        font { family: root.fuente; pixelSize: 13 * root.esc; weight: Font.Light }
+                                    }
+                                    Rectangle {   // barra de progreso (volumen, brillo…)
+                                        visible: tj.valor >= 0
+                                        width: parent.width; height: 6; radius: 3
+                                        color: Qt.alpha(root.arena, 0.12)
+                                        Rectangle {
+                                            width: parent.width * Math.max(0, Math.min(100, tj.valor)) / 100; height: parent.height; radius: 3
+                                            color: root.terracota
+                                            Behavior on width { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+                                        }
+                                    }
+                                    Row {   // botones de acción
+                                        spacing: 8
+                                        topPadding: 4
+                                        Repeater {
+                                            model: tj.modelData.actions
+                                            Rectangle {
+                                                required property var modelData
+                                                visible: modelData.identifier !== "default"
+                                                width: visible ? etqAccion.implicitWidth + 24 : 0; height: visible ? 28 : 0; radius: 14
+                                                color: az.containsMouse ? Qt.alpha(root.terracota, 0.25) : "transparent"
+                                                border.width: 1; border.color: Qt.alpha(root.terracota, 0.7)
+                                                Behavior on color { ColorAnimation { duration: 150 } }
+                                                Text { id: etqAccion; anchors.centerIn: parent; text: modelData.text; color: root.arena
+                                                       font { family: root.fuente; pixelSize: 12 * root.esc; weight: Font.Medium } }
+                                                MouseArea { id: az; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                                                            onClicked: { modelData.invoke(); tj.modelData.dismiss() } }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            Rectangle {   // cuenta atrás: se vacía hasta que la notificación se va
+                                visible: tj.dur > 0
+                                x: 20; y: parent.height - 5
+                                width: (parent.width - 40) * tj.resta; height: 2; radius: 1
+                                color: Qt.alpha(root.terracota, hov.hovered ? 0.8 : 0.45)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // ═════════════════ MENÚ DE IA (Super + C) ═════════════════
     // Primer nivel: una fila por herramienta. Si tiene varias formas de abrirse (terminal y app), al elegirla salen sus
     // opciones. Las de terminal se abren en kitty. Solo se pueden lanzar las que están instaladas.
@@ -1714,18 +1906,14 @@ ShellRoot {
     property int iaSel: 0
     property var iaDisp: []
     readonly property var iaGrupos: [
-        { t: "Claude", d: "Claude Code y la app", logo: "claude", c: "#c8745a", m: "C", items: [
-            { t: "Claude Code",    d: "En la terminal, para programar",   tipo: "TERMINAL", logo: "claudecode", c: "#c8745a", m: "C", bin: "claude",         cmd: "kitty claude" },
-            { t: "Claude Desktop", d: "La app, con ventana propia",       tipo: "APP",      logo: "claude",     c: "#c8745a", m: "C", bin: "claude-desktop", cmd: "claude-desktop" } ] },
-        { t: "Codex", d: "Codex de OpenAI: terminal y app", logo: "codex", c: "#86a595", m: "Cx", items: [
-            { t: "Codex CLI",      d: "En la terminal",                   tipo: "TERMINAL", logo: "codex",      c: "#86a595", m: "Cx", bin: "codex",         cmd: "kitty codex" },
-            { t: "Codex App",      d: "La app de ChatGPT con Codex (vista previa)", tipo: "APP", logo: "openai", c: "#86a595", m: "Cx", bin: "chatgpt",       cmd: "chatgpt" } ] },
-        { t: "Antigravity", d: "El agente de Google (agy)", logo: "antigravity", c: "#7d9bc0", m: "A", items: [
-            { t: "Antigravity",    d: "El agente de Google (agy) en la terminal", tipo: "TERMINAL", logo: "antigravity", c: "#7d9bc0", m: "A", bin: "agy", cmd: "kitty agy" } ] },
-        { t: "Hermes", d: "La app oficial de Nous Research", logo: "hermes", c: "#c0a06a", m: "H", items: [
-            { t: "Hermes Desktop", d: "La app oficial de Hermes",          tipo: "APP",      logo: "hermes",     c: "#c0a06a", m: "H", bin: "hermes",         cmd: "hermes desktop" } ] },
-        { t: "Ollama", d: "Modelos locales", logo: "ollama", c: "#b3ada3", m: "O", items: [
-            { t: "Ollama",         d: "Muestra los modelos que tienes",   tipo: "TERMINAL", logo: "ollama",     c: "#b3ada3", m: "O", bin: "ollama",         cmd: "kitty sh -c 'ollama list; echo; echo \"ollama run NOMBRE  para hablar con uno\"; exec zsh'" } ] }
+        { t: "Claude Desktop", d: "La app de Claude, con ventana propia", logo: "claude", c: "#c8745a", m: "C", items: [
+            { t: "Claude Desktop", d: "La app de Claude, con ventana propia", tipo: "APP", logo: "claude", c: "#c8745a", m: "C", bin: "claude-desktop", cmd: "claude-desktop" } ] },
+        { t: "Codex App", d: "La app de ChatGPT con Codex (vista previa)", logo: "openai", c: "#86a595", m: "Cx", items: [
+            { t: "Codex App", d: "La app de ChatGPT con Codex (vista previa)", tipo: "APP", logo: "openai", c: "#86a595", m: "Cx", bin: "chatgpt", cmd: "chatgpt" } ] },
+        { t: "Antigravity", d: "La plataforma de agentes de Google (2.0)", logo: "antigravity", c: "#7d9bc0", m: "A", items: [
+            { t: "Antigravity", d: "La plataforma de agentes de Google (2.0)", tipo: "APP", logo: "antigravity", c: "#7d9bc0", m: "A", bin: "antigravity", cmd: "antigravity" } ] },
+        { t: "Hermes Desktop", d: "La app oficial de Hermes (Nous Research)", logo: "hermes", c: "#c0a06a", m: "H", items: [
+            { t: "Hermes Desktop", d: "La app oficial de Hermes (Nous Research)", tipo: "APP", logo: "hermes", c: "#c0a06a", m: "H", bin: "hermes", cmd: "hermes desktop" } ] }
     ]
     // lo que se ve ahora: las herramientas o las opciones de la elegida
     readonly property var iaVisibles: root.iaNivel === 0 ? root.iaGrupos : root.iaGrupos[root.iaGrupo].items
@@ -1745,7 +1933,7 @@ ShellRoot {
     function iaAtras() { if (root.iaNivel === 1) { root.iaNivel = 0; root.iaSel = root.iaGrupo } else root.iaAbierto = false }
     Process {
         id: pIa
-        command: ["sh", "-c", "PATH=\"$HOME/.local/bin:$PATH\"; for b in claude-desktop claude agy codex chatgpt hermes ollama; do command -v $b >/dev/null 2>&1 && echo $b; done"]
+        command: ["sh", "-c", "PATH=\"$HOME/.local/bin:$PATH\"; for b in claude-desktop chatgpt antigravity hermes; do command -v $b >/dev/null 2>&1 && echo $b; done"]
         stdout: StdioCollector { onStreamFinished: root.iaDisp = text.trim().split("\n") }
     }
     onIaAbiertoChanged: { if (root.iaAbierto) { root.iaNivel = 0; root.iaSel = 0; pIa.running = true } }
@@ -1920,7 +2108,7 @@ ShellRoot {
         { k: "Super + .",                 d: "Captura de una zona al portapapeles" },
         { k: "Super + W",                 d: "Cambiar el fondo (y los colores del sistema)" },
         { k: "Super + V",                 d: "Abrir VS Code" },
-        { k: "Super + C",                 d: "Menú de IA: Claude, Antigravity, Codex, Hermes, Ollama" },
+        { k: "Super + C",                 d: "Menú de IA: apps de escritorio de Claude, Codex, Antigravity y Hermes" },
         { k: "Super + clic izq. y arrastrar", d: "Mover la ventana" },
         { k: "Super + clic der. y arrastrar", d: "Cambiar el tamaño de la ventana" },
         { k: "Super + rueda del ratón",   d: "Cambiar de escritorio" },

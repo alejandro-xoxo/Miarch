@@ -242,6 +242,8 @@ ui_etapa "Aplicando el wallpaper y los colores"
 # al actualizar (miarch-update) no se cambia tu fondo: solo se vuelven a calcular los colores del actual
 [ -n "${MIARCH_ACTUALIZANDO:-}" ] || "$HOME/.local/bin/wallpaper.sh" || true
 # kitty toma sus colores de un archivo que genera miarch-colors a partir del wallpaper
+# las notificaciones las dibuja Quickshell: si dunst sigue vivo (sesión anterior) ocupa el servicio y se cierra
+pkill -x dunst 2>/dev/null || true
 [ -s "$HOME/.cache/miarch-wallpaper" ] && "$HOME/.local/bin/miarch-colors" "$(cat "$HOME/.cache/miarch-wallpaper")" >/dev/null || true
 
 # anota el commit cuyas configuraciones se aplicaron (miarch-update y la nube de la barra lo usan para saber si hay algo pendiente)
