@@ -16,16 +16,18 @@ ETAPAS_PAQUETES="$(bash ./packages.sh --etapas)"
 ETAPAS_INSTALL="$(bash ./install.sh --etapas)"
 export MIARCH_UI_TOTAL=$(( 2 + ETAPAS_PAQUETES + ETAPAS_INSTALL ))
 export MIARCH_UI_ACTUAL=0
+export MIARCH_UI_SUB=1   # los scripts que lanza setup.sh no repiten el logo ni el resumen
 source ./lib/ui.sh
 
+ui_banner "instalador"
 ui_etapa "Comprobando internet"
 if ! curl -fsS --max-time 8 -o /dev/null https://archlinux.org; then
-    echo "[ERROR] No hay internet. Conéctate y vuelve a ejecutar ./setup.sh"
-    echo "   Wi-Fi:  iwctl station wlan0 connect \"NOMBRE_DE_TU_RED\"    (con cable ya debería funcionar)"
+    ui_error "No hay internet. Conéctate y vuelve a ejecutar ./setup.sh"
+    ui_info "Wi-Fi:  iwctl station wlan0 connect \"NOMBRE_DE_TU_RED\"    (con cable ya debería funcionar)"
     exit 1
 fi
 
-echo "[i] Se pide la contraseña de sudo una sola vez (se mantiene activa mientras dure la instalación)."
+ui_info "Se pide la contraseña de sudo una sola vez (se mantiene activa mientras dure la instalación)."
 sudo -v
 ( while true; do sudo -n true; sleep 45; kill -0 "$$" 2>/dev/null || exit; done ) &
 KEEPALIVE=$!
@@ -42,6 +44,6 @@ bash ./packages.sh
 export MIARCH_UI_ACTUAL=$(( 2 + ETAPAS_PAQUETES ))
 bash ./install.sh
 
-echo ""
-echo "[OK] ¡Todo listo! Reinicia con:  sudo reboot"
-echo "   Después inicia sesión en la terminal (tty1) y el escritorio arranca solo."
+ui_resumen "Instalación completa"
+ui_caja "Reinicia con:  sudo reboot" "Después inicia sesión en la terminal (tty1) y el escritorio arranca solo." "" "github.com/alejandro-xoxo/Miarch"
+echo

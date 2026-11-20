@@ -18,11 +18,12 @@ UI_STATS="${MIARCH_STATS:-$HOME/.cache/miarch/instalacion.stats}"
 mkdir -p "$(dirname "$UI_LOG")" 2>/dev/null || true
 UI_TOTAL="${MIARCH_UI_TOTAL:-1}"
 UI_ACTUAL="${MIARCH_UI_ACTUAL:-0}"
+UI_PRIMERO=0; [ -n "${MIARCH_UI_INICIO:-}" ] || UI_PRIMERO=1       # el primer script de la cadena empieza de cero
 UI_INICIO="${MIARCH_UI_INICIO:-$(date +%s)}"
 export MIARCH_STATS="$UI_STATS" MIARCH_UI_INICIO="$UI_INICIO"
 UI_TTY=0; [ -t 1 ] && UI_TTY=1
 UI_PCT_ANT=0
-[ -n "${MIARCH_UI_TOTAL:-}" ] || : > "$UI_STATS" 2>/dev/null || true     # solo si no lo lanza setup.sh
+[ "$UI_PRIMERO" = 0 ] || : > "$UI_STATS" 2>/dev/null || true
 
 # ---- nivel de detalle gráfico ----
 if [ -n "${MIARCH_UI_NIVEL:-}" ]; then UI_NIVEL="$MIARCH_UI_NIVEL"
@@ -65,7 +66,7 @@ ui_tiempo() { local s="$1"; if [ "$s" -ge 60 ]; then printf '%dm %02ds' $((s / 6
 ui_banner() {
     local sub="${1:-}" ver="" i
     ver="$(git -C "$UI_DIR/.." describe --tags --always 2>/dev/null || true)"
-    if [ "$UI_TTY" = 0 ]; then echo "== Miarch ${ver} ${sub} =="; return; fi
+    if [ "$UI_TTY" = 0 ]; then echo "== Miarch ${ver} ${sub} (github.com/alejandro-xoxo/Miarch) =="; return; fi
     local logo=()
     if [ "$UI_NIVEL" -ge 1 ]; then
         logo=("███╗   ███╗██╗ █████╗ ██████╗  ██████╗██╗  ██╗"
@@ -93,7 +94,8 @@ ui_banner() {
         printf '  %s%s%s\n' "$esc" "${logo[$i]}" "$C_R"
         sleep 0.06
     done
-    printf '\n  %s%s%s\n\n' "$C_TENUE" "Arch Linux + Hyprland   ·   ${ver:-instalador}${sub:+   ·   $sub}" "$C_R"
+    printf '\n  %s%s%s\n' "$C_TENUE" "Arch Linux + Hyprland   ·   ${ver:-instalador}${sub:+   ·   $sub}" "$C_R"
+    printf '  %s%salejandro-xoxo / Miarch%s   %sgithub.com/alejandro-xoxo/Miarch%s\n\n' "$C_ACENTO" "$C_NEG" "$C_R" "$C_TENUE" "$C_R"
 }
 
 # ---- barra del total ----

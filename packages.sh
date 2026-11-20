@@ -69,6 +69,7 @@ ETAPAS=$(( 6 + ${#AUR_PAQUETES[@]} ))
 [ "${1:-}" = "--etapas" ] && { echo "$ETAPAS"; exit 0; }
 
 ui_total "$ETAPAS"
+[ -n "${MIARCH_UI_SUB:-}" ] || ui_banner "paquetes"   # solo si no lo lanza setup.sh
 ui_sudo
 ui_etapa "Actualizando el sistema e instalando los paquetes oficiales"
 ui_ejecutar "Actualizando el sistema (pacman -Syu)" sudo pacman -Syu --noconfirm
@@ -85,14 +86,14 @@ configurar_docker_ollama() {
     raiz_gb="$(df -BG --output=size / | tail -1 | tr -dc '0-9')"
     datos="/home/.datos-pesados"
     if [ "${raiz_gb:-0}" -lt 100 ] && [ "$(findmnt -n -o SOURCE --target /home)" != "$(findmnt -n -o SOURCE --target /)" ]; then
-        echo "[i] La raíz tiene ${raiz_gb} GB: Docker y Ollama guardarán sus datos en $datos (partición /home)."
+        ui_info "La raíz tiene ${raiz_gb} GB: Docker y Ollama guardarán sus datos en $datos (partición /home)."
         sudo install -d -m 755 "$datos"
         if [ ! -s /etc/docker/daemon.json ] && [ -z "$(ls -A /var/lib/docker 2>/dev/null)" ]; then
             sudo install -d -m 711 "$datos/docker"
             sudo install -d -m 755 /etc/docker   # el paquete docker no crea esta carpeta
             printf '{\n  "data-root": "%s/docker"\n}\n' "$datos" | sudo tee /etc/docker/daemon.json >/dev/null
         else
-            echo "[i] Docker ya tiene datos o configuración: no se mueve su carpeta."
+            ui_info "Docker ya tiene datos o configuración: no se mueve su carpeta."
         fi
         if getent passwd ollama >/dev/null; then
             sudo install -d -o ollama -g ollama -m 755 "$datos/ollama"
@@ -101,19 +102,19 @@ configurar_docker_ollama() {
                 | sudo tee /etc/systemd/system/ollama.service.d/miarch-modelos.conf >/dev/null
             sudo systemctl daemon-reload
         else
-            echo "[i] No se encontró el usuario 'ollama': los modelos quedarán en la ubicación por defecto."
+            ui_info "No se encontró el usuario 'ollama': los modelos quedarán en la ubicación por defecto."
         fi
     fi
 
     # Docker arranca por socket (solo cuando lo usas, no gasta memoria al encender); Ollama queda activo.
     sudo systemctl enable --now docker.socket ollama.service \
-        || echo "[!] No se pudo activar docker o ollama (revisa: systemctl status docker.socket ollama)"
+        || ui_aviso "No se pudo activar docker o ollama (revisa: systemctl status docker.socket ollama)"
 
     # Estar en el grupo docker equivale a tener acceso de administrador (root) sobre el equipo.
     # Se añade tu usuario para usar docker sin sudo; si prefieres no hacerlo, quita estas líneas.
     if [[ " $(id -nG "$USER") " != *" docker "* ]]; then   # sin tuberías: con pipefail, grep -q puede dar falsos errores
         sudo usermod -aG docker "$USER"
-        echo "[i] Entraste al grupo docker: cierra sesión y vuelve a entrar para usarlo sin sudo."
+        ui_info "Entraste al grupo docker: cierra sesión y vuelve a entrar para usarlo sin sudo."
     fi
 }
 
@@ -122,7 +123,7 @@ configurar_docker_ollama() {
 # =========================
 ui_etapa "Activando servicios (Wi-Fi, Bluetooth, modos de energía)"
 sudo systemctl enable --now iwd.service bluetooth.service power-profiles-daemon.service \
-    || echo "[!] No se pudo activar algún servicio (revisa: systemctl status iwd bluetooth power-profiles-daemon)"
+    || ui_aviso "No se pudo activar algún servicio (revisa: systemctl status iwd bluetooth power-profiles-daemon)"
 ui_etapa "Configurando Docker y Ollama"
 configurar_docker_ollama
 
@@ -135,16 +136,16 @@ if [ ! -d "$HOME/.oh-my-zsh" ]; then
 fi
 
 if [ "$(getent passwd "$USER" | cut -d: -f7)" != "/usr/bin/zsh" ]; then
-    sudo chsh -s /usr/bin/zsh "$USER" || echo "[!] No se pudo cambiar el shell predeterminado"
+    sudo chsh -s /usr/bin/zsh "$USER" || ui_aviso "No se pudo cambiar el shell predeterminado"
 fi
 
 ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
 for plugin in zsh-autosuggestions zsh-syntax-highlighting zsh-history-substring-search; do
     if [ ! -d "$ZSH_CUSTOM/plugins/$plugin" ]; then
         ui_ejecutar "Descargando el plugin $plugin" git clone --depth=1 "https://github.com/zsh-users/$plugin" "$ZSH_CUSTOM/plugins/$plugin" \
-            || echo "[!] No se pudo clonar $plugin"
+            || ui_aviso "No se pudo clonar $plugin"
     else
-        echo "[OK] Plugin $plugin ya instalado"
+        ui_ok "Plugin $plugin ya instalado"
     fi
 done
 
@@ -161,7 +162,7 @@ ui_etapa "Preparando AUR (yay)"
 if ! command -v yay &>/dev/null; then
     ui_ejecutar "Instalando yay (ayudante de AUR)" instalar_yay
 else
-    echo "   [OK] yay ya está instalado"
+    ui_ok "yay ya está instalado"
 fi
 
 # Nota de seguridad: --noconfirm instala sin que veas el PKGBUILD de cada paquete.
@@ -172,27 +173,19 @@ for paquete in "${AUR_PAQUETES[@]}"; do
     ui_ejecutar "$paquete" yay -S --noconfirm --needed "$paquete" || AUR_FALLIDOS+=("$paquete")
 done
 if [ "${#AUR_FALLIDOS[@]}" -gt 0 ]; then
-    echo ""
-    echo "[!] No se pudieron instalar estos paquetes de AUR: ${AUR_FALLIDOS[*]}"
-    echo "   Reintenta uno con:  yay -S ${AUR_FALLIDOS[0]}   (te mostrará el error completo)"
-    echo ""
+    ui_aviso "No se pudieron instalar estos paquetes de AUR: ${AUR_FALLIDOS[*]}"
+    ui_info "Reintenta uno con:  yay -S ${AUR_FALLIDOS[0]}   (te mostrará el error completo)"
 fi
 
 # =========================
 # JAVA 21 POR DEFECTO
 # =========================
 ui_etapa "Dejando Java 21 como versión por defecto"
-sudo archlinux-java set java-21-openjdk || echo "[!] No se pudo fijar Java 21 (revisa: archlinux-java status)"
+sudo archlinux-java set java-21-openjdk || ui_aviso "No se pudo fijar Java 21 (revisa: archlinux-java status)"
 
-echo ""
-if [ "${#AUR_FALLIDOS[@]}" -gt 0 ]; then
-    echo "[!] Paquetes instalados, salvo los de AUR que fallaron (arriba)."
-else
-    echo "[OK] ¡Paquetes instalados!"
+if [ -z "${MIARCH_UI_SUB:-}" ]; then     # solo si no lo lanza setup.sh o miarch-update (que muestra su propio resumen)
+    ui_resumen "Paquetes instalados"
+    ui_info "Siguiente paso:  ./install.sh"
+    ui_info "La primera vez, inicia sesión en cada herramienta:  claude  |  codex  |  agy  |  gh auth login"
+    ui_info "Docker: cierra sesión y vuelve a entrar para usarlo sin sudo.   Ollama: ollama pull llama3.2"
 fi
-echo "   Siguiente paso:  ./install.sh"
-echo ""
-echo "   La primera vez, inicia sesión en cada herramienta:"
-echo "     claude   |   codex   |   agy   |   gh auth login"
-echo ""
-echo "   Docker: cierra sesión y vuelve a entrar para usarlo sin sudo.  Ollama: ollama pull llama3.2"
