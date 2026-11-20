@@ -365,7 +365,7 @@ hl.bind(mainMod .. " + SHIFT + ESCAPE", hl.dsp.exec_cmd("qs -c miarch ipc call p
 hl.bind(mainMod .. " + RETURN", hl.dsp.exec_cmd(terminal))                 -- terminal
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("google-chrome-stable"))        -- navegador (Chrome)
 hl.bind(mainMod .. " + V", hl.dsp.exec_cmd("code"))                     -- VS Code
-hl.bind(mainMod .. " + C", hl.dsp.exec_cmd("claude-desktop"))          -- Claude Desktop
+hl.bind(mainMod .. " + C", hl.dsp.exec_cmd("qs -c miarch ipc call ia toggle"))   -- menú de IA (Quickshell)
 local closeWindowBind = hl.bind(mainMod .. " + SHIFT + Q", hl.dsp.window.close()) -- cerrar ventana (con Shift para evitar clics accidentales)
 -- closeWindowBind:set_enabled(false)
 hl.bind(mainMod .. " + CTRL + SHIFT + M", hl.dsp.exec_cmd("command -v hyprshutdown >/dev/null 2>&1 && hyprshutdown || hyprctl dispatch 'hl.dsp.exit()'"))
