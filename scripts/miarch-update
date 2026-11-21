@@ -19,8 +19,10 @@ unset MIARCH_UI_INICIO MIARCH_UI_TOTAL MIARCH_UI_ACTUAL MIARCH_UI_SUB MIARCH_UI_
 REPO="${MIARCH_DIR:-$HOME/Miarch}"
 FORZAR=0; [ "${1:-}" = "--forzar" ] && FORZAR=1
 
+SUDO_KEEPALIVE=""
 limpiar() {
     [ -n "${MIARCH_SUDO_VIVO:-}" ] && kill "$MIARCH_SUDO_VIVO" 2>/dev/null || true
+    [ -n "${SUDO_KEEPALIVE:-}" ] && kill "$SUDO_KEEPALIVE" 2>/dev/null || true
 }
 trap limpiar EXIT INT TERM
 
@@ -104,6 +106,13 @@ if [ ! -e "$HOME/.config/miarch/sin-greeter" ]; then
     # y si el instalador sabe compararse con lo instalado (sirve aunque no haya marca), se le pregunta también
     [ "$GREETER_PEND" = 0 ] && grep -q -- '--pendiente' ./scripts/miarch-greeter-install 2>/dev/null && bash ./scripts/miarch-greeter-install --pendiente && GREETER_PEND=1
 fi
+# Tapa del portátil: no suspender al cerrar la tapa (opcional)
+TAPA_PEND=0
+if [ -x ./scripts/miarch-tapa ]; then
+    bash ./scripts/miarch-tapa --pendiente 2>/dev/null && TAPA_PEND=1
+elif command -v miarch-tapa >/dev/null 2>&1; then
+    miarch-tapa --pendiente 2>/dev/null && TAPA_PEND=1
+fi
 PAQ_CAMBIA=0; [ "$NUEVOS" -gt 0 ] && ! git diff --quiet HEAD "$UP" -- packages.sh && PAQ_CAMBIA=1
 
 # servicios a arreglar (bluetooth si no responde o está desactivado; iwd si está inactivo)
@@ -166,6 +175,12 @@ else
     ui_ok "Paquetes de Miarch: no falta ninguno"
 fi
 [ "$GREETER_PEND" = 1 ] && ui_info "Se instalará la pantalla de inicio de sesión de Miarch (la verás al reiniciar)"
+[ "$TAPA_PEND" = 1 ] && ui_info "Tapa del portátil: no se suspenderá al cerrarla"
+MARCA_TAPA="${MIARCH_TAPA_MARCA:-$HOME/.config/miarch/tapa-sin-suspender}"
+CONF_TAPA="${MIARCH_LOGIND_DIR:-/etc/systemd/logind.conf.d}/50-miarch-tapa.conf"
+if [ ! -f "$MARCA_TAPA" ] && [ -f "$CONF_TAPA" ]; then
+    ui_info "La tapa sigue sin suspender: borra la marca con miarch-tapa --quitar"
+fi
 if [ "$BT_ACCION" = "restart" ]; then
     ui_info "Bluetooth no responde: se reiniciará"
 elif [ "$BT_ACCION" = "enable" ]; then
@@ -188,8 +203,9 @@ if [ "$FORZAR" = 1 ] || { [ "$CFG_PENDIENTES" = 1 ] && ! { [ "$NUEVOS" -gt 0 ] &
 HACER_PAQ=0; { [ "${#FALTAN[@]}" -gt 0 ] || [ "${#SOBRAN[@]}" -gt 0 ] || [ "$PAQ_CAMBIA" = 1 ]; } && HACER_PAQ=1
 HACER_SIS=0; [ "$N_SIS" -gt 0 ] && HACER_SIS=1
 HACER_GREET=$GREETER_PEND
+HACER_TAPA=$TAPA_PEND
 HACER_SERV=0; { [ -n "$BT_ACCION" ] || [ -n "$IWD_ACCION" ]; } && HACER_SERV=1
-if [ "$HACER_MIARCH$HACER_PAQ$HACER_SIS$HACER_GREET$HACER_SERV" = "00000" ]; then
+if [ "$HACER_MIARCH$HACER_PAQ$HACER_SIS$HACER_GREET$HACER_SERV$HACER_TAPA" = "000000" ]; then
     echo
     ui_ok "Todo está al día. No hay nada que descargar ni instalar."
     ui_resumen "Todo al día"
@@ -200,6 +216,7 @@ PLAN=()
 [ "$HACER_MIARCH" = 1 ] && PLAN+=("$([ "$NUEVOS" -gt 0 ] && echo "descargar y aplicar los cambios de Miarch" || echo "aplicar las configuraciones de Miarch")")
 [ "$HACER_PAQ" = 1 ]    && PLAN+=("instalar los paquetes de Miarch que faltan")
 [ "$HACER_GREET" = 1 ]  && PLAN+=("instalar la pantalla de inicio de sesión")
+[ "$HACER_TAPA" = 1 ]   && PLAN+=("ajustar la tapa del portátil para no suspender")
 [ "$HACER_SIS" = 1 ]    && PLAN+=("actualizar $N_SIS $(plural "$N_SIS" paquete paquetes) del sistema")
 [ "$HACER_SERV" = 1 ]   && PLAN+=("reparar servicios del sistema")
 echo
@@ -207,14 +224,13 @@ si "Se va a: $(unir "${PLAN[@]}"). ¿Continuar? (pide tu contraseña si hace fal
 
 # etapas reales = las tareas elegidas (la barra del total muestra solo lo que de verdad se hará)
 UI_ACTUAL=0
-UI_TOTAL=$(( HACER_MIARCH * 2 + HACER_PAQ + HACER_SIS + HACER_GREET + HACER_SERV ))
-if [ "$HACER_PAQ" = 1 ] || [ "$HACER_SIS" = 1 ] || [ "$HACER_GREET" = 1 ] || [ "$HACER_SERV" = 1 ]; then
+UI_TOTAL=$(( HACER_MIARCH * 2 + HACER_PAQ + HACER_SIS + HACER_GREET + HACER_SERV + HACER_TAPA ))
+if [ "$HACER_PAQ" = 1 ] || [ "$HACER_SIS" = 1 ] || [ "$HACER_GREET" = 1 ] || [ "$HACER_SERV" = 1 ] || [ "$HACER_TAPA" = 1 ]; then
     sudo -v || { ui_error "Sin permiso de administrador: no se instala nada."; fin 1; }
     # La contraseña de sudo caduca a los pocos minutos y compilar apps tarda más: se renueva mientras dure la actualización.
     # Sin esto, un paso posterior se quedaría esperando la contraseña, invisible bajo el indicador de progreso.
-    ( while true; do sudo -n true 2>/dev/null; sleep 45; kill -0 "$$" 2>/dev/null || exit; done ) &
+    ( while true; do sudo -n true 2>/dev/null; sleep 45; kill -0 "$$" 2>/dev/null || exit; done ) >/dev/null 2>&1 &
     SUDO_KEEPALIVE=$!
-    trap 'kill "$SUDO_KEEPALIVE" 2>/dev/null' EXIT
 fi
 
 # =====================================================================================================
@@ -292,6 +308,19 @@ if [ "$HACER_GREET" = 1 ]; then
             || ui_aviso "No se pudo instalar la pantalla de inicio de sesión. Sigues entrando por la terminal; se reintentará la próxima vez."
     else
         ui_aviso "Este Miarch aún no trae la pantalla de inicio de sesión: descarga los cambios y vuelve a intentarlo."
+    fi
+fi
+
+if [ "$HACER_TAPA" = 1 ]; then
+    ui_etapa "Ajustando la tapa del portátil"
+    if [ -x ./scripts/miarch-tapa ]; then
+        MIARCH_SUDO_VIVO=1 ui_ejecutar "Configurando la tapa del portátil" bash ./scripts/miarch-tapa --aplicar \
+            || ui_aviso "No se pudo configurar la tapa del portátil."
+    elif command -v miarch-tapa >/dev/null 2>&1; then
+        MIARCH_SUDO_VIVO=1 ui_ejecutar "Configurando la tapa del portátil" miarch-tapa --aplicar \
+            || ui_aviso "No se pudo configurar la tapa del portátil."
+    else
+        ui_aviso "No se encontró miarch-tapa para configurar la tapa del portátil."
     fi
 fi
 
