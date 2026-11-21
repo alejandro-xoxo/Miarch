@@ -25,6 +25,7 @@ PAQUETES=(
     rofi                      # lanzador de respaldo (Super+Shift+Espacio)
     grim slurp wl-clipboard   # capturas y portapapeles
     brightnessctl playerctl xdg-user-dirs
+    mpv                       # reproductor de vídeo (mp4, mkv…), ligero y con aceleración por hardware
 
     # Gráficos y audio
     mesa intel-media-driver pipewire pipewire-pulse wireplumber sound-theme-freedesktop   # el pitido del volumen
