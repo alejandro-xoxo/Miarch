@@ -8,6 +8,7 @@ Guarda los guiones para grabar el vídeo de Miarch y dos comandos, para no perde
 - `bin/tux-arch`: dibuja el Tux de letras con "Miarch / By / alejandro-xoxo" (`tux-arch --ventana` lo abre en una terminal normal).
 - `bin/m-music`: se instala como `m:music`; abre la página de música (cava, letra, peaclock, cbonsai y pipes.sh).
 - `prog/`, `actualizador-sim.py`, `tux.png`: lo que usan los anteriores.
+- `crear-musica.py`: genera una canción **original** de ambiente club (128 BPM, numpy, sin copyright): `python3 crear-musica.py salida.wav`. Se usa con `MIARCH_DEMO_MUSICA` en `demo.env`.
 - `paquetes.txt`: los programas necesarios (oficiales y de AUR). **No** están en `packages.sh`.
 - `demo.env.ejemplo`: plantilla de los ajustes privados (la contraseña va vacía).
 

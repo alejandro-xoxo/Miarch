@@ -12,7 +12,7 @@ AQUI=$(cd "$(dirname "$0")" && pwd)
 DEST="$HOME/demo-miarch"; BIN="$HOME/.local/bin"; ENV="$HOME/.config/miarch/personal/demo.env"
 if [ "$SECO" = 1 ]; then echo "modo seco: copiaría la demo a $DEST, tux-arch y m:music a $BIN y crearía $ENV si falta"; else
 mkdir -p "$DEST/prog" "$BIN" "$(dirname "$ENV")"
-cp "$AQUI"/demo-v9.sh "$AQUI"/actualizador-sim.py "$AQUI"/tux.png "$DEST/"
+cp "$AQUI"/demo-v9.sh "$AQUI"/actualizador-sim.py "$AQUI"/crear-musica.py "$AQUI"/tux.png "$DEST/"
 cp "$AQUI"/prog/* "$DEST/prog/"
 chmod +x "$DEST"/demo-v9.sh "$DEST"/prog/*.sh
 install -m755 "$AQUI/bin/tux-arch" "$BIN/tux-arch"
