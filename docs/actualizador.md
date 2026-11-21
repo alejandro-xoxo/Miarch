@@ -13,7 +13,8 @@ flowchart TD
         F2 --> F3["Paquetes que faltan o sobran"]
         F3 --> F4["Actualizaciones del sistema y de AUR"]
         F4 --> F5["Pantalla de inicio de sesión"]
-        F5 --> F6["Novedades y áreas que cambian"]
+        F5 --> FServ["Servicios (Bluetooth e iwd)"]
+        FServ --> F6["Novedades y áreas que cambian"]
     end
 
     F6 --> Conf{"Una confirmación"}
@@ -25,11 +26,12 @@ flowchart TD
         A2 --> A3["3. Paquetes: instalar y quitar"]
         A3 --> A4["4. Pantalla de inicio de sesión"]
         A4 --> A5["5. yay -Syu"]
-        A5 --> A6["6. Recargar Hyprland y Quickshell"]
+        A5 --> A6["6. Reparando servicios"]
+        A6 --> A7["7. Recargar Hyprland y Quickshell"]
     end
 
     Sudo --> A1
-    A6 --> Resumen["Resumen con duraciones"]
+    A7 --> Resumen["Resumen con duraciones"]
 ```
 
 ## Número de la nube
@@ -66,8 +68,9 @@ La primera fase inspecciona el estado del sistema sin modificar archivos ni inst
    - Consulta actualizaciones del sistema oficiales mediante `checkupdates` y paquetes AUR mediante `yay -Qua`.
 4. **Inspección de login:** Comprueba si el greeter gráfico está activo en systemd o si sus fuentes han cambiado.
 5. **Detección de bloqueos de pacman (db.lck):** Si existe un bloqueo con un proceso vivo (`pacman`, `yay`, `paru`, `pamac`) de más de 5 minutos, emite un aviso preventivo indicando el comando, tiempo y terminal (`pts/...`) antes de pedir confirmación.
-6. **Informe previo:** Imprime las áreas del sistema sujetas a modificación y despliega hasta 3 títulos de entradas no leídas del archivo `NOVEDADES.md`.
-7. **Confirmación:** Solicita una única aprobación interactiva antes de proceder.
+6. **Inspección de servicios:** Detecta si `bluetooth` está desactivado o si está activo pero no responde a `bluetoothctl show` (solo si hay adaptador presente), y si el servicio Wi-Fi `iwd` se encuentra inactivo.
+7. **Informe previo:** Imprime las áreas del sistema sujetas a modificación, los servicios a reparar y despliega hasta 3 títulos de entradas no leídas del archivo `NOVEDADES.md`.
+8. **Confirmación:** Solicita una única aprobación interactiva antes de proceder.
 
 ## Fase 2: Aplicación y orden de ejecución
 
@@ -78,7 +81,9 @@ Si el usuario aprueba la operación, `miarch-update` aplica exclusivamente los p
 3. **Gestión de paquetes:** Instala dependencias nuevas y remueve paquetes declarados obsoletos. Antes de modificar paquetes invoca la función compartida `esperar_pacman` (`lib/pacman.sh`).
 4. **Pantalla de inicio de sesión:** Configura `greetd` y sincroniza assets de `/usr/share/miarch/greeter` y `/var/lib/miarch-greeter`. Si `greetd` ya está instalado (`pacman -Q greetd`), no ejecuta `pacman -S`. Si no lo está, consulta `esperar_pacman` antes de instalar.
 5. **Actualización de paquetes del sistema:** Comprueba `esperar_pacman` y ejecuta `yay -Syu --noconfirm`. Si hay un bloqueo no resuelto, omite la actualización del sistema avisando al usuario y continúa.
-6. **Reinicio del entorno gráfico:** Como última acción del proceso, recarga Hyprland y reinicia Quickshell cuando los paquetes ya están actualizados, para que no quede corriendo un binario viejo.
+6. **Reparación de servicios:** Ejecuta `sudo systemctl restart bluetooth` (o `enable --now`) y `sudo systemctl start iwd`, esperando hasta 8 segundos para validar que Bluetooth responde adecuadamente. Un fallo en este paso no detiene el resto de la actualización.
+7. **Reinicio del entorno gráfico:** Como última acción del proceso, recarga Hyprland y reinicia Quickshell cuando los paquetes ya están actualizados, para que no quede corriendo un binario viejo.
+8. **Avisos finales:** Si en la ejecución cambiaron archivos de aplicaciones Electron (`config/applications/`, `config/claude-desktop/`, `config/electron/`, `config/vscode/` o `ELECTRON_OZONE_PLATFORM_HINT`), imprime un aviso recordando cerrar y reabrir ChatGPT, Claude Desktop y Antigravity para verlas nítidas. Todo el proceso corre bajo la confirmación única inicial.
 
 ## Gestión de bloqueos de pacman (db.lck)
 
