@@ -288,6 +288,8 @@ ShellRoot {
     readonly property var salida: Pipewire.defaultAudioSink
     readonly property real volumen: salida && salida.audio ? salida.audio.volume : 0
     readonly property bool silenciado: salida && salida.audio ? salida.audio.muted : false
+    property real _volDestino: volumen
+    Timer { id: tVolSync; interval: 600; onTriggered: root._volDestino = root.volumen }
     // El reproductor que está sonando; si ninguno suena, el primero (Spotify, navegador, etc.)
     readonly property var jugador: {
         const v = Mpris.players.values
@@ -478,7 +480,19 @@ ShellRoot {
                         texto: Math.round(root.volumen * 100) + "%"
                         atenuado: root.silenciado
                         onClic: root.lanzar(["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle"])
-                        onRueda: dir => root.lanzar(["wpctl", "set-volume", "-l", "1", "@DEFAULT_AUDIO_SINK@", dir > 0 ? "5%+" : "5%-"])
+                        onRueda: dir => {
+                            const s = root.salida
+                            if (!s || !s.audio) return
+                            if (!tVolSync.running) root._volDestino = root.volumen
+                            const paso = (dir / 120) * 0.05
+                            root._volDestino = Math.max(0, Math.min(1, root._volDestino + paso))
+                            s.audio.volume = root._volDestino
+                            if (dir > 0) s.audio.muted = false
+                            tVolSync.restart()
+                            const sil = (dir > 0 ? false : s.audio.muted) ? 1 : 0
+                            const v = Math.round(root._volDestino * 100)
+                            root.mostrarOsd(v, sil ? "Silenciado" : (v + "%"), sil)
+                        }
                     }
                     Modulo {   // batería
                         icono: root.cargando ? "" : (root.bateria > 0.85 ? "" : root.bateria > 0.6 ? "" : root.bateria > 0.35 ? "" : root.bateria > 0.12 ? "" : "")
@@ -2033,11 +2047,17 @@ ShellRoot {
     property string osdTexto: ""
     property bool osdSilencio: false
     Timer { id: tOsd; interval: 1200; onTriggered: root.osdVisible = false }
+    function mostrarOsd(valor: int, texto: string, silencio: int): void {
+        root.osdValor = Math.max(0, Math.min(100, valor))
+        root.osdTexto = texto
+        root.osdSilencio = silencio === 1
+        root.osdVisible = true
+        tOsd.restart()
+    }
     IpcHandler {
         target: "osd"
         function mostrar(valor: int, texto: string, silencio: int): void {
-            root.osdValor = Math.max(0, Math.min(100, valor)); root.osdTexto = texto; root.osdSilencio = silencio === 1
-            root.osdVisible = true; tOsd.restart()
+            root.mostrarOsd(valor, texto, silencio)
         }
     }
     Variants {
