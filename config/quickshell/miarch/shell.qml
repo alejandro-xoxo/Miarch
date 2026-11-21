@@ -3010,6 +3010,7 @@ ShellRoot {
 
     IpcHandler {
         target: "lock"
+        function estado(): string { return sesion.locked ? "bloqueado" : "libre" }
         function lock(): void { animApertura.stop(); tPorSiNoHayLog.stop(); root.clave = ""; root.errorClave = false; root.accesoOk = false; root.apertura = 0; sesion.locked = true }   // un bloqueo nuevo cancela cualquier desbloqueo a medias
     }
 
