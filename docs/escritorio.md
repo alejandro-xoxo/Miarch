@@ -119,6 +119,7 @@ La gestión de audio está implementada en `scripts/miarch-volumen` interactuand
   ```bash
   qs -c miarch ipc call osd mostrar <0-100> <texto> <1 si está en silencio>
   ```
+- **Rueda del ratón en la barra**: En el módulo de volumen de la barra superior, la rueda del ratón interactúa directamente con PipeWire sin lanzar procesos externos, aplicando pasos proporcionales con destino acumulado y activando el indicador visual OSD.
 
 ## Paneles de Conectividad
 

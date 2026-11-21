@@ -3,6 +3,9 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-20.102 · La rueda del volumen va fluida
+Girar la rueda del ratón sobre el módulo de volumen en la barra superior ahora ajusta el nivel de audio al instante de forma nativa a través de PipeWire, sin lanzar procesos en segundo plano. Los pasos son proporcionales a la velocidad de giro, acumulan el destino para evitar retrasos y muestran la barra visual OSD en pantalla.
+
 ## 2026-11-20.101 · El login también teclea el log y suena
 Al iniciar sesión, la pantalla de login ahora teclea el registro de servicios del sistema en tiempo real y suena con el perfil de switches mecánicos, exactamente igual que la pantalla de bloqueo. Además, se añade la herramienta `comprobar-greeter` para verificar la seguridad y sintaxis del inicio de sesión antes de instalar o actualizar.
 
