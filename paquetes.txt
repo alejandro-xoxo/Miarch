@@ -1,0 +1,13 @@
+# Programas que usa la demo y los comandos tux-arch y m:music. NO están en packages.sh: el actualizador de Miarch no los instala a nadie.
+# Formato: origen nombre   (pacman = repositorio oficial · aur = AUR, paquete de la comunidad que Arch no revisa)
+pacman cava
+pacman wtype
+pacman gpu-screen-recorder
+pacman fastfetch
+pacman playerctl
+pacman ffmpeg
+pacman mpv
+aur sptlrx-bin
+aur peaclock
+aur cbonsai
+aur pipes.sh
