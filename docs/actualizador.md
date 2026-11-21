@@ -65,8 +65,9 @@ La primera fase inspecciona el estado del sistema sin modificar archivos ni inst
    - Detecta dependencias faltantes u obsoletas del repositorio mediante flags de `packages.sh`.
    - Consulta actualizaciones del sistema oficiales mediante `checkupdates` y paquetes AUR mediante `yay -Qua`.
 4. **Inspección de login:** Comprueba si el greeter gráfico está activo en systemd o si sus fuentes han cambiado.
-5. **Informe previo:** Imprime las áreas del sistema sujetas a modificación y despliega hasta 3 títulos de entradas no leídas del archivo `NOVEDADES.md`.
-6. **Confirmación:** Solicita una única aprobación interactiva antes de proceder.
+5. **Detección de bloqueos de pacman (db.lck):** Si existe un bloqueo con un proceso vivo (`pacman`, `yay`, `paru`, `pamac`) de más de 5 minutos, emite un aviso preventivo indicando el comando, tiempo y terminal (`pts/...`) antes de pedir confirmación.
+6. **Informe previo:** Imprime las áreas del sistema sujetas a modificación y despliega hasta 3 títulos de entradas no leídas del archivo `NOVEDADES.md`.
+7. **Confirmación:** Solicita una única aprobación interactiva antes de proceder.
 
 ## Fase 2: Aplicación y orden de ejecución
 
@@ -74,10 +75,18 @@ Si el usuario aprueba la operación, `miarch-update` aplica exclusivamente los p
 
 1. **Descarga de código:** Ejecuta `git pull --ff-only`. Si tienes cambios locales sin guardar, no descarga nada y te avisa, para no pisarlos.
 2. **Aplicación de configuraciones:** Invoca `install.sh`, copiando los archivos de `config/` y `scripts/` a `$HOME`.
-3. **Gestión de paquetes:** Instala dependencias nuevas y remueve paquetes declarados obsoletos.
-4. **Pantalla de inicio de sesión:** Configura `greetd` y sincroniza assets de `/usr/share/miarch/greeter` y `/var/lib/miarch-greeter`.
-5. **Actualización de paquetes del sistema:** Ejecuta `yay -Syu --noconfirm`.
+3. **Gestión de paquetes:** Instala dependencias nuevas y remueve paquetes declarados obsoletos. Antes de modificar paquetes invoca la función compartida `esperar_pacman` (`lib/pacman.sh`).
+4. **Pantalla de inicio de sesión:** Configura `greetd` y sincroniza assets de `/usr/share/miarch/greeter` y `/var/lib/miarch-greeter`. Si `greetd` ya está instalado (`pacman -Q greetd`), no ejecuta `pacman -S`. Si no lo está, consulta `esperar_pacman` antes de instalar.
+5. **Actualización de paquetes del sistema:** Comprueba `esperar_pacman` y ejecuta `yay -Syu --noconfirm`. Si hay un bloqueo no resuelto, omite la actualización del sistema avisando al usuario y continúa.
 6. **Reinicio del entorno gráfico:** Como última acción del proceso, recarga Hyprland y reinicia Quickshell cuando los paquetes ya están actualizados, para que no quede corriendo un binario viejo.
+
+## Gestión de bloqueos de pacman (db.lck)
+
+Para evitar bloqueos o fallos si el usuario tiene otra terminal ejecutando un paquete a medias:
+- **Sin bloqueo:** La operación continúa de inmediato sin demoras.
+- **Proceso vivo activo:** Si `pacman`, `yay`, `paru` o `pamac` están en ejecución (excluyendo procesos hijos de la propia actualización y `checkupdates`), espera hasta 90 segundos mostrando el tiempo transcurrido. Si el proceso termina durante la espera, la actualización sigue con normalidad.
+- **Bloqueo persistente:** Si agota el tiempo y el proceso sigue vivo, no falla con un error crudo: informa con claridad en español indicando el proceso, su tiempo vivo y su terminal (ej. `Hay una instalación abierta desde hace 1 h 27 min (yay -S peaclock, terminal pts/3). Respóndele o ciérrala (Ctrl+C) y vuelve a pulsar la nube.`), saltando la tarea pendiente y recordando que se reintentará en la siguiente ejecución.
+- **Bloqueo huérfano:** Si existe `/var/lib/pacman/db.lck` sin procesos activos asociados, se verifica dos veces con 2 segundos de separación para descartar carreras, se elimina con `sudo rm -f` y se emite un aviso informativo.
 
 ## Gestión de privilegios (sudo)
 
