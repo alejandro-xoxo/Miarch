@@ -1382,6 +1382,20 @@ ShellRoot {
         }
         pTapaAccion.running = true
     }
+    property bool siempreEncendido: false
+    Process {
+        id: pEncendidoCheck
+        command: [Quickshell.env("HOME") + "/.local/bin/miarch-encendido", "estado"]
+        stdout: StdioCollector { onStreamFinished: root.siempreEncendido = text.trim() === "1" }
+    }
+    Process {
+        id: pEncendidoAccion
+        onExited: pEncendidoCheck.running = true
+    }
+    function alternarSiempreEncendido() {
+        pEncendidoAccion.command = [Quickshell.env("HOME") + "/.local/bin/miarch-encendido", root.siempreEncendido ? "desactivar" : "activar"]
+        pEncendidoAccion.running = true
+    }
     function refrescarAjustes() {
         fHypr.reload(); fAjustes.reload(); fBrillo.reload(); fBrilloMax.reload()
         if (!pInfo.running) pInfo.running = true
@@ -1389,6 +1403,7 @@ ShellRoot {
         if (!pFondos.running) pFondos.running = true
         if (!pPantallasLista.running && !pPantallasAccion.running) pPantallasLista.running = true
         if (!pTapaCheck.running) pTapaCheck.running = true
+        if (!pEncendidoCheck.running) pEncendidoCheck.running = true
     }
 
     // Audio: hay que "seguir" los nodos para poder leer su volumen
@@ -1958,6 +1973,14 @@ ShellRoot {
                                 Interruptor {
                                     encendido: root.tapaSinSuspender
                                     onAlternar: root.alternarTapaSinSuspender()
+                                }
+                            }
+                            Fila {
+                                etiqueta: "Mantener encendido con el cargador"
+                                detalle: "No se suspende ni se apaga por inactividad mientras esté enchufado (el botón de encendido sigue funcionando)"
+                                Interruptor {
+                                    encendido: root.siempreEncendido
+                                    onAlternar: root.alternarSiempreEncendido()
                                 }
                             }
                             Etiqueta { texto: "SESIÓN" }
