@@ -16,9 +16,9 @@ cp "$AQUI"/demo-v9.sh "$AQUI"/actualizador-sim.py "$AQUI"/crear-musica.py "$AQUI
 cp "$AQUI"/prog/* "$DEST/prog/"
 chmod +x "$DEST"/demo-v9.sh "$DEST"/prog/*.sh
 install -m755 "$AQUI/bin/tux-arch" "$BIN/tux-arch"
-install -m755 "$AQUI/bin/m-music" "$BIN/m:music"
+install -m755 "$AQUI/bin/mimusic" "$BIN/mimusic"; ln -sf mimusic "$BIN/m:music"
 echo "✔ Demo copiada a $DEST"
-echo "✔ Comandos instalados: tux-arch y m:music (en $BIN)"
+echo "✔ Comandos instalados: tux-arch y mimusic (también como m:music) (en $BIN)"
 if [ -e "$ENV" ]; then echo "• $ENV ya existe: no se toca"
 else install -m600 "$AQUI/demo.env.ejemplo" "$ENV"; echo "✔ Creado $ENV (vacío): pon tu contraseña ahí si quieres que la demo la escriba sola"; fi
 fi
@@ -34,4 +34,4 @@ if [ "${#FALTAN[@]}" -gt 0 ]; then
   echo "▲ Faltan programas: ${FALTAN[*]}"
   echo "  Instálalos con: bash $AQUI/restaurar.sh --paquetes"
 fi
-echo "Para ver el Tux: tux-arch · Para la página de música: m:music · Para la demo: ~/demo-miarch/demo-v9.sh /tmp/demo.log"
+echo "Para ver el Tux: tux-arch · Para la página de música: mimusic · Para la demo: ~/demo-miarch/demo-v9.sh /tmp/demo.log"

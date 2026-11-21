@@ -1,16 +1,16 @@
 #!/bin/bash
 # SPDX-License-Identifier: GPL-3.0-or-later
-# m:music: abre la página de música en el monitor con foco: cava grande, la letra de la canción, peaclock, cbonsai y pipes.sh.
-#   m:music            abre las 5 ventanas flotantes (clase m-music), una detrás de otra
-#   m:music --play     además reanuda la canción cuando aparece cava (por defecto NO toca la música)
-#   m:music --cerrar   cierra solo esas ventanas
-#   m:music --seco     muestra qué abriría y dónde, sin abrir nada
+# mimusic: abre la página de música en el monitor con foco: cava grande, la letra de la canción, peaclock, cbonsai y pipes.sh.
+#   mimusic            abre las 5 ventanas flotantes (clase m-music), una detrás de otra
+#   mimusic --play     además reanuda la canción cuando aparece cava (por defecto NO toca la música)
+#   mimusic --cerrar   cierra solo esas ventanas
+#   mimusic --seco     muestra qué abriría y dónde, sin abrir nada
 set -u
 PLAY=0; SECO=0; CERRAR=0
-for a in "$@"; do case "$a" in --play) PLAY=1;; --seco) SECO=1;; --cerrar) CERRAR=1;; -h|--help) sed -n '2,7p' "$0"; exit 0;; *) echo "m:music: opción desconocida: $a" >&2; exit 2;; esac; done
+for a in "$@"; do case "$a" in --play) PLAY=1;; --seco) SECO=1;; --cerrar) CERRAR=1;; -h|--help) sed -n '2,6p' "$0"; exit 0;; *) echo "mimusic: opción desconocida: $a" >&2; exit 2;; esac; done
 cerrar() { for a in $(hyprctl clients -j | python3 -c "import json,sys; print(' '.join(c['address'] for c in json.load(sys.stdin) if c['class']=='m-music'))"); do hyprctl dispatch "hl.dsp.window.close({ window = \"address:$a\" })" >/dev/null; done; }
 [ "$CERRAR" = 1 ] && { cerrar; exit 0; }
-for c in cava sptlrx peaclock cbonsai pipes.sh; do command -v "$c" >/dev/null || echo "m:music: aviso, falta $c (esa ventana no se abrirá)" >&2; done
+for c in cava sptlrx peaclock cbonsai pipes.sh; do command -v "$c" >/dev/null || echo "mimusic: aviso, falta $c (esa ventana no se abrirá)" >&2; done
 read -r MX MY W H < <(hyprctl monitors -j | python3 -c "import json,sys; m=next(m for m in json.load(sys.stdin) if m['focused']); print(m['x'], m['y'], int(m['width']/m['scale']), int(m['height']/m['scale']))")
 # medidas pensadas para 1920x1080 y escaladas al monitor con foco
 e() { python3 -c "print(int($1))"; }

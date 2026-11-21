@@ -1,12 +1,12 @@
 # Demo personal de Miarch
 
 Rama **personal**, aparte de Miarch: no está en `main` ni en `develop`, así que el actualizador (que sigue `main`) **no la entrega a nadie**.
-Guarda los guiones para grabar el vídeo de Miarch y dos comandos, para no perderlos al cambiar de equipo.
+Guarda los guiones para grabar el vídeo de Miarch y dos comandos (`tux-arch` y `mimusic`), para no perderlos al cambiar de equipo.
 
 ## Qué hay
 - `demo-v9.sh`: la demo en una sola toma (login, música, fondos, terminales, paneles, actualizador simulado y bloqueo final). Graba solo un monitor.
 - `bin/tux-arch`: dibuja el Tux de letras con "Miarch / By / alejandro-xoxo" (`tux-arch --ventana` lo abre en una terminal normal).
-- `bin/m-music`: se instala como `m:music`; abre la página de música (cava, letra, peaclock, cbonsai y pipes.sh).
+- `bin/mimusic`: se instala como `mimusic` (y como alias `m:music`); abre la página de música (cava, letra, peaclock, cbonsai y pipes.sh).
 - `prog/`, `actualizador-sim.py`, `tux.png`: lo que usan los anteriores.
 - `crear-musica.py`: genera una canción **original** de ambiente club (128 BPM, numpy, sin copyright): `python3 crear-musica.py salida.wav`. Se usa con `MIARCH_DEMO_MUSICA` en `demo.env`.
 - `paquetes.txt`: los programas necesarios (oficiales y de AUR). **No** están en `packages.sh`.
