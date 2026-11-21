@@ -508,6 +508,17 @@ hl.bind("XF86AudioPause", hl.dsp.exec_cmd("playerctl play-pause"), { locked = tr
 hl.bind("XF86AudioPlay",  hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
 hl.bind("XF86AudioPrev",  hl.dsp.exec_cmd("playerctl previous"),   { locked = true })
 
+-- Tapa del portátil: apagar pantalla interna al cerrar la tapa con monitor externo conectado (opcional)
+do
+    local marca = (os.getenv("HOME") or "") .. "/.config/miarch/tapa-sin-suspender"
+    local f = io.open(marca, "r")
+    if f then
+        f:close()
+        hl.bind("switch:on:Lid Switch", hl.dsp.exec_cmd("~/.local/bin/miarch-tapa --pantalla cerrar"), { locked = true })
+        hl.bind("switch:off:Lid Switch", hl.dsp.exec_cmd("~/.local/bin/miarch-tapa --pantalla abrir"), { locked = true })
+    end
+end
+
 
 --------------------------------
 ---- WINDOWS AND WORKSPACES ----
