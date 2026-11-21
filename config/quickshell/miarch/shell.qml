@@ -3009,7 +3009,8 @@ ShellRoot {
     }
     Process {
         id: pLog
-        command: ["sh", "-c", "journalctl -b -n 26 --no-pager -o short-monotonic 2>/dev/null || journalctl --user -b -n 26 --no-pager -o short-monotonic 2>/dev/null"]
+        // Modo demo (para grabar vídeos): el registro real no enseña el nombre de tu equipo, que sale en cada línea
+        command: ["sh", "-c", "{ journalctl -b -n 26 --no-pager -o short-monotonic 2>/dev/null || journalctl --user -b -n 26 --no-pager -o short-monotonic 2>/dev/null; }" + (root.demo ? " | { H=$(cat /etc/hostname 2>/dev/null); if [ -n \"$H\" ]; then sed \"s/$H/miarch/g\"; else cat; fi; }" : "")]
         stdout: StdioCollector {
             onStreamFinished: {
                 const l = text.split("\n").map(x => x.trim()).filter(x => x.length > 0)
