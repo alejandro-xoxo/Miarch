@@ -3,6 +3,9 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-20.109 · Las teclas del desbloqueo vuelven a oírse en las grabaciones
+El sonido de teclas al desbloquear se reproducía de una forma que los grabadores de pantalla no captaban. Ahora se reproduce con `paplay` (con `pw-play` de respaldo), como el resto del audio del sistema, así que se oye al grabar un vídeo.
+
 ## 2026-11-20.108 · La tapa cerrada se respeta al arrancar
 Si arrancas el escritorio con la tapa del portátil ya cerrada y un monitor externo conectado, la pantalla interna se apaga sola, sin tener que abrir y cerrar la tapa.
 
