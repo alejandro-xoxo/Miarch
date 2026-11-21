@@ -3,6 +3,9 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-20.110 · Nuevo comando mimusic
+Escribe `mimusic` en una terminal y se abre una página de música en el monitor con foco: `cava` grande, la letra de la canción, `peaclock`, `cbonsai` y `pipes.sh`. Se adapta al tamaño y a la orientación de tu pantalla y deja libre la barra. Los programas son opcionales: instala los que quieras (`cava`, `sptlrx-bin`, `peaclock`, `cbonsai`, `pipes.sh`) y el resto se salta. Al terminar cierra la terminal desde la que lo escribiste (`--quedarme` para que no lo haga; `mimusic --cerrar` cierra las ventanas).
+
 ## 2026-11-20.109 · Las teclas del desbloqueo vuelven a oírse en las grabaciones
 El sonido de teclas al desbloquear se reproducía de una forma que los grabadores de pantalla no captaban. Ahora se reproduce con `paplay` (con `pw-play` de respaldo), como el resto del audio del sistema, así que se oye al grabar un vídeo.
 
