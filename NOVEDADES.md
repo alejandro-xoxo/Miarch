@@ -6,6 +6,9 @@ Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentr
 ## 2026-11-21.112 · Blender instalado con Miarch
 Miarch instala Blender (modelado, animación y render 3D) desde el repositorio oficial. Son unos 200 MB de descarga y bastante más instalado; se añade solo al actualizar. Si tu gráfica es Intel antigua, el visor 3D va con la GPU pero el render usa el procesador.
 
+## 2026-11-21.111 · Equipo encendido con el cargador conectado
+Con el cargador conectado, Miarch bloquea suspensión, hibernación, inactividad y apagado automático por tapa. Se activa desde Ajustes → Energía; el botón de encendido sigue funcionando.
+
 ## 2026-11-20.110 · Nuevo comando mimusic
 Escribe `mimusic` en una terminal y se abre una página de música en el monitor con foco: `cava` grande, la letra de la canción, `peaclock`, `cbonsai` y `pipes.sh`. Se adapta al tamaño y a la orientación de tu pantalla y deja libre la barra. Los programas son opcionales: instala los que quieras (`cava`, `sptlrx-bin`, `peaclock`, `cbonsai`, `pipes.sh`) y el resto se salta. Al terminar cierra la terminal desde la que lo escribiste (`--quedarme` para que no lo haga; `mimusic --cerrar` cierra las ventanas).
 

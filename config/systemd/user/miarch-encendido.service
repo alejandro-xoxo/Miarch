@@ -1,0 +1,11 @@
+[Unit]
+Description=Miarch: no suspender con el cargador conectado
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/miarch-encendido demonio
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

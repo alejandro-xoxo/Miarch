@@ -58,9 +58,16 @@ mkdir -p "$HOME/.config" "$HOME/.local/bin" "$WALL_DIR"
 # SCRIPTS (van a ~/.local/bin)
 # =========================
 ui_etapa "Instalando los scripts de Miarch"
-for f in wallpaper.sh miarch-colors miarch-pantallas miarch-set miarch-wifi miarch-bluetooth miarch-info miarch-fetch miarch-update miarch-chrome-tema miarch-modo-juego miarch-steam miarch-volumen mimusic miarch-tapa; do
+for f in wallpaper.sh miarch-colors miarch-pantallas miarch-set miarch-wifi miarch-bluetooth miarch-info miarch-fetch miarch-update miarch-chrome-tema miarch-modo-juego miarch-steam miarch-volumen mimusic miarch-tapa miarch-encendido; do
     [ -f "$DOTFILES_DIR/scripts/$f" ] && install -Dm755 "$DOTFILES_DIR/scripts/$f" "$HOME/.local/bin/$f"
 done
+
+# Servicio opcional: solo se habilita si el usuario ya activó la marca desde Ajustes.
+install -Dm644 "$CONFIG_DIR/systemd/user/miarch-encendido.service" "$HOME/.config/systemd/user/miarch-encendido.service"
+systemctl --user daemon-reload 2>/dev/null || true
+if [ -e "$HOME/.config/miarch/siempre-encendido" ]; then
+    systemctl --user enable --now miarch-encendido.service 2>/dev/null || true
+fi
 
 # =========================
 # CONFIGURACIONES

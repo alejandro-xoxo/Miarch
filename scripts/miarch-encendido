@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+set -u
+
+PS="${MIARCH_ENCENDIDO_PS:-/sys/class/power_supply}"
+MARCA="${MIARCH_ENCENDIDO_MARCA:-$HOME/.config/miarch/siempre-encendido}"
+SERVICIO=miarch-encendido.service
+
+uso() {
+    cat <<'EOF'
+Uso: miarch-encendido {demonio|activar|desactivar|estado}
+  demonio     Bloquea suspensión, inactividad y acción de tapa con cargador conectado.
+  activar     Activa el servicio de usuario.
+  desactivar  Desactiva el servicio de usuario.
+  estado      Imprime 1 si la opción está activada y 0 si no.
+EOF
+}
+
+hay_alimentacion_externa() {
+    local archivo tipo valor hay_red=0
+    for archivo in "$PS"/*/type; do
+        [ -f "$archivo" ] || continue
+        tipo="$(<"$archivo")"
+        case "$tipo" in Mains|USB) hay_red=1 ;; *) continue ;; esac
+        valor=""
+        IFS= read -r valor < "${archivo%/type}/online" 2>/dev/null || true
+        [ "$valor" = 1 ] && return 0
+    done
+    # Equipos sin fuente de alimentación de red reportada (p. ej. sobremesas).
+    [ "$hay_red" -eq 0 ]
+}
+
+demonio() {
+    local inhibidor=""
+    terminar() {
+        if [ -n "$inhibidor" ]; then
+            kill "$inhibidor" 2>/dev/null || true
+            wait "$inhibidor" 2>/dev/null || true
+            inhibidor=""
+        fi
+    }
+    trap terminar EXIT
+    trap 'exit 0' INT TERM
+    while :; do
+        if hay_alimentacion_externa; then
+            if [ -z "$inhibidor" ] || ! kill -0 "$inhibidor" 2>/dev/null; then
+                systemd-inhibit --what=sleep:idle:handle-lid-switch --who=Miarch --why="Cargador conectado: no suspender" --mode=block sleep infinity &
+                inhibidor=$!
+            fi
+        elif [ -n "$inhibidor" ]; then
+            terminar
+        fi
+        sleep "${MIARCH_ENCENDIDO_INTERVALO:-5}"
+    done
+}
+
+accion() {
+    local operacion="$1"
+    if [ "$operacion" = activar ]; then
+        mkdir -p "$(dirname "$MARCA")"
+        : > "$MARCA"
+        if ! systemctl --user enable --now "$SERVICIO"; then
+            printf '[miarch-encendido] No se pudo activar el servicio de usuario.\n' >&2
+        fi
+    else
+        if ! systemctl --user disable --now "$SERVICIO"; then
+            printf '[miarch-encendido] No se pudo desactivar el servicio de usuario.\n' >&2
+        fi
+        rm -f "$MARCA"
+    fi
+    return 0
+}
+
+case "${1:-}" in
+    demonio) [ "$#" -eq 1 ] || { uso >&2; exit 2; }; demonio ;;
+    activar|desactivar) [ "$#" -eq 1 ] || { uso >&2; exit 2; }; accion "$1" ;;
+    estado) [ "$#" -eq 1 ] || { uso >&2; exit 2; }; [ -e "$MARCA" ] && echo 1 || echo 0 ;;
+    -h|--help) [ "$#" -eq 1 ] || { uso >&2; exit 2; }; uso ;;
+    *) uso >&2; exit 2 ;;
+esac
