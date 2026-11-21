@@ -516,6 +516,15 @@ do
         f:close()
         hl.bind("switch:on:Lid Switch", hl.dsp.exec_cmd("~/.local/bin/miarch-tapa --pantalla cerrar"), { locked = true })
         hl.bind("switch:off:Lid Switch", hl.dsp.exec_cmd("~/.local/bin/miarch-tapa --pantalla abrir"), { locked = true })
+        -- Los atajos solo saltan al mover la tapa: si ya está cerrada al arrancar, se aplica el estado actual
+        hl.on("hyprland.start", function()
+            local e = io.popen("cat /proc/acpi/button/lid/*/state 2>/dev/null")
+            local estado = e and e:read("*a") or ""
+            if e then e:close() end
+            if estado:find("closed") then
+                hl.exec_cmd("sleep 2 && ~/.local/bin/miarch-tapa --pantalla cerrar")
+            end
+        end)
     end
 end
 
