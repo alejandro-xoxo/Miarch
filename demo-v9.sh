@@ -5,7 +5,7 @@ S=$HOME/demo-miarch
 LOG=${1:-/tmp/miarch-demo-v9.log}; PRUEBA=0; SECO=0
 [ "${2:-}" = "--prueba" ] && PRUEBA=1
 [ "${2:-}" = "--seco" ] && SECO=1
-MIARCH_DEMO_PASS=; MIARCH_DEMO_PANTALLA=HDMI-A-1; MIARCH_DEMO_BLOQUEO_SEG=3
+MIARCH_DEMO_MUSICA=; MIARCH_DEMO_PASS=; MIARCH_DEMO_PANTALLA=HDMI-A-1; MIARCH_DEMO_BLOQUEO_SEG=3
 if [ "$SECO" = 0 ] && [ "$PRUEBA" = 0 ]; then [ -f ~/.config/miarch/personal/demo.env ] && . ~/.config/miarch/personal/demo.env; fi
 PANT=$MIARCH_DEMO_PANTALLA; EDP=$(hyprctl monitors -j | python3 -c "import json,sys; print(next((m['name'] for m in json.load(sys.stdin) if m['name']!='$PANT'),''))")
 RITMO=1; [ $PRUEBA = 1 ] && RITMO=0.25
@@ -55,7 +55,7 @@ cerrar_direcciones() { local a x; for a in "$@"; do [ -n "$a" ] || continue; hy 
 cerrar_demo() { [ "${#DEMO_ADDRS[@]}" -gt 0 ] && cerrar_direcciones "${DEMO_ADDRS[@]}"; }
 if [ "$SECO" = 1 ]; then
   log "modo seco: plan; tiempos relativos en segundos"
-  for c in hyprctl qs wtype pw-play playerctl gpu-screen-recorder notify-send kitty python3 ffmpeg pgrep pkill setsid awk cat date du cut grep head seq sleep tr mv rm kill; do
+  for c in hyprctl qs wtype paplay playerctl gpu-screen-recorder notify-send kitty python3 ffmpeg pgrep pkill setsid awk cat date du cut grep head seq sleep tr mv rm kill; do
     command -v "$c" >/dev/null 2>&1 && log "  comando disponible: $c" || log "  FALLO falta comando: $c"
   done
   if command -v wallpaper.sh >/dev/null 2>&1 || command -v "$HOME/.local/bin/wallpaper.sh" >/dev/null 2>&1; then log "  comando disponible: wallpaper.sh"; else log "  FALLO falta comando: wallpaper.sh"; fi
@@ -84,7 +84,14 @@ fi
 CUR=$(hyprctl cursorpos | tr -d " "); REC=""; FONDO=$(cat ~/.cache/miarch-wallpaper 2>/dev/null); ESTADO=$(playerctl status 2>/dev/null)
 VOL_ORIG=$(playerctl volume 2>/dev/null)
 # Baja el volumen de Spotify (solo su reproductor por MPRIS, nunca el del sistema) hasta casi 0 en ~4 s.
-bajar_volumen() { local v0=${VOL_ORIG:-0.9} i pasos=16 v; for ((i=1;i<=pasos;i++)); do v=$(awk "BEGIN{printf \"%.3f\", $v0*(1-$i/$pasos)}"); playerctl volume "$v" 2>/dev/null; sleep 0.25; done; log "volumen de la música bajado gradualmente (original $v0)"; }
+# Música propia (MIARCH_DEMO_MUSICA=ruta en demo.env): se reproduce con paplay en vez de Spotify (pw-play no llega a la grabación), así cava va a la par y el audio del vídeo queda libre de derechos.
+id_flujo_musica() { pw-dump 2>/dev/null | python3 -c "
+import json,sys
+for o in json.load(sys.stdin):
+    p=o.get('info',{}).get('props',{})
+    if p.get('media.class')=='Stream/Output/Audio' and 'paplay' in (p.get('application.name','')+p.get('application.process.binary','')): print(o['id']); break"; }
+bajar_volumen_archivo() { local id i; id=$(id_flujo_musica); [ -n "$id" ] || { log "aviso: no se encontró el flujo de la música propia"; return; }; for i in $(seq 1 16); do wpctl set-volume "$id" "$(awk "BEGIN{printf \"%.3f\", 0.9*(1-$i/16)}")" 2>/dev/null; sleep 0.25; done; log "música propia bajada gradualmente"; }
+bajar_volumen() { if [ -n "${MUSICA_PID:-}" ] && kill -0 "$MUSICA_PID" 2>/dev/null; then bajar_volumen_archivo; return; fi; local v0=${VOL_ORIG:-0.9} i pasos=16 v; for ((i=1;i<=pasos;i++)); do v=$(awk "BEGIN{printf \"%.3f\", $v0*(1-$i/$pasos)}"); playerctl volume "$v" 2>/dev/null; sleep 0.25; done; log "volumen de la música bajado gradualmente (original $v0)"; }
 restaurar_volumen() { [ -n "$VOL_ORIG" ] && playerctl volume "$VOL_ORIG" 2>/dev/null; }
 limpiar() {
   cerrar_paneles; q notif cerrar
@@ -101,6 +108,7 @@ limpiar() {
   registrar_demos_nuevos ""
   cerrar_demo
   [ "$ESTADO" != "Playing" ] && playerctl pause 2>/dev/null
+  [ -n "${MUSICA_PID:-}" ] && kill "$MUSICA_PID" 2>/dev/null
   restaurar_volumen
   cambiar_fondo "$FONDO_FINAL" >/dev/null 2>&1; log "limpieza: fondo final blanco (mujer)"
   pkill -x qs 2>/dev/null; sleep 1; (setsid -f qs -c miarch >/dev/null 2>&1 </dev/null)
@@ -116,7 +124,7 @@ recortar() {
     r() { awk "BEGIN{print $1-$T_REC}"; }
     L1=$(awk "BEGIN{print $(r $T_LOCK)+$MIARCH_DEMO_BLOQUEO_SEG}"); U1=$(awk "BEGIN{print $(r $T_UNLOCK)-0.4}")
     L2=$(awk "BEGIN{print $(r $T_LOCK2)+$MIARCH_DEMO_BLOQUEO_SEG}"); U2=$(awk "BEGIN{print $(r $T_UNLOCK2)-0.4}"); F=$(r $T_FIN)
-    ffmpeg -v error -y -i "$BRUTO" -filter_complex "[0:v]trim=0:$L1,setpts=PTS-STARTPTS[v1];[0:a]atrim=0:$L1,asetpts=PTS-STARTPTS[a1];[0:v]trim=$U1:$L2,setpts=PTS-STARTPTS[v2];[0:a]atrim=$U1:$L2,asetpts=PTS-STARTPTS[a2];[0:v]trim=$U2:$F,setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=3[v3];[0:a]atrim=$U2:$F,asetpts=PTS-STARTPTS,apad=pad_dur=3[a3];[v1][a1][v2][a2][v3][a3]concat=n=3:v=1:a=1[v][a]" -map "[v]" -map "[a]" -c:v libx264 -preset fast -crf 18 -c:a aac "$V" 2>>$LOG && rm -f "$BRUTO" && log "recortado: bloqueos $L1→$U1 y $L2→$U2; congelado final 3 s" || { mv "$BRUTO" "$V"; log "no se pudo recortar; vídeo sin recortar"; }
+    ffmpeg -v error -y -i "$BRUTO" -filter_complex "[0:v]trim=0:$L1,setpts=PTS-STARTPTS[v1];[0:a]atrim=0:$L1,asetpts=PTS-STARTPTS[a1];[0:v]trim=$U1:$L2,setpts=PTS-STARTPTS[v2];[0:a]atrim=$U1:$L2,asetpts=PTS-STARTPTS[a2];[0:v]trim=$U2:$F,setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=3[v3];[0:a]atrim=$U2:$F,asetpts=PTS-STARTPTS,apad=pad_dur=3[a3];[v1][a1][v2][a2][v3][a3]concat=n=3:v=1:a=1[v][a]" -map "[v]" -map "[a]" -c:v libx264 -preset fast -crf 18 -c:a aac "$V" 2>>$LOG && rm -f "$BRUTO" && { log "recortado: bloqueos $L1→$U1 y $L2→$U2; congelado final 3 s"; if [ -n "${T_PLAY:-}" ]; then SEG=$(awk "BEGIN{printf \"%.1f\", ($T_PLAY-$T_REC)-($U1-$L1)}"); log "SINCRONIZAR: la canción empieza en el segundo $SEG del vídeo final. En TikTok pon el sonido desde ahí, desde el principio de la canción"; fi; } || { mv "$BRUTO" "$V"; log "no se pudo recortar; vídeo sin recortar"; }
   else mv "$BRUTO" "$V"; fi
 }
 trap limpiar EXIT
@@ -138,7 +146,7 @@ bloquear_y_esperar() {
       log "  aviso: IPC lock estado no existe; no se escribió contraseña; se espera sonido de desbloqueo (máx. 150 s)"
       local i
       for ((i=0; i<300; i++)); do
-        if pgrep -f 'pw-play.*desbloqueo' >/dev/null 2>&1; then log "desbloqueo detectado por sonido (respaldo)"; return 0; fi
+        if pgrep -f '(paplay|pw-play).*desbloqueo' >/dev/null 2>&1; then log "desbloqueo detectado por sonido (respaldo)"; return 0; fi
         sleep 0.5
       done
       log "ERROR: sin estado IPC ni sonido de desbloqueo tras 150 s; se requiere intervención manual"
@@ -158,7 +166,7 @@ bloquear_y_esperar() {
   for ((i=0; i<300; i++)); do
     estado=$(estado_lock)
     [ "$estado" = libre ] && { log "desbloqueo confirmado por estado IPC"; return 0; }
-    if pgrep -f 'pw-play.*desbloqueo' >/dev/null 2>&1; then sonido=1; fi
+    if pgrep -f '(paplay|pw-play).*desbloqueo' >/dev/null 2>&1; then sonido=1; fi
     [ "$sonido" = 1 ] && { log "desbloqueo detectado por sonido (señal secundaria)"; return 0; }
     sleep 0.5
   done
@@ -230,7 +238,8 @@ for _ in 1 2 3 4 5 6 7 8 9 10; do
   [ "$(nvent_titulo cava 2)" -gt 0 ] && break
   sleep 0.2
 done
-  if [ "$(nvent_titulo cava 2)" -gt 0 ]; then playerctl play 2>/dev/null; log "cava visible; playerctl play enviado"; else comprobar "cava visible antes de reanudar" false; fi
+  if [ "$(nvent_titulo cava 2)" -gt 0 ]; then if [ -n "${MIARCH_DEMO_MUSICA:-}" ] && [ -f "$MIARCH_DEMO_MUSICA" ] && command -v pw-play >/dev/null 2>&1; then F="$MIARCH_DEMO_MUSICA"; case "$F" in *.wav|*.ogg|*.flac) ;; *) ffmpeg -v error -y -i "$F" /tmp/miarch-demo-musica.wav 2>/dev/null && F=/tmp/miarch-demo-musica.wav;; esac   # paplay lee wav/ogg/flac
+  paplay --volume=58982 "$F" >/dev/null 2>&1 & MUSICA_PID=$!; log "cava visible; música propia en marcha: $(basename "$MIARCH_DEMO_MUSICA")"; else playerctl position 0 2>/dev/null; playerctl play 2>/dev/null; log "cava visible; canción reiniciada desde el principio y en marcha (para sincronizar cava)"; fi; T_PLAY=$(date +%s.%N); else comprobar "cava visible antes de reanudar" false; fi
 abrir_musica sptlrx "size 1250 98; move 22 960"
 abrir_musica peaclock "size 608 230; move 1290 68"
 abrir_musica cbonsai "size 608 420; move 1290 310"
@@ -309,12 +318,12 @@ medir_escena; log "escena 11: escritorio 2, música visible 4 s y bloqueo final"
 comprobar "música visible en escritorio 2 antes del bloqueo final" "[ \"$(nvent 2)\" -ge 5 ]"
 bajar_volumen   # ~4 s con la página de música a la vista; para cuando empieza el login casi no se oye
 if [ $PRUEBA = 0 ]; then
-  for i in $(seq 1 40); do pgrep -f 'pw-play.*desbloqueo' >/dev/null || break; sleep 0.5; done
+  for i in $(seq 1 40); do pgrep -f '(paplay|pw-play).*desbloqueo' >/dev/null || break; sleep 0.5; done
   comprobar "bloqueo final emitido estando en escritorio 2" "[ \"$(activo)\" = 2 ]"
   T_LOCK2=$(date +%s.%N); bloquear_y_esperar final || exit 1
   T_UNLOCK2=$(date +%s.%N); log "desbloqueado (final) $(date +%T)"
   # El título MIARCH empieza a aparecer a los ~2,6 s de la entrada: en ese momento se pausa la canción y se restaura su volumen
-  sleep 2.6; playerctl pause 2>/dev/null; restaurar_volumen; log "música pausada al aparecer MIARCH"
+  sleep 2.6; playerctl pause 2>/dev/null; [ -n "${MUSICA_PID:-}" ] && kill "$MUSICA_PID" 2>/dev/null; restaurar_volumen; log "música pausada al aparecer MIARCH"
   cerrar_direcciones "${MUSIC_ADDRS[@]}"
   MUSIC_ADDRS=()
   sleep 1.0   # el título y la firma ya están completos (la firma llega al 100 % a los ~3,8 s)
