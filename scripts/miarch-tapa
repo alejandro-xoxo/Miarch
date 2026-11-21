@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Miarch · no suspender al cerrar la tapa del portátil (opcional)
+set -euo pipefail
+
+MARCA="${MIARCH_TAPA_MARCA:-$HOME/.config/miarch/tapa-sin-suspender}"
+LOGIND_DIR="${MIARCH_LOGIND_DIR:-/etc/systemd/logind.conf.d}"
+CONF_FILE="$LOGIND_DIR/50-miarch-tapa.conf"
+PROC_DIR="${MIARCH_PROC_DIR:-/proc}"
+SYS_DIR="${MIARCH_SYS_DIR:-/sys}"
+
+CONTENIDO_ESPERADO="[Login]
+HandleLidSwitch=ignore
+HandleLidSwitchExternalPower=ignore
+HandleLidSwitchDocked=ignore
+"
+
+es_portatil() {
+    local f
+    for f in "$PROC_DIR"/acpi/button/lid/* "$SYS_DIR"/class/power_supply/BAT*; do
+        [ -e "$f" ] && return 0
+    done
+    return 1
+}
+
+pendiente() {
+    [ -f "$MARCA" ] || return 1
+    es_portatil || return 1
+    [ ! -f "$CONF_FILE" ] && return 0
+    if ! printf '%s' "$CONTENIDO_ESPERADO" | cmp -s - "$CONF_FILE"; then
+        return 0
+    fi
+    return 1
+}
+
+aplicar() {
+    local tmp
+    tmp="$(mktemp)"
+    printf '%s' "$CONTENIDO_ESPERADO" > "$tmp"
+    sudo install -Dm644 "$tmp" "$CONF_FILE"
+    rm -f "$tmp"
+    sudo systemctl kill -s HUP systemd-logind
+}
+
+quitar() {
+    sudo rm -f "$CONF_FILE"
+    sudo systemctl kill -s HUP systemd-logind
+}
+
+pantalla() {
+    local accion="${1:-}"
+    if [ "$accion" != "cerrar" ] && [ "$accion" != "abrir" ]; then
+        echo "Uso: miarch-tapa --pantalla cerrar|abrir" >&2
+        return 1
+    fi
+
+    python3 - "$accion" <<'PY'
+import sys, json, subprocess
+
+accion = sys.argv[1]
+
+def get_monitors(args):
+    try:
+        p = subprocess.run(["hyprctl"] + args, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+        if p.returncode == 0 and p.stdout.strip():
+            return json.loads(p.stdout)
+    except Exception:
+        pass
+    return []
+
+monitors = get_monitors(["monitors", "-j"])
+all_monitors = get_monitors(["monitors", "all", "-j"]) or monitors
+
+edp_name = None
+for m in all_monitors:
+    name = m.get("name", "")
+    if name.startswith("eDP"):
+        edp_name = name
+        break
+if not edp_name:
+    for m in monitors:
+        name = m.get("name", "")
+        if name.startswith("eDP"):
+            edp_name = name
+            break
+if not edp_name:
+    edp_name = "eDP-1"
+
+activos = [m for m in monitors if not m.get("disabled", False)]
+otro_activo = any(not m.get("name", "").startswith("eDP") for m in activos)
+
+if accion == "cerrar":
+    if otro_activo:
+        subprocess.run(["hyprctl", "eval", f'hl.monitor({{ output = "{edp_name}", disabled = true }})'])
+elif accion == "abrir":
+    subprocess.run(["hyprctl", "eval", f'hl.monitor({{ output = "{edp_name}", mode = "preferred", position = "auto", scale = "auto" }})'])
+PY
+}
+
+case "${1:-}" in
+    --pendiente)
+        if pendiente; then
+            exit 0
+        else
+            exit 1
+        fi
+        ;;
+    --aplicar)
+        aplicar
+        ;;
+    --quitar)
+        quitar
+        ;;
+    --pantalla)
+        pantalla "${2:-}"
+        ;;
+    *)
+        echo "Uso: miarch-tapa {--pendiente|--aplicar|--quitar|--pantalla cerrar|abrir}" >&2
+        exit 1
+        ;;
+esac

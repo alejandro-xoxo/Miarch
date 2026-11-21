@@ -17,7 +17,9 @@ Al inicio del archivo se exponen las variables principales de configuración que
 - `ANIM`: Presets de animación (`slide`, `zoom`, `suave`, `elastico`, `original`).
 - `BLUR`: Nivel de desenfoque (`ninguno` hasta `extremo`).
 
-El archivo define también las reglas de ventana y los atajos de teclado globales (ver [atajos](atajos.md)). Debido a que la variable de entorno `PATH` inicial de Hyprland no incluye `~/.local/bin`, las invocaciones a utilidades locales (como `miarch-volumen`) se enlazan mediante su ruta absoluta.
+El archivo define también las reglas de ventana y los atajos de teclado globales (ver [atajos](atajos.md)). Debido a que la variable de entorno `PATH` inicial de Hyprland no incluye `~/.local/bin`, las invocaciones a utilidades locales (como `miarch-volumen` o `miarch-tapa`) se enlazan mediante su ruta absoluta.
+
+Cuando existe la marca opcional `~/.config/miarch/tapa-sin-suspender`, Hyprland enlaza los interruptores de la tapa (`switch:on:Lid Switch` y `switch:off:Lid Switch`) con flags `{ locked = true }` ejecutando `~/.local/bin/miarch-tapa --pantalla cerrar` y `--pantalla abrir`. Al cerrar la tapa, la pantalla interna del portátil (`eDP`) se apaga únicamente si existe otro monitor activo conectado (evitando quedar a oscuras si no hay pantalla externa); al abrir la tapa se reactiva en modo preferido.
 
 En mediciones de consumo sobre un procesador Intel Core i5-8365U con cargas concurrentes (Chrome, VS Code, Spotify y Claude abiertos), Hyprland mantiene una utilización aproximada del 10% de un hilo de CPU y 230 MB de memoria RAM.
 
@@ -33,7 +35,7 @@ La interfaz de usuario del sistema está implementada en un único archivo modul
 | Barra | Borde superior | Panel persistente que aloja selector de espacios de trabajo, control de música, indicador de actualizaciones del sistema (icono de nube), estados de Bluetooth, Wi-Fi, volumen, batería, acceso a ajustes y bloqueo. |
 | Lanzador | `Super + Espacio` | Buscador de aplicaciones con soporte para coincidencias por abreviaturas y ordenación dinámica según frecuencia de uso. |
 | Conexiones | Clic en la barra | Paneles emergentes para la administración de interfaces Wi-Fi y dispositivos Bluetooth. |
-| Ajustes | `Super + Esc` | Centro de configuración del sistema dividido en red, sonido, pantallas, pantalla, apariencia, teclado y ratón, accesibilidad, energía y sistema. Permite ver la disposición lógica de pantallas, intercambiarlas de lado, elegir la principal e identificarlas visualmente (`miarch-pantallas`), y aplica variables de entorno mediante `miarch-set`. La nueva disposición de pantallas se aplica recargando la configuración de Hyprland (`hyprctl reload`). |
+| Ajustes | `Super + Esc` | Centro de configuración del sistema dividido en red, sonido, pantallas, pantalla, apariencia, teclado y ratón, accesibilidad, energía y sistema. Permite ver la disposición lógica de pantallas, intercambiarlas de lado, elegir la principal e identificarlas visualmente (`miarch-pantallas`), configurar el modo de energía o activar el comportamiento de no suspender al cerrar la tapa del portátil (`tapa-sin-suspender`), y aplica variables de entorno mediante `miarch-set`. La nueva disposición de pantallas se aplica recargando la configuración de Hyprland (`hyprctl reload`). |
 | Menú de Energía | `Super + Shift + Esc` | Interfaz de sesión estructurada en dos pestañas: Energía (bloqueo, suspensión, cierre de sesión, reinicio, apagado) y Atajos. |
 | Menú IA | `Super + C` | Menú de lanzadores de herramientas de inteligencia artificial con iconos de LobeHub Icons (licencia MIT): Claude Desktop (`claude-desktop`), Codex App (`openai-chatgpt`), Antigravity (`antigravity`) y Hermes Desktop (`~/.hermes`). Las aplicaciones no instaladas se renderizan atenuadas. |
 | Bloqueo | `Super + L` | Bloqueo de sesión (`WlSessionLock` + PAM) con secuencia de entrada cinematográfica. Ver más abajo. |

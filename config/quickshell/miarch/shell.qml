@@ -1362,12 +1362,33 @@ ShellRoot {
         command: ["sh", "-c", "find \"$(xdg-user-dir PICTURES 2>/dev/null || echo \"$HOME/Pictures\")/Wallpapers\" -maxdepth 1 -type f \\( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' -o -iname '*.gif' \\) | sort"]
         stdout: StdioCollector { onStreamFinished: root.fondos = text.trim().split("\n").filter(x => x.length > 0) }
     }
+    property bool tapaSinSuspender: false
+    Process {
+        id: pTapaCheck
+        command: ["sh", "-c", "[ -f \"$HOME/.config/miarch/tapa-sin-suspender\" ] && echo 1 || echo 0"]
+        stdout: StdioCollector { onStreamFinished: root.tapaSinSuspender = text.trim() === "1" }
+    }
+    Process {
+        id: pTapaAccion
+        onExited: pTapaCheck.running = true
+    }
+    function alternarTapaSinSuspender() {
+        if (root.tapaSinSuspender) {
+            root.tapaSinSuspender = false
+            pTapaAccion.command = ["rm", "-f", Quickshell.env("HOME") + "/.config/miarch/tapa-sin-suspender"]
+        } else {
+            root.tapaSinSuspender = true
+            pTapaAccion.command = ["sh", "-c", "mkdir -p \"$HOME/.config/miarch\" && touch \"$HOME/.config/miarch/tapa-sin-suspender\""]
+        }
+        pTapaAccion.running = true
+    }
     function refrescarAjustes() {
         fHypr.reload(); fAjustes.reload(); fBrillo.reload(); fBrilloMax.reload()
         if (!pInfo.running) pInfo.running = true
         if (!pMonitores.running) pMonitores.running = true
         if (!pFondos.running) pFondos.running = true
         if (!pPantallasLista.running && !pPantallasAccion.running) pPantallasLista.running = true
+        if (!pTapaCheck.running) pTapaCheck.running = true
     }
 
     // Audio: hay que "seguir" los nodos para poder leer su volumen
@@ -1929,6 +1950,15 @@ ShellRoot {
                             Seccion {
                                 titulo: "MODO DE ENERGÍA"; clave: "perfil"; actual: root.perfilActual
                                 opciones: [ { v: "power-saver", t: "Ahorro" }, { v: "balanced", t: "Equilibrado" }, { v: "performance", t: "Rendimiento" } ]
+                            }
+                            Etiqueta { texto: "TAPA DEL PORTÁTIL" }
+                            Fila {
+                                etiqueta: "No suspender al cerrar la tapa"
+                                detalle: "Se aplica al pulsar la nube (actualizador)"
+                                Interruptor {
+                                    encendido: root.tapaSinSuspender
+                                    onAlternar: root.alternarTapaSinSuspender()
+                                }
                             }
                             Etiqueta { texto: "SESIÓN" }
                             Flow {
