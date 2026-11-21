@@ -1,0 +1,94 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# mimusic: página de música en el monitor con foco: cava grande, la letra de la canción, peaclock, cbonsai y pipes.sh.
+#   mimusic            abre las ventanas flotantes (clase m-music), una detrás de otra, y cierra la terminal desde la que lo escribes
+#   mimusic --play     además reanuda la canción cuando aparece cava (por defecto NO toca la música)
+#   mimusic --cerrar   cierra solo esas ventanas
+#   mimusic --seco     muestra qué abriría y dónde (y qué terminal cerraría), sin abrir ni cerrar nada
+#   mimusic --quedarme no cierra la terminal desde la que lo escribes
+# Se adapta al monitor con foco: usa su tamaño lógico (con escala), descuenta la barra y gira el reparto en pantallas verticales.
+# Los programas (cava, sptlrx, peaclock, cbonsai, pipes.sh) son opcionales y no los instala Miarch: los que falten se saltan.
+set -u
+PLAY=0; SECO=0; CERRAR=0; QUEDARME=0
+for a in "$@"; do case "$a" in --play) PLAY=1;; --seco) SECO=1;; --cerrar) CERRAR=1;; --quedarme) QUEDARME=1;; -h|--help) sed -n '2,10p' "$0"; exit 0;; *) echo "mimusic: opción desconocida: $a" >&2; exit 2;; esac; done
+
+# --- cerrar la terminal desde la que se escribió el comando (por la cadena de procesos padre, no por "la ventana activa") ---
+# Protegida: si en esa terminal corre además algo importante (claude, node, ssh, editores, tmux…), no se cierra y se avisa.
+terminal_propia() {  # imprime "address<TAB>título<TAB>motivo-de-protección"; vacío si el comando no se lanzó desde una terminal
+  python3 - <<'PY'
+import os, json, subprocess
+cl = json.loads(subprocess.run(["hyprctl", "clients", "-j"], capture_output=True, text=True).stdout or "[]")
+por_pid = {c["pid"]: c for c in cl}
+def ppid(p):
+    try: return int(open(f"/proc/{p}/stat").read().rsplit(")", 1)[1].split()[1])
+    except Exception: return 0
+p = os.getpid()
+while p > 1 and p not in por_pid: p = ppid(p)
+if p in por_pid:
+    c = por_pid[p]; prot = {"claude", "node", "codex", "agy", "ssh", "vim", "nvim", "nano", "tmux", "screen", "btop", "htop", "mosh", "less", "man"}
+    motivo = ""
+    for q in os.listdir("/proc"):
+        if not q.isdigit(): continue
+        q = int(q); r = q
+        while r > 1 and r != p: r = ppid(r)
+        if r == p:
+            try: n = open(f"/proc/{q}/comm").read().strip()
+            except Exception: continue
+            if n in prot: motivo = n; break
+    print(c["address"], c["title"], motivo, sep="\t")
+PY
+}
+cerrar_mi_terminal() {  # $1 = seco|real
+  local dato dir tit mot; dato=$(terminal_propia); [ -n "$dato" ] || return 0
+  dir=${dato%%$'\t'*}; mot=${dato##*$'\t'}; tit=${dato#*$'\t'}; tit=${tit%$'\t'*}
+  if [ -n "$mot" ]; then echo "aviso: no cierro la terminal \"$tit\" porque en ella corre $mot (usa --quedarme para no ver este aviso)" >&2; return 0; fi
+  if [ "$1" = seco ]; then echo "cerraría la terminal desde la que se escribió: \"$tit\""; return 0; fi
+  sleep 0.6; hyprctl dispatch "hl.dsp.window.close({ window = \"address:$dir\" })" >/dev/null
+}
+cerrar() { for a in $(hyprctl clients -j | python3 -c "import json,sys; print(' '.join(c['address'] for c in json.load(sys.stdin) if c['class']=='m-music'))"); do hyprctl dispatch "hl.dsp.window.close({ window = \"address:$a\" })" >/dev/null; done; }
+[ "$CERRAR" = 1 ] && { cerrar; exit 0; }
+
+# --- reparto de las ventanas según el monitor con foco ---
+# Salida: una línea por ventana "nombre x y ancho alto" (x e y relativos al monitor) y la primera línea "monitor NOMBRE ANCHOxALTO".
+geometria() {
+  hyprctl monitors -j | python3 -c '
+import json, sys
+ms = json.load(sys.stdin)
+m = next((x for x in ms if x.get("focused")), ms[0])
+w, h, sc = m["width"], m["height"], (m.get("scale") or 1)
+if m.get("transform", 0) in (1, 3, 5, 7): w, h = h, w                    # monitor girado: se intercambian ancho y alto
+lw, lh = int(w / sc), int(h / sc)                                          # tamaño lógico (con escala)
+rl, rt, rr, rb = (m.get("reserved") or [0, 0, 0, 0])                        # espacio de la barra: izquierda, arriba, derecha, abajo
+ax, ay, aw, ah = rl, rt, lw - rl - rr, lh - rt - rb                          # zona útil, relativa al monitor
+g = max(8, round(aw * 0.0115)); L = []                                      # margen = hueco entre ventanas
+print("monitor", m["name"], "%dx%d" % (aw, ah))
+def vent(n, x, y, ww, hh): L.append((n, ax + x, ay + y, max(ww, 80), max(hh, 50)))
+if aw < 800 or ah < 480:                                                   # pantalla muy pequeña: solo cava y la letra
+    hl = max(round(ah * 0.14), 50); vent("cava", g, g, aw - 2 * g, ah - 3 * g - hl); vent("sptlrx", g, ah - g - hl, aw - 2 * g, hl)
+elif aw >= ah * 1.15:                                                      # horizontal: cava + letra a la izquierda, tres a la derecha
+    ru = aw - 3 * g; lwid = round(ru * 0.673); rwid = ru - lwid; hl = round(ah * 0.0907)
+    vent("cava", g, g, lwid, ah - 3 * g - hl); vent("sptlrx", g, ah - g - hl, lwid, hl)
+    rest = ah - 2 * g - 2 * g; hs = [round(rest * f) for f in (0.238, 0.435)]; hs.append(rest - sum(hs)); y = g
+    for n, hh in zip(("peaclock", "cbonsai", "pipes"), hs): vent(n, g + lwid + g, y, rwid, hh); y += hh + g
+else:                                                                      # vertical o casi cuadrada: todo apilado
+    ru = ah - 6 * g; pesos = (("cava", 0.40), ("sptlrx", 0.07), ("peaclock", 0.10), ("cbonsai", 0.25), ("pipes", 0.18)); y = g
+    for n, f in pesos: hh = round(ru * f); vent(n, g, y, aw - 2 * g, hh); y += hh + g
+for n, x, y, ww, hh in L: print(n, x, y, ww, hh)
+'
+}
+GEO=$(geometria) || { echo "mimusic: no pude leer el monitor (¿Hyprland?)" >&2; exit 1; }
+MON=$(echo "$GEO" | awk 'NR==1{print $2}')
+orden_cmd() { case "$1" in cava) echo "cava";; sptlrx) echo "sptlrx -p mpris --before hidden --after hidden --current bold";; peaclock) echo "peaclock";; cbonsai) echo "cbonsai -li";; pipes) echo "pipes.sh";; esac; }
+HAY=0; for c in cava sptlrx peaclock cbonsai pipes.sh; do command -v "$c" >/dev/null 2>&1 && HAY=1 || echo "mimusic: aviso, falta $c (esa ventana no se abrirá)" >&2; done
+if [ "$HAY" = 0 ] && [ "$SECO" = 0 ]; then echo "mimusic: no hay ninguno de los programas instalados. Instala los que quieras: sudo pacman -S cava · yay -S sptlrx-bin peaclock cbonsai pipes.sh" >&2; exit 1; fi
+[ "$SECO" = 1 ] && echo "monitor: $(echo "$GEO" | awk 'NR==1{print $2" · zona útil "$3}')"
+[ "$SECO" = 0 ] && cerrar
+echo "$GEO" | tail -n +2 | while read -r n x y w h; do
+  cmd=$(orden_cmd "$n"); prog=${cmd%% *}
+  if [ "$SECO" = 1 ]; then echo "$n: ${w}x${h} en $x,$y → $cmd"; continue; fi
+  command -v "$prog" >/dev/null 2>&1 || continue
+  hyprctl dispatch "hl.dsp.exec_cmd(\"[monitor $MON; float; size $w $h; move $x $y] kitty --class m-music --title $n -e $cmd\")" >/dev/null
+  if [ "$n" = cava ] && [ "$PLAY" = 1 ]; then for _ in $(seq 1 15); do hyprctl clients -j | grep -q '"title": "cava"' && break; sleep 0.2; done; playerctl play 2>/dev/null; fi
+  sleep 0.5
+done
+[ "$QUEDARME" = 1 ] || { [ "$SECO" = 1 ] && cerrar_mi_terminal seco || cerrar_mi_terminal real; }
