@@ -14,6 +14,7 @@
 # Si setup.sh lanza otro script, éste continúa la misma barra (MIARCH_UI_TOTAL / MIARCH_UI_ACTUAL).
 
 UI_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+[ -f "$UI_DIR/pacman.sh" ] && source "$UI_DIR/pacman.sh"
 UI_LOG="${MIARCH_LOG:-$HOME/.cache/miarch/instalacion.log}"
 UI_STATS="${MIARCH_STATS:-$HOME/.cache/miarch/instalacion.stats}"
 mkdir -p "$(dirname "$UI_LOG")" 2>/dev/null || true
