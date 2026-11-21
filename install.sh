@@ -58,7 +58,7 @@ mkdir -p "$HOME/.config" "$HOME/.local/bin" "$WALL_DIR"
 # SCRIPTS (van a ~/.local/bin)
 # =========================
 ui_etapa "Instalando los scripts de Miarch"
-for f in wallpaper.sh miarch-colors miarch-pantallas miarch-set miarch-wifi miarch-bluetooth miarch-info miarch-fetch miarch-update miarch-chrome-tema miarch-modo-juego miarch-steam miarch-volumen miarch-tapa; do
+for f in wallpaper.sh miarch-colors miarch-pantallas miarch-set miarch-wifi miarch-bluetooth miarch-info miarch-fetch miarch-update miarch-chrome-tema miarch-modo-juego miarch-steam miarch-volumen mimusic miarch-tapa; do
     [ -f "$DOTFILES_DIR/scripts/$f" ] && install -Dm755 "$DOTFILES_DIR/scripts/$f" "$HOME/.local/bin/$f"
 done
 
