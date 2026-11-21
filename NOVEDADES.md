@@ -3,8 +3,10 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-20.106 · El actualizador repara Bluetooth
+El actualizador detecta si Bluetooth no responde o está desactivado y si iwd está inactivo para repararlos con la confirmación única, y avisa si hace falta reiniciar apps de IA para verlas nítidas.
+
 ## 2026-11-20.105 · Reproductor de vídeo
-Miarch instala `mpv`, un reproductor ligero que abre mp4, mkv y casi cualquier vídeo con aceleración por hardware. Se añade solo al actualizar.
 
 ## 2026-11-20.103 · El actualizador explica los bloqueos de pacman
 Si otra terminal tiene abierta una instalación (pacman, yay, paru o pamac), el actualizador ya no falla con un error crudo ni se detiene sin explicación: te muestra qué comando está corriendo, cuánto tiempo lleva abierto y en qué terminal está para que puedas responderle o cerrarlo con Ctrl+C. Si la instalación previa termina mientras espera (hasta 90 segundos), continúa automáticamente; y si quedó un bloqueo huérfano tras un cierre forzado, lo detecta y lo limpia sin preguntas. Además, el instalador de la pantalla de inicio de sesión no vuelve a llamar a pacman si greetd ya está en el sistema.
