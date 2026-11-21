@@ -3,6 +3,9 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-20.107 · Portátil: no suspender al cerrar la tapa (opcional)
+Ahora puedes configurar el portátil para que siga funcionando al cerrar la tapa sin suspenderse. La opción se activa con un interruptor en Ajustes → Energía (o creando `~/.config/miarch/tapa-sin-suspender`) y el actualizador la aplica de forma nativa en `/etc/systemd/logind.conf.d/50-miarch-tapa.conf` recargando logind con SIGHUP sin cerrar tu sesión. Además, al cerrar la tapa con un monitor externo conectado, la pantalla interna del portátil se apaga automáticamente para ahorrar batería y no dejar ventanas ocultas, y vuelve a encenderse al abrirla; si no hay ninguna pantalla externa conectada, la pantalla no se apaga para que no te quedes a oscuras.
+
 ## 2026-11-20.106 · El actualizador repara Bluetooth
 El actualizador detecta si Bluetooth no responde o está desactivado y si iwd está inactivo para repararlos con la confirmación única, y avisa si hace falta reiniciar apps de IA para verlas nítidas.
 

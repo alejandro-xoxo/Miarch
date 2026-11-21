@@ -22,6 +22,7 @@ flowchart TD
         WALL["scripts/wallpaper.sh"]
         INFO["scripts/miarch-info"]
         GREET["scripts/miarch-greeter-install"]
+        TAPA["scripts/miarch-tapa"]
     end
 
     subgraph System["Servicios y Sistema"]
@@ -30,9 +31,11 @@ flowchart TD
         BLUEZ["bluez (bluetoothctl)"]
         GREETD["greetd"]
         AWWW["awww"]
+        LOGIND["systemd-logind"]
     end
 
     HL -->|Ruta absoluta| VOL
+    HL -->|Ruta absoluta| TAPA
     VOL --> WP
     QS -->|JSON IPC| WIFI
     WIFI --> IWD
@@ -47,7 +50,9 @@ flowchart TD
     WALL --> COL
     UPD --> UI
     UPD --> GREET
+    UPD --> TAPA
     GREET --> GREETD
+    TAPA --> LOGIND
 ```
 
 ---
@@ -71,6 +76,7 @@ flowchart TD
 | `scripts/miarch-chrome-tema` | Limpia los parámetros de color personalizados asignados al perfil del navegador Google Chrome. | `miarch-chrome-tema` | `install.sh`, o a mano. |
 | `scripts/miarch-greeter-install` | Instalador y configurador de la pantalla de inicio de sesión (`greetd` + Quickshell). Comprueba la seguridad con `comprobar-greeter`, copia archivos y sonido a `/usr/share/miarch/greeter`, prepara `/var/lib/miarch-greeter`, respalda `/etc/greetd/config.toml` y habilita el servicio. | `./scripts/miarch-greeter-install` (con tu usuario normal, no como root: pide `sudo` por dentro) | `setup.sh`, `miarch-update` o a mano. |
 | `scripts/comprobar-greeter` | Comprobación de seguridad para la pantalla de inicio de sesión (`greetd` + Quickshell). Valida la sintaxis de `Greetd.launch`, scripts shell (`sh -n`), carga offscreen de QML y configuración en `config.toml`. | `./scripts/comprobar-greeter [RUTA_REPO]` | `scripts/miarch-greeter-install` o a mano. |
+| `scripts/miarch-tapa` | Gestión de tapa del portátil: no suspender al cerrar la tapa (`50-miarch-tapa.conf` en `systemd-logind`) y apagar la pantalla interna en Hyprland si hay un monitor externo conectado. | `miarch-tapa {--pendiente\|--aplicar\|--quitar\|--pantalla cerrar\|abrir}` | `miarch-update`, atajos de interruptor en Hyprland (`switch:on/off:Lid Switch`) o terminal. |
 | `scripts/wallpaper.sh` | Selección y asignación de fondo de pantalla aleatorio utilizando `awww`, desencadenando la actualización cromática mediante `miarch-colors`. | `wallpaper.sh` | Hyprland (al iniciar y con `Super + W`) y el panel de Ajustes. |
 | `scripts/tomar-capturas` | Automatización de capturas de pantalla para documentación en formato JPEG a 1280 px de ancho. | `tomar-capturas` | Desarrollador para generación de activos visuales del repositorio. |
 
@@ -91,3 +97,13 @@ Script encargado de la instalación, resolución de dependencias por fabricante 
 Actualizador en dos fases (ver [actualizador.md](actualizador.md)):
 
 * `--forzar`: vuelve a aplicar las configuraciones y los scripts (`install.sh`) aunque no haya cambios nuevos que descargar.
+
+### `miarch-tapa`
+
+Gestor opcional para el comportamiento de la tapa en portátiles:
+
+* `--pendiente`: comprueba si la marca `~/.config/miarch/tapa-sin-suspender` existe, si el equipo es un portátil y si `/etc/systemd/logind.conf.d/50-miarch-tapa.conf` falta o su contenido difiere (código 0 si hay que aplicar, 1 en caso contrario).
+* `--aplicar`: escribe `/etc/systemd/logind.conf.d/50-miarch-tapa.conf` con permisos 0644 mediante `sudo install -Dm644` y recarga `systemd-logind` con `sudo systemctl kill -s HUP systemd-logind`.
+* `--quitar`: elimina el archivo de configuración con `sudo rm -f` y recarga `systemd-logind` con `HUP`.
+* `--pantalla cerrar`: apaga la pantalla interna (`eDP*`) mediante Hyprland (`hl.monitor({ output = ..., disabled = true })`) únicamente si existe otro monitor activo conectado.
+* `--pantalla abrir`: reactiva la pantalla interna (`eDP*`) en modo preferido.

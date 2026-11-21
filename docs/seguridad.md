@@ -101,6 +101,26 @@ flowchart LR
   * **Fase 1 (Revisión)**: No ejecuta comandos privilegiados ni altera archivos del sistema. Consulta cambios remotos vía `git fetch`, configuraciones pendientes en `~/.cache/miarch/configs-aplicadas`, paquetes faltantes/obsoletos, y chequea actualizaciones con `checkupdates` y `yay -Qua`.
   * **Fase 2 (Aplicación)**: Solicita confirmación explícita al usuario. Tras ser autorizado, solicita `sudo` una vez y renueva la marca de tiempo automáticamente cada 45 segundos para prevenir expiraciones durante compilaciones extensas (como `quickshell-git`).
 
+### Configuración del Sistema en `/etc` (Tapa del Portátil)
+
+Cuando el usuario activa voluntariamente el no suspender al cerrar la tapa (`~/.config/miarch/tapa-sin-suspender`):
+* **Archivo modificado en `/etc`**: `/etc/systemd/logind.conf.d/50-miarch-tapa.conf` con permisos `0644`.
+* **Contenido aplicado**:
+  ```ini
+  [Login]
+  HandleLidSwitch=ignore
+  HandleLidSwitchExternalPower=ignore
+  HandleLidSwitchDocked=ignore
+  ```
+* **Recarga de `systemd-logind`**: Ejecuta `sudo systemctl kill -s HUP systemd-logind`. La señal `SIGHUP` recarga la directiva sin reiniciar el demonio ni interrumpir las sesiones activas del usuario.
+* **Procedimiento para deshacer**:
+  Eliminar el archivo marcador y ejecutar la desinstalación:
+  ```bash
+  rm -f ~/.config/miarch/tapa-sin-suspender
+  miarch-tapa --quitar
+  ```
+  Esto elimina `/etc/systemd/logind.conf.d/50-miarch-tapa.conf` y vuelve a enviar `HUP` a `systemd-logind` restaurando el comportamiento por defecto del sistema.
+
 ### Contenedores y Almacenamiento Pesado
 
 * **Grupo Docker**: La inclusión del usuario en el grupo `docker` equivale funcionalmente a privilegios de administración completa (`root`) en el sistema local.
