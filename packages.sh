@@ -53,6 +53,7 @@ PAQUETES=(
     # Aplicaciones
     dolphin qt6ct breeze-icons   # gestor de archivos + tema de Qt (qt6ct) e íconos
     spotify-launcher
+    blender                      # modelado, animación y render 3D (con gráficas Intel antiguas renderiza con la CPU)
 )
 # AUR (paquetes de la comunidad: no están firmados por Arch)
 AUR_PAQUETES=(
