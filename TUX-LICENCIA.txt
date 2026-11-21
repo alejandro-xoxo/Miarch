@@ -1,0 +1,4 @@
+Tux: Larry Ewing, Simon Budig y Garrett LeSage (Wikimedia Commons, File:Tux.svg), licencia "Attribution".
+Se permite usar y modificar la imagen citando a los autores. "Tux" es marca asociada a Linux.
+Origen: https://commons.wikimedia.org/wiki/File:Tux.svg · https://isc.tamu.edu/~lewing/linux/
+tux.png es este mismo dibujo recortado a su contorno. Sin imágenes de personajes de terceros.

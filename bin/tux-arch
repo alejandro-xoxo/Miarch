@@ -1,0 +1,18 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# tux-arch: muestra el Tux de letras (blanco y negro) con "Miarch / Arch Linux / alejandro-xoxo" debajo.
+#   tux-arch            lo dibuja en ESTA terminal (Ctrl+C para salir)
+#   tux-arch --ventana  lo abre en una terminal normal nueva (como Super+Enter; clase tux-arch)
+#   tux-arch --cerrar   cierra esa ventana
+set -u
+PY="$HOME/demo-miarch/prog/tux-texto.py"
+[ -f "$PY" ] || { echo "tux-arch: falta $PY" >&2; exit 1; }
+case "${1:-}" in
+  "") exec python3 "$PY" ;;
+  --ventana)   # terminal normal (como Super+Enter): ocupa el escritorio, con la barra visible
+    hyprctl dispatch "hl.dsp.exec_cmd(\"kitty --class tux-arch --title tux-arch -e python3 $PY\")" >/dev/null ;;
+  --cerrar)
+    for a in $(hyprctl clients -j | python3 -c "import json,sys; print(' '.join(c['address'] for c in json.load(sys.stdin) if c['class']=='tux-arch'))"); do hyprctl dispatch "hl.dsp.window.close({ window = \"address:$a\" })" >/dev/null; done ;;
+  -h|--help) sed -n '2,5p' "$0" ;;
+  *) echo "tux-arch: opción desconocida: $1 (usa --ventana, --cerrar o ninguna)" >&2; exit 2 ;;
+esac
