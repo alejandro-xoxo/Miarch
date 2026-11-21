@@ -35,16 +35,30 @@ def letra(r, g, b, al, x, y):
 def random_char(chars, x, y):
     return chars[(x * 7 + y * 13 + (x * y) % 5) % len(chars)]
 
+# Tamaños del texto de más grande a más pequeño (escala de cada línea). () = sin texto.
+DISENOS = [(3, 2, 2), (2, 1, 1), (1, 1, 1), ()]
+PRIORIDAD = 0.75      # el pingüino debe conservar al menos el 75 % del alto que tendría con la ventana entera
+
+def plan(filas, cols):
+    """Devuelve (alto del pingüino, escalas del texto). El pingüino tiene prioridad: primero se encoge el texto y, si ni así
+    el pingüino llega al 75 % de su alto máximo, el texto desaparece y el pingüino ocupa todo lo que pueda."""
+    tope = min(max(filas - 2, 6), max(int((cols - 2) / (2 * ASPECT)), 4))          # alto máximo posible (por filas y por ancho)
+    for esc in DISENOS:
+        if esc and any(len(t) * e > cols - 2 for (t, _, _), e in zip(LINEAS, esc)): continue    # el texto no cabe de ancho
+        bajo = sum(esc) + 2 if esc else 0
+        h = min(max(filas - bajo - 2, 4), tope)
+        if not esc or h >= PRIORIDAD * tope: return h, esc
+    return tope, ()
+
 def dibujar():
     try: cols, filas = os.get_terminal_size()
     except OSError: cols, filas = 120, 40
-    bajo = sum(e for _, _, e in LINEAS) + 2                  # filas para el texto, debajo del Tux
-    h = max(filas - bajo - 2, 6)                             # filas del Tux
+    h, esc = plan(filas, cols)                               # alto del Tux y tamaño del texto (el Tux tiene prioridad)
     w = int(h * 2 * ASPECT)                                  # una celda mide ~1:2
     if w > cols - 2: w = cols - 2; h = max(int(w / (2 * ASPECT)), 4)
     im = base.convert("RGBa").resize((w, h), Image.LANCZOS).convert("RGBA")   # sin halos oscuros en los bordes
     px = im.load()
-    total = h + 1 + bajo - 2; arriba = max((filas - total) // 2, 0); izq = (cols - w) // 2
+    total = h + (1 + sum(esc) if esc else 0); arriba = max((filas - total) // 2, 0); izq = (cols - w) // 2
     out = ["\x1b[2J\x1b[?25l"]
     for y in range(h):
         s = [f"\x1b[{arriba + y + 1};{izq + 1}H\x1b[1m"]
@@ -53,14 +67,15 @@ def dibujar():
             s.append(" " if c is None else f"\x1b[38;2;{c[1]};{c[2]};{c[3]}m{c[0]}")
         s.append("\x1b[0m"); out.append("".join(s))
     fila = arriba + h + 2                                    # texto normal, agrandado, centrado debajo del Tux
-    for t, est, esc in LINEAS:
-        col = max((cols - len(t) * esc) // 2, 0) + 1
-        out.append(f"\x1b[{fila};{col}H\x1b[{est}m\x1b]66;s={esc};{t}\x1b\\\x1b[0m")
-        fila += esc
+    for (t, est, _), e in zip(LINEAS, esc):
+        col = max((cols - len(t) * e) // 2, 0) + 1
+        out.append(f"\x1b[{fila};{col}H\x1b[{est}m\x1b]66;s={e};{t}\x1b\\\x1b[0m")
+        fila += e
     sys.stdout.write("".join(out)); sys.stdout.flush()
 
-time.sleep(0.6)
-while True:
-    if cambio[0]:
-        cambio[0] = False; dibujar()
-    time.sleep(0.2)
+if __name__ == "__main__":
+  time.sleep(0.6)
+  while True:
+      if cambio[0]:
+          cambio[0] = False; dibujar()
+      time.sleep(0.2)
