@@ -20,6 +20,7 @@ Miarch/
 │   └── ui.sh
 ├── scripts/
 │   ├── miarch-bluetooth
+│   ├── miarch-encendido
 │   ├── miarch-chrome-tema
 │   ├── miarch-colors
 │   ├── miarch-fetch
@@ -35,6 +36,8 @@ Miarch/
 │   ├── tomar-capturas
 │   └── wallpaper.sh
 ├── config/
+│   ├── systemd/
+│   │   └── user/miarch-encendido.service
 │   ├── chrome/
 │   ├── greeter/
 │   ├── hypr/
@@ -78,7 +81,7 @@ flowchart TD
     ApplyPhase --> GreeterInstall
 
     Hyprland["config/hypr/hyprland.lua"] --> Quickshell["config/quickshell/miarch/shell.qml"]
-    Quickshell --> HelperScripts["scripts/ (miarch-set, miarch-pantallas, miarch-wifi, miarch-bluetooth, miarch-volumen, miarch-info)"]
+    Quickshell --> HelperScripts["scripts/ (miarch-set, miarch-pantallas, miarch-wifi, miarch-bluetooth, miarch-volumen, miarch-info, miarch-encendido)"]
     
     Wallpaper["scripts/wallpaper.sh"] --> Colors["scripts/miarch-colors"]
     Colors --> CacheColors["~/.cache/miarch/colors.json"]

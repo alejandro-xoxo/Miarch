@@ -21,6 +21,8 @@ El archivo define también las reglas de ventana y los atajos de teclado globale
 
 Cuando existe la marca opcional `~/.config/miarch/tapa-sin-suspender`, Hyprland enlaza los interruptores de la tapa (`switch:on:Lid Switch` y `switch:off:Lid Switch`) con flags `{ locked = true }` ejecutando `~/.local/bin/miarch-tapa --pantalla cerrar` y `--pantalla abrir`. Al cerrar la tapa, la pantalla interna del portátil (`eDP`) se apaga únicamente si existe otro monitor activo conectado (evitando quedar a oscuras si no hay pantalla externa); al abrir la tapa se reactiva en modo preferido.
 
+En Ajustes → Energía, el interruptor **Mantener encendido con el cargador** activa `miarch-encendido.service`. Mientras detecta alimentación de red, el servicio bloquea suspensión, hibernación, inactividad y la acción automática de la tapa. El botón de encendido sigue funcionando; al desconectar el cargador deja de aplicar el bloqueo. La opción queda guardada en `~/.config/miarch/siempre-encendido`.
+
 En mediciones de consumo sobre un procesador Intel Core i5-8365U con cargas concurrentes (Chrome, VS Code, Spotify y Claude abiertos), Hyprland mantiene una utilización aproximada del 10% de un hilo de CPU y 230 MB de memoria RAM.
 
 ## Shell del Sistema: Quickshell (`config/quickshell/miarch/shell.qml`)

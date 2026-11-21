@@ -77,6 +77,7 @@ flowchart TD
 | `scripts/miarch-greeter-install` | Instalador y configurador de la pantalla de inicio de sesión (`greetd` + Quickshell). Comprueba la seguridad con `comprobar-greeter`, copia archivos y sonido a `/usr/share/miarch/greeter`, prepara `/var/lib/miarch-greeter`, respalda `/etc/greetd/config.toml` y habilita el servicio. | `./scripts/miarch-greeter-install` (con tu usuario normal, no como root: pide `sudo` por dentro) | `setup.sh`, `miarch-update` o a mano. |
 | `scripts/comprobar-greeter` | Comprobación de seguridad para la pantalla de inicio de sesión (`greetd` + Quickshell). Valida la sintaxis de `Greetd.launch`, scripts shell (`sh -n`), carga offscreen de QML y configuración en `config.toml`. | `./scripts/comprobar-greeter [RUTA_REPO]` | `scripts/miarch-greeter-install` o a mano. |
 | `scripts/miarch-tapa` | Gestión de tapa del portátil: no suspender al cerrar la tapa (`50-miarch-tapa.conf` en `systemd-logind`) y apagar la pantalla interna en Hyprland si hay un monitor externo conectado. | `miarch-tapa {--pendiente\|--aplicar\|--quitar\|--pantalla cerrar\|abrir}` | `miarch-update`, atajos de interruptor en Hyprland (`switch:on/off:Lid Switch`) o terminal. |
+| `scripts/miarch-encendido` | Bloquea suspensión, inactividad y acción automática de tapa mientras detecta alimentación externa; incluye la gestión del servicio de usuario desde Ajustes. | `miarch-encendido {demonio\|activar\|desactivar\|estado}` | Ajustes → Energía y `miarch-encendido.service`. |
 | `scripts/mimusic` | Página de música en el monitor con foco: `cava` grande, la letra de la canción (`sptlrx`), `peaclock`, `cbonsai` y `pipes.sh` en ventanas flotantes que se adaptan al tamaño, la escala y la orientación del monitor y descuentan la barra. Los programas son opcionales (Miarch no los instala): los que falten se saltan. Cierra la terminal desde la que se escribe, salvo que en ella corra algo importante. | `mimusic [--play] [--cerrar] [--seco] [--quedarme]` | Terminal del usuario |
 | `scripts/wallpaper.sh` | Selección y asignación de fondo de pantalla aleatorio utilizando `awww`, desencadenando la actualización cromática mediante `miarch-colors`. | `wallpaper.sh` | Hyprland (al iniciar y con `Super + W`) y el panel de Ajustes. |
 | `scripts/tomar-capturas` | Automatización de capturas de pantalla para documentación en formato JPEG a 1280 px de ancho. | `tomar-capturas` | Desarrollador para generación de activos visuales del repositorio. |
@@ -108,3 +109,9 @@ Gestor opcional para el comportamiento de la tapa en portátiles:
 * `--quitar`: elimina el archivo de configuración con `sudo rm -f` y recarga `systemd-logind` con `HUP`.
 * `--pantalla cerrar`: apaga la pantalla interna (`eDP*`) mediante Hyprland (`hl.monitor({ output = ..., disabled = true })`) únicamente si existe otro monitor activo conectado.
 * `--pantalla abrir`: reactiva la pantalla interna (`eDP*`) en modo preferido.
+
+### `miarch-encendido`
+
+* `activar` y `desactivar`: habilitan o deshabilitan `miarch-encendido.service` y mantienen la marca `~/.config/miarch/siempre-encendido`.
+* `estado`: imprime `1` o `0` según exista la marca.
+* `demonio`: mantiene el inhibidor solo mientras detecta alimentación externa; en equipos sin fuentes de red declaradas se considera conectado.

@@ -10,6 +10,8 @@
 
 `greetd` (pantalla de inicio de sesión gráfica): lo instala y activa `setup.sh` y el actualizador, con `./scripts/miarch-greeter-install`. Si no lo quieres, crea `~/.config/miarch/sin-greeter`. Ver [instalación](instalacion.md#pantalla-de-inicio-de-sesión-gráfica-greeter).
 
+`miarch-encendido.service` es un servicio de usuario opcional, activado desde Ajustes → Energía. Con alimentación externa mantiene un inhibidor de suspensión, inactividad y acción de tapa; el botón de encendido conserva su acción deliberada. Para consultar los bloqueos activos ejecuta `systemd-inhibit --list`.
+
 ## Reparación automática en el actualizador (`miarch-update`)
 
 Durante la revisión inicial, el actualizador detecta servicios que requieren atención y los repara con la confirmación única de la actualización:
