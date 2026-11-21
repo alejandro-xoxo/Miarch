@@ -41,8 +41,19 @@ command -v qs >/dev/null || { echo "[ERROR] Falta quickshell (ejecuta ./packages
 echo "==> Comprobando seguridad de la pantalla de inicio de sesión..."
 "$REPO/scripts/comprobar-greeter" "$REPO" || { echo "[ERROR] La comprobación de seguridad del greeter falló."; exit 1; }
 
-echo "==> Instalando greetd..."
-sudo pacman -S --needed --noconfirm greetd
+if pacman -Q greetd >/dev/null 2>&1; then
+    echo "==> greetd ya está instalado (no se ejecuta pacman)"
+else
+    echo "==> Instalando greetd..."
+    [ -f "$REPO/lib/pacman.sh" ] && source "$REPO/lib/pacman.sh"
+    if declare -F esperar_pacman >/dev/null; then
+        if ! esperar_pacman; then
+            echo "[!] Hay un bloqueo de pacman: no se pudo instalar greetd. Se reintentará la próxima vez."
+            exit 1
+        fi
+    fi
+    sudo pacman -S --needed --noconfirm greetd
+fi
 
 echo "==> Copiando la pantalla de inicio de sesión a $DEST ..."
 KB="$(grep -oP '^local KB *= *"\K[^"]+' "$HOME/.config/hypr/hyprland.lua" 2>/dev/null || echo latam)"
