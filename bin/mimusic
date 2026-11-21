@@ -5,9 +5,43 @@
 #   mimusic --play     además reanuda la canción cuando aparece cava (por defecto NO toca la música)
 #   mimusic --cerrar   cierra solo esas ventanas
 #   mimusic --seco     muestra qué abriría y dónde, sin abrir nada
+#   mimusic --quedarme no cierra la terminal desde la que lo escribes (por defecto se cierra al terminar)
 set -u
-PLAY=0; SECO=0; CERRAR=0
-for a in "$@"; do case "$a" in --play) PLAY=1;; --seco) SECO=1;; --cerrar) CERRAR=1;; -h|--help) sed -n '2,6p' "$0"; exit 0;; *) echo "mimusic: opción desconocida: $a" >&2; exit 2;; esac; done
+PLAY=0; SECO=0; CERRAR=0; QUEDARME=0
+for a in "$@"; do case "$a" in --play) PLAY=1;; --seco) SECO=1;; --quedarme) QUEDARME=1;; --cerrar) CERRAR=1;; -h|--help) sed -n '2,7p' "$0"; exit 0;; *) echo "mimusic: opción desconocida: $a" >&2; exit 2;; esac; done
+# --- cerrar la terminal desde la que se escribió el comando (por la cadena de procesos padre, no por "la ventana activa") ---
+# Protegida: si en esa terminal corre además algo importante (claude, node, ssh, editores, tmux…), no se cierra y se avisa.
+terminal_propia() {  # imprime "address<TAB>título<TAB>motivo-de-protección"; vacío si el comando no se lanzó desde una terminal
+  python3 - <<'PY'
+import os, json, subprocess
+cl = json.loads(subprocess.run(["hyprctl", "clients", "-j"], capture_output=True, text=True).stdout)
+por_pid = {c["pid"]: c for c in cl}
+def ppid(p):
+    try: return int(open(f"/proc/{p}/stat").read().rsplit(")", 1)[1].split()[1])
+    except Exception: return 0
+p = os.getpid()
+while p > 1 and p not in por_pid: p = ppid(p)
+if p in por_pid:
+    c = por_pid[p]; prot = {"claude", "node", "codex", "agy", "ssh", "vim", "nvim", "nano", "tmux", "screen", "btop", "htop", "mosh", "less", "man"}
+    motivo = ""
+    for q in os.listdir("/proc"):
+        if not q.isdigit(): continue
+        q = int(q); r = q; 
+        while r > 1 and r != p: r = ppid(r)
+        if r == p:
+            try: n = open(f"/proc/{q}/comm").read().strip()
+            except Exception: continue
+            if n in prot: motivo = n; break
+    print(c["address"], c["title"], motivo, sep="\t")
+PY
+}
+cerrar_mi_terminal() {  # $1 = seco|real
+  local dato dir tit mot; dato=$(terminal_propia); [ -n "$dato" ] || return 0
+  dir=${dato%%$'\t'*}; mot=${dato##*$'\t'}; tit=${dato#*$'\t'}; tit=${tit%$'\t'*}
+  if [ -n "$mot" ]; then echo "aviso: no cierro la terminal \"$tit\" porque en ella corre $mot (usa --quedarme para no ver este aviso)" >&2; return 0; fi
+  if [ "$1" = seco ]; then echo "cerraría la terminal desde la que se escribió: \"$tit\""; return 0; fi
+  sleep 0.6; hyprctl dispatch "hl.dsp.window.close({ window = \"address:$dir\" })" >/dev/null
+}
 cerrar() { for a in $(hyprctl clients -j | python3 -c "import json,sys; print(' '.join(c['address'] for c in json.load(sys.stdin) if c['class']=='m-music'))"); do hyprctl dispatch "hl.dsp.window.close({ window = \"address:$a\" })" >/dev/null; done; }
 [ "$CERRAR" = 1 ] && { cerrar; exit 0; }
 for c in cava sptlrx peaclock cbonsai pipes.sh; do command -v "$c" >/dev/null || echo "mimusic: aviso, falta $c (esa ventana no se abrirá)" >&2; done
@@ -30,3 +64,4 @@ abrir sptlrx   22  960  1250  98 sptlrx -p mpris --before hidden --after hidden 
 abrir peaclock 1290 68   608 230 peaclock
 abrir cbonsai  1290 310  608 420 cbonsai -li
 abrir pipes    1290 742  608 316 pipes.sh
+[ "$QUEDARME" = 1 ] || { [ "$SECO" = 1 ] && cerrar_mi_terminal seco || cerrar_mi_terminal real; }

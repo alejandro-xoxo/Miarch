@@ -12,6 +12,9 @@ Guarda los guiones para grabar el vídeo de Miarch y dos comandos (`tux-arch` y 
 - `paquetes.txt`: los programas necesarios (oficiales y de AUR). **No** están en `packages.sh`.
 - `demo.env.ejemplo`: plantilla de los ajustes privados (la contraseña va vacía).
 
+## Qué pasa con la terminal desde la que los escribes
+`mimusic` y `tux-arch --ventana` **cierran la terminal en la que los escribiste** al terminar (la localizan por la cadena de procesos padre, no por "la ventana activa"). Si en esa terminal corre algo importante (`claude`, `node`, `ssh`, editores, `tmux`…) no se cierra y avisan. `--quedarme` evita el cierre y `--seco` muestra qué harían sin hacerlo.
+
 ## Restaurar en otro equipo
 ```
 git clone -b personal/demo --single-branch https://github.com/alejandro-xoxo/Miarch.git ~/miarch-demo
