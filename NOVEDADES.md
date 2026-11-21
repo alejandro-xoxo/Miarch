@@ -3,6 +3,9 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-21.113 · El modo demo oculta el nombre de tu equipo en el desbloqueo
+Al grabar un vídeo con el modo demo, el registro que se teclea al desbloquear ya no enseña el nombre de tu equipo: lo sustituye por `miarch`. Fuera del modo demo no cambia nada.
+
 ## 2026-11-21.112 · Blender instalado con Miarch
 Miarch instala Blender (modelado, animación y render 3D) desde el repositorio oficial. Son unos 200 MB de descarga y bastante más instalado; se añade solo al actualizar. Si tu gráfica es Intel antigua, el visor 3D va con la GPU pero el render usa el procesador.
 
