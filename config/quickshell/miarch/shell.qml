@@ -2981,7 +2981,7 @@ ShellRoot {
     }
     function arrancarApertura() {
         if (!root.accesoOk) return                     // se volvió a bloquear mientras tanto: no se desbloquea nada
-        Quickshell.execDetached(["pw-play", "--volume=0.6", Quickshell.env("HOME") + "/.config/quickshell/miarch/sonidos/desbloqueo.wav"])
+        Quickshell.execDetached(["sh", "-c", "paplay --volume=39322 \"$1\" 2>/dev/null || pw-play --volume=0.6 \"$1\"", "sh", Quickshell.env("HOME") + "/.config/quickshell/miarch/sonidos/desbloqueo.wav"])   // paplay: el grabador de pantalla sí lo captura; pw-play de respaldo
         animApertura.restart()                         // el sonido y la animación empiezan a la vez
     }
     Process {
