@@ -124,6 +124,7 @@ flowchart TD
 | `scripts/miarch-wifi` | Puente de comunicación en formato JSON entre la interfaz gráfica y el demonio `iwd` (`iwctl`). Administra credenciales seguras mediante `MIARCH_PASS` y pseudo-terminales (`pty`). |
 | `scripts/miarch-bluetooth` | Mediador para emparejamiento Bluetooth seguro mediante `bluetoothctl` con agente `NoInputNoOutput`, registro de confianza y conexión automática. Genera salida JSON y registra operaciones en `~/.cache/miarch/bluetooth.log`. |
 | `scripts/miarch-volumen` | Ajusta y conmuta el volumen de audio con `wpctl`, reproduce retroalimentación sonora con tasa limitada (110 ms) y activa el indicador visual en Quickshell vía IPC. |
+| `scripts/mimusic` | Abre la página de música (cava, letra, peaclock, cbonsai y pipes.sh) adaptada al monitor con foco. |
 | `scripts/miarch-info` | Exporta datos estructurados en JSON sobre hardware y sistema operativo para la sección de Sistema del panel de ajustes. |
 | `scripts/miarch-fetch` | Presentación de métricas de fastfetch ajustadas proporcionalmente al ancho de la terminal. |
 | `scripts/miarch-steam` | Iniciador de Steam con factores de escala adaptados a la resolución y factor de escala de la pantalla. |
