@@ -32,7 +32,7 @@ La pantalla de bloqueo está implementada en Quickshell (`config/quickshell/miar
 * **Validación PAM sincrónica**: Todo flujo de desbloqueo requiere un resultado afirmativo en vivo de PAM (`system-auth`). No existe ningún desbloqueo automático de pruebas.
 * **Cancelación de carrera en rebloqueo**: Si se emite un nuevo evento de bloqueo mientras una animación de desbloqueo autenticada está en progreso, la secuencia se invalida inmediatamente y el sistema regresa al estado bloqueado sin liberar la sesión.
 * **Ciclo de vida de la contraseña**: la variable con lo tecleado se vacía en cuanto se usa (también si PAM no llega a arrancar). QML no permite garantizar el borrado físico de esa memoria.
-* **Secuencia de desbloqueo controlada**: La transición visual dura 5.6 segundos (barras cinematográficas del 12.8% de altura, desplazamiento del fondo de +12%, viñeta, texto MIARCH "by alejandro-xoxo", destello anamórfico sincronizado al 76% con el impacto acústico de `generar-desbloqueo.py` y salida de `journalctl` mecanografiada). Si la autenticación falla en cualquier punto previo a la concesión PAM, la animación no se ejecuta.
+* **Secuencia de desbloqueo controlada**: La transición visual dura 5.6 segundos (barras cinematográficas del 12.8% de altura, desplazamiento del fondo de +12%, viñeta, texto MIARCH "by alejandro-xoxo", sonido de teclado mecánico con perfil de switches rojos lineales sintetizado por código sin muestras de terceros acompañando la salida de `journalctl` mecanografiada). Si la autenticación falla en cualquier punto previo a la concesión PAM, la animación no se ejecuta.
 
 ---
 
@@ -43,6 +43,11 @@ El gestor de acceso gráfico corre bajo `greetd` ejecutando una sesión mínima 
 ### Despliegue y Mecanismos de Falla
 
 * **Instalación**: El script `scripts/miarch-greeter-install` instala `greetd`, copia los recursos a `/usr/share/miarch/greeter`, asigna la paleta y fondo en `/var/lib/miarch-greeter`, respalda `/etc/greetd/config.toml` como `config.toml.miarch-bak` y habilita el servicio de `systemd`.
+* **Comprobación de seguridad previa (`scripts/comprobar-greeter`)**: Antes de copiar archivos o alterar el sistema, el instalador ejecuta una suite de verificación que comprueba:
+  1. *Sintaxis de lanzamiento*: Extrae los arrays de comando de `Greetd.launch` en `config/greeter/shell.qml`, los une con espacios como hace greetd y verifica con `bash -n` que `exec <args>` es sintaxis válida (evita bucles de reinicio de sesión causados por comandos con llaves, redirecciones o tuberías complejas no soportadas).
+  2. *Integridad de scripts*: Valida con `sh -n` la sintaxis de `config/greeter/sesion.sh` y `config/greeter/start.sh`.
+  3. *Carga en vacío*: Evalúa `shell.qml` en modo *offscreen* (`QT_QPA_PLATFORM=offscreen MIARCH_GREETER_TEST=1`) garantizando que no existan errores de análisis QML.
+  4. *Parámetros de terminal*: Asegura que `config/greeter/config.toml` configure `vt = 1` y apunte a `/usr/share/miarch/greeter/start.sh`.
 * **Omisión durante instalación**: Si existe el archivo `~/.config/miarch/sin-greeter`, `setup.sh` omite el despliegue del greeter gráfico.
 * **Plan B si el login gráfico falla**: Si el greeter gráfico falla al iniciar en un intervalo de 8 segundos, el sistema recurre automáticamente a la interfaz en modo texto (`agreety`).
 * **Procedimiento de recuperación manual**: Si el usuario no puede acceder a la interfaz gráfica, se puede acceder a una consola virtual y restaurar el inicio estándar de terminal:
@@ -95,6 +100,26 @@ flowchart LR
 * **Actualizaciones (`miarch-update`)**:
   * **Fase 1 (Revisión)**: No ejecuta comandos privilegiados ni altera archivos del sistema. Consulta cambios remotos vía `git fetch`, configuraciones pendientes en `~/.cache/miarch/configs-aplicadas`, paquetes faltantes/obsoletos, y chequea actualizaciones con `checkupdates` y `yay -Qua`.
   * **Fase 2 (Aplicación)**: Solicita confirmación explícita al usuario. Tras ser autorizado, solicita `sudo` una vez y renueva la marca de tiempo automáticamente cada 45 segundos para prevenir expiraciones durante compilaciones extensas (como `quickshell-git`).
+
+### Configuración del Sistema en `/etc` (Tapa del Portátil)
+
+Cuando el usuario activa voluntariamente el no suspender al cerrar la tapa (`~/.config/miarch/tapa-sin-suspender`):
+* **Archivo modificado en `/etc`**: `/etc/systemd/logind.conf.d/50-miarch-tapa.conf` con permisos `0644`.
+* **Contenido aplicado**:
+  ```ini
+  [Login]
+  HandleLidSwitch=ignore
+  HandleLidSwitchExternalPower=ignore
+  HandleLidSwitchDocked=ignore
+  ```
+* **Recarga de `systemd-logind`**: Ejecuta `sudo systemctl kill -s HUP systemd-logind`. La señal `SIGHUP` recarga la directiva sin reiniciar el demonio ni interrumpir las sesiones activas del usuario.
+* **Procedimiento para deshacer**:
+  Eliminar el archivo marcador y ejecutar la desinstalación:
+  ```bash
+  rm -f ~/.config/miarch/tapa-sin-suspender
+  miarch-tapa --quitar
+  ```
+  Esto elimina `/etc/systemd/logind.conf.d/50-miarch-tapa.conf` y vuelve a enviar `HUP` a `systemd-logind` restaurando el comportamiento por defecto del sistema.
 
 ### Contenedores y Almacenamiento Pesado
 

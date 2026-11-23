@@ -19,7 +19,14 @@ unset MIARCH_UI_INICIO MIARCH_UI_TOTAL MIARCH_UI_ACTUAL MIARCH_UI_SUB MIARCH_UI_
 REPO="${MIARCH_DIR:-$HOME/Miarch}"
 FORZAR=0; [ "${1:-}" = "--forzar" ] && FORZAR=1
 
-fin() { echo; read -rp "Enter para cerrar " _; exit "${1:-0}"; }
+SUDO_KEEPALIVE=""
+limpiar() {
+    [ -n "${MIARCH_SUDO_VIVO:-}" ] && kill "$MIARCH_SUDO_VIVO" 2>/dev/null || true
+    [ -n "${SUDO_KEEPALIVE:-}" ] && kill "$SUDO_KEEPALIVE" 2>/dev/null || true
+}
+trap limpiar EXIT INT TERM
+
+fin() { limpiar; echo; read -rp "Enter para cerrar " _; exit "${1:-0}"; }
 si()  { local r; read -rp "  ? $1 [S/n] " r; [[ -z "$r" || "$r" =~ ^[sSyY] ]]; }
 unir() { local s="" x; for x in "$@"; do s+="${s:+, }$x"; done; printf "%s" "$s"; }
 plural() { [ "$1" = 1 ] && echo "$2" || echo "$3"; }
@@ -63,6 +70,7 @@ cd "$REPO"
 if [ -f "$REPO/lib/ui.sh" ]; then
     source "$REPO/lib/ui.sh"
 else
+    [ -f "$REPO/lib/pacman.sh" ] && source "$REPO/lib/pacman.sh"
     ui_banner() { :; }; ui_total() { :; }; ui_resumen() { :; }
     ui_etapa()  { printf '\n==> %s\n' "$*"; }; ui_titulo() { printf '\n==> %s\n' "$*"; }
     ui_ok()     { echo "[OK] $*"; };  ui_info() { echo "[i] $*"; }
@@ -98,7 +106,31 @@ if [ ! -e "$HOME/.config/miarch/sin-greeter" ]; then
     # y si el instalador sabe compararse con lo instalado (sirve aunque no haya marca), se le pregunta también
     [ "$GREETER_PEND" = 0 ] && grep -q -- '--pendiente' ./scripts/miarch-greeter-install 2>/dev/null && bash ./scripts/miarch-greeter-install --pendiente && GREETER_PEND=1
 fi
+# Tapa del portátil: no suspender al cerrar la tapa (opcional)
+TAPA_PEND=0
+if [ -x ./scripts/miarch-tapa ]; then
+    bash ./scripts/miarch-tapa --pendiente 2>/dev/null && TAPA_PEND=1
+elif command -v miarch-tapa >/dev/null 2>&1; then
+    miarch-tapa --pendiente 2>/dev/null && TAPA_PEND=1
+fi
 PAQ_CAMBIA=0; [ "$NUEVOS" -gt 0 ] && ! git diff --quiet HEAD "$UP" -- packages.sh && PAQ_CAMBIA=1
+
+# servicios a arreglar (bluetooth si no responde o está desactivado; iwd si está inactivo)
+BT_ACCION=""
+if command -v bluetoothctl >/dev/null 2>&1 && [ -n "$(timeout 4 bluetoothctl list 2>/dev/null)" ]; then
+    if [ "$(systemctl is-enabled bluetooth 2>/dev/null)" != "enabled" ]; then
+        BT_ACCION="enable"
+    elif [ "$(systemctl is-active bluetooth 2>/dev/null)" = "active" ]; then
+        if ! timeout 6 bluetoothctl show >/dev/null 2>&1; then
+            BT_ACCION="restart"
+        fi
+    fi
+fi
+
+IWD_ACCION=""
+if [ "$(systemctl is-active iwd 2>/dev/null)" != "active" ]; then
+    IWD_ACCION="start"
+fi
 
 # un packages.sh antiguo no conoce --faltantes y ejecutaría la instalación completa: solo se pregunta si lo soporta
 FALTAN=(); SOBRAN=()
@@ -143,6 +175,18 @@ else
     ui_ok "Paquetes de Miarch: no falta ninguno"
 fi
 [ "$GREETER_PEND" = 1 ] && ui_info "Se instalará la pantalla de inicio de sesión de Miarch (la verás al reiniciar)"
+[ "$TAPA_PEND" = 1 ] && ui_info "Tapa del portátil: no se suspenderá al cerrarla"
+MARCA_TAPA="${MIARCH_TAPA_MARCA:-$HOME/.config/miarch/tapa-sin-suspender}"
+CONF_TAPA="${MIARCH_LOGIND_DIR:-/etc/systemd/logind.conf.d}/50-miarch-tapa.conf"
+if [ ! -f "$MARCA_TAPA" ] && [ -f "$CONF_TAPA" ]; then
+    ui_info "La tapa sigue sin suspender: borra la marca con miarch-tapa --quitar"
+fi
+if [ "$BT_ACCION" = "restart" ]; then
+    ui_info "Bluetooth no responde: se reiniciará"
+elif [ "$BT_ACCION" = "enable" ]; then
+    ui_info "Bluetooth desactivado: se habilitará e iniciará"
+fi
+[ "$IWD_ACCION" = "start" ] && ui_info "iwd no está activo: se iniciará"
 if [ "$N_SIS" -gt 0 ]; then
     ui_info "Sistema: ${#SIS_OFI[@]} oficiales y ${#SIS_AUR[@]} de AUR por actualizar:"
     printf '%s\n' "${SIS_OFI[@]}" "${SIS_AUR[@]}" | grep -v '^$' | head -10 | sed 's/^/        - /'
@@ -150,6 +194,7 @@ if [ "$N_SIS" -gt 0 ]; then
 else
     ui_ok "Sistema: al día"
 fi
+declare -F revisar_bloqueo_pacman >/dev/null && revisar_bloqueo_pacman || true
 
 # qué se haría
 HACER_MIARCH=0; { [ "$NUEVOS" -gt 0 ] && [ "$SUCIO" = 0 ]; } && HACER_MIARCH=1
@@ -158,7 +203,9 @@ if [ "$FORZAR" = 1 ] || { [ "$CFG_PENDIENTES" = 1 ] && ! { [ "$NUEVOS" -gt 0 ] &
 HACER_PAQ=0; { [ "${#FALTAN[@]}" -gt 0 ] || [ "${#SOBRAN[@]}" -gt 0 ] || [ "$PAQ_CAMBIA" = 1 ]; } && HACER_PAQ=1
 HACER_SIS=0; [ "$N_SIS" -gt 0 ] && HACER_SIS=1
 HACER_GREET=$GREETER_PEND
-if [ "$HACER_MIARCH$HACER_PAQ$HACER_SIS$HACER_GREET" = "0000" ]; then
+HACER_TAPA=$TAPA_PEND
+HACER_SERV=0; { [ -n "$BT_ACCION" ] || [ -n "$IWD_ACCION" ]; } && HACER_SERV=1
+if [ "$HACER_MIARCH$HACER_PAQ$HACER_SIS$HACER_GREET$HACER_SERV$HACER_TAPA" = "000000" ]; then
     echo
     ui_ok "Todo está al día. No hay nada que descargar ni instalar."
     ui_resumen "Todo al día"
@@ -169,25 +216,27 @@ PLAN=()
 [ "$HACER_MIARCH" = 1 ] && PLAN+=("$([ "$NUEVOS" -gt 0 ] && echo "descargar y aplicar los cambios de Miarch" || echo "aplicar las configuraciones de Miarch")")
 [ "$HACER_PAQ" = 1 ]    && PLAN+=("instalar los paquetes de Miarch que faltan")
 [ "$HACER_GREET" = 1 ]  && PLAN+=("instalar la pantalla de inicio de sesión")
+[ "$HACER_TAPA" = 1 ]   && PLAN+=("ajustar la tapa del portátil para no suspender")
 [ "$HACER_SIS" = 1 ]    && PLAN+=("actualizar $N_SIS $(plural "$N_SIS" paquete paquetes) del sistema")
+[ "$HACER_SERV" = 1 ]   && PLAN+=("reparar servicios del sistema")
 echo
 si "Se va a: $(unir "${PLAN[@]}"). ¿Continuar? (pide tu contraseña si hace falta)" || { ui_info "No se hizo ningún cambio."; fin 0; }
 
 # etapas reales = las tareas elegidas (la barra del total muestra solo lo que de verdad se hará)
 UI_ACTUAL=0
-UI_TOTAL=$(( HACER_MIARCH * 2 + HACER_PAQ + HACER_SIS + HACER_GREET ))
-if [ "$HACER_PAQ" = 1 ] || [ "$HACER_SIS" = 1 ] || [ "$HACER_GREET" = 1 ]; then
+UI_TOTAL=$(( HACER_MIARCH * 2 + HACER_PAQ + HACER_SIS + HACER_GREET + HACER_SERV + HACER_TAPA ))
+if [ "$HACER_PAQ" = 1 ] || [ "$HACER_SIS" = 1 ] || [ "$HACER_GREET" = 1 ] || [ "$HACER_SERV" = 1 ] || [ "$HACER_TAPA" = 1 ]; then
     sudo -v || { ui_error "Sin permiso de administrador: no se instala nada."; fin 1; }
     # La contraseña de sudo caduca a los pocos minutos y compilar apps tarda más: se renueva mientras dure la actualización.
     # Sin esto, un paso posterior se quedaría esperando la contraseña, invisible bajo el indicador de progreso.
-    ( while true; do sudo -n true 2>/dev/null; sleep 45; kill -0 "$$" 2>/dev/null || exit; done ) &
+    ( while true; do sudo -n true 2>/dev/null; sleep 45; kill -0 "$$" 2>/dev/null || exit; done ) >/dev/null 2>&1 &
     SUDO_KEEPALIVE=$!
-    trap 'kill "$SUDO_KEEPALIVE" 2>/dev/null' EXIT
 fi
 
 # =====================================================================================================
 # 2) HACER solo lo que hace falta
 # =====================================================================================================
+AVISO_ELECTRON=0
 if [ "$HACER_MIARCH" = 1 ]; then
     if [ "$NUEVOS" -gt 0 ]; then
         ui_etapa "Descargando los cambios de Miarch"
@@ -204,10 +253,17 @@ if [ "$HACER_MIARCH" = 1 ]; then
     ui_etapa "Aplicando los cambios de Miarch (se conservan tus ajustes y tu fondo)"
     HYPR="$HOME/.config/hypr/hyprland.lua"
     GUARDADOS="$(grep -E '^local (ESCALA|KB|NATURAL|TAP|SENS|CURSOR|MOVIMIENTO|ANIM|BLUR)[[:space:]]*=' "$HYPR" 2>/dev/null || true)"
+    if [ -n "$MARCA_ANT" ] && git cat-file -e "$MARCA_ANT^{commit}" 2>/dev/null; then
+        if ! git diff --quiet "$MARCA_ANT" HEAD -- config/applications config/claude-desktop config/electron config/vscode 2>/dev/null \
+           || git diff "$MARCA_ANT" HEAD -- config/hypr/hyprland.lua 2>/dev/null | grep -E '^[+-].*ELECTRON_OZONE_PLATFORM_HINT'; then
+            AVISO_ELECTRON=1
+        fi
+    fi
     if MIARCH_ACTUALIZANDO=1 ui_ejecutar "Copiando configuraciones y scripts" bash ./install.sh; then
         mkdir -p "$(dirname "$CFG_MARCA")"; git rev-parse HEAD > "$CFG_MARCA"
         [ -n "$(ultima_novedad)" ] && ultima_novedad > "$NOV_MARCA"      # ya viste las novedades hasta esta
     else
+        AVISO_ELECTRON=0
         ui_aviso "install.sh terminó con avisos (arriba están las últimas líneas). Se volverá a intentar la próxima vez."
     fi
     if [ -n "$GUARDADOS" ] && [ -f "$HYPR" ]; then
@@ -249,15 +305,66 @@ if [ "$HACER_GREET" = 1 ]; then
     ui_etapa "Instalando la pantalla de inicio de sesión (se ve al reiniciar)"
     if [ -x ./scripts/miarch-greeter-install ]; then
         MIARCH_SUDO_VIVO=1 ui_ejecutar "Instalando greetd y la pantalla de Miarch" bash ./scripts/miarch-greeter-install \
-            || ui_aviso "No se pudo instalar la pantalla de inicio de sesión. Sigues entrando por la terminal; reintenta con ./scripts/miarch-greeter-install"
+            || ui_aviso "No se pudo instalar la pantalla de inicio de sesión. Sigues entrando por la terminal; se reintentará la próxima vez."
     else
         ui_aviso "Este Miarch aún no trae la pantalla de inicio de sesión: descarga los cambios y vuelve a intentarlo."
     fi
 fi
 
+if [ "$HACER_TAPA" = 1 ]; then
+    ui_etapa "Ajustando la tapa del portátil"
+    if [ -x ./scripts/miarch-tapa ]; then
+        MIARCH_SUDO_VIVO=1 ui_ejecutar "Configurando la tapa del portátil" bash ./scripts/miarch-tapa --aplicar \
+            || ui_aviso "No se pudo configurar la tapa del portátil."
+    elif command -v miarch-tapa >/dev/null 2>&1; then
+        MIARCH_SUDO_VIVO=1 ui_ejecutar "Configurando la tapa del portátil" miarch-tapa --aplicar \
+            || ui_aviso "No se pudo configurar la tapa del portátil."
+    else
+        ui_aviso "No se encontró miarch-tapa para configurar la tapa del portátil."
+    fi
+fi
+
 if [ "$HACER_SIS" = 1 ]; then
     ui_etapa "Actualizando $N_SIS $(plural "$N_SIS" paquete paquetes) del sistema"
-    ui_ejecutar "Actualizando el sistema (yay -Syu)" yay -Syu --noconfirm || ui_aviso "La actualización del sistema falló (arriba están las últimas líneas)."
+    if esperar_pacman; then
+        ui_ejecutar "Actualizando el sistema (yay -Syu)" yay -Syu --noconfirm || ui_aviso "La actualización del sistema falló (arriba están las últimas líneas)."
+    else
+        ui_aviso "Se omite la actualización del sistema por bloqueo de pacman. Se reintentará la próxima vez."
+    fi
+fi
+
+if [ "$HACER_SERV" = 1 ]; then
+    ui_etapa "Reparando servicios"
+    if [ "$BT_ACCION" = "restart" ]; then
+        if sudo systemctl restart bluetooth; then
+            BT_OK=0
+            T_INI=$(date +%s)
+            while [ $(( $(date +%s) - T_INI )) -lt 8 ]; do
+                T_REST=$(( 8 - ($(date +%s) - T_INI) ))
+                T_LIM=6
+                [ "$T_REST" -lt "$T_LIM" ] && T_LIM="$T_REST"
+                [ "$T_LIM" -le 0 ] && break
+                if timeout "$T_LIM" bluetoothctl show >/dev/null 2>&1; then
+                    BT_OK=1
+                    break
+                fi
+                sleep 1
+            done
+            if [ "$BT_OK" = 1 ]; then
+                ui_ok "Bluetooth responde"
+            else
+                ui_aviso "sigue sin responder: reinicia el equipo"
+            fi
+        else
+            ui_aviso "No se pudo reiniciar Bluetooth"
+        fi
+    elif [ "$BT_ACCION" = "enable" ]; then
+        sudo systemctl enable --now bluetooth || ui_aviso "No se pudo habilitar Bluetooth"
+    fi
+
+    if [ "$IWD_ACCION" = "start" ]; then
+        sudo systemctl start iwd || ui_aviso "No se pudo iniciar iwd"
+    fi
 fi
 
 if [ "${RECARGAR:-0}" = 1 ] && [ -z "${MIARCH_SIN_REINICIO:-}" ]; then
@@ -267,6 +374,8 @@ if [ "${RECARGAR:-0}" = 1 ] && [ -z "${MIARCH_SIN_REINICIO:-}" ]; then
     (env -u MIARCH_UI_INICIO -u MIARCH_UI_TOTAL -u MIARCH_UI_ACTUAL -u MIARCH_UI_SUB -u MIARCH_UI_COMPACTO -u MIARCH_SUDO_VIVO -u MIARCH_STATS setsid qs -c miarch >/dev/null 2>&1 &)
     ui_ok "Hyprland y el escritorio recargados"
 fi
+
+[ "${AVISO_ELECTRON:-0}" = 1 ] && ui_info "Cierra y vuelve a abrir ChatGPT, Claude y Antigravity para que se vean nítidos"
 
 ui_resumen "Actualización completa"
 fin 0

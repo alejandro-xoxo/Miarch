@@ -288,6 +288,8 @@ ShellRoot {
     readonly property var salida: Pipewire.defaultAudioSink
     readonly property real volumen: salida && salida.audio ? salida.audio.volume : 0
     readonly property bool silenciado: salida && salida.audio ? salida.audio.muted : false
+    property real _volDestino: volumen
+    Timer { id: tVolSync; interval: 600; onTriggered: root._volDestino = root.volumen }
     // El reproductor que está sonando; si ninguno suena, el primero (Spotify, navegador, etc.)
     readonly property var jugador: {
         const v = Mpris.players.values
@@ -478,7 +480,19 @@ ShellRoot {
                         texto: Math.round(root.volumen * 100) + "%"
                         atenuado: root.silenciado
                         onClic: root.lanzar(["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle"])
-                        onRueda: dir => root.lanzar(["wpctl", "set-volume", "-l", "1", "@DEFAULT_AUDIO_SINK@", dir > 0 ? "5%+" : "5%-"])
+                        onRueda: dir => {
+                            const s = root.salida
+                            if (!s || !s.audio) return
+                            if (!tVolSync.running) root._volDestino = root.volumen
+                            const paso = (dir / 120) * 0.05
+                            root._volDestino = Math.max(0, Math.min(1, root._volDestino + paso))
+                            s.audio.volume = root._volDestino
+                            if (dir > 0) s.audio.muted = false
+                            tVolSync.restart()
+                            const sil = (dir > 0 ? false : s.audio.muted) ? 1 : 0
+                            const v = Math.round(root._volDestino * 100)
+                            root.mostrarOsd(v, sil ? "Silenciado" : (v + "%"), sil)
+                        }
                     }
                     Modulo {   // batería
                         icono: root.cargando ? "" : (root.bateria > 0.85 ? "" : root.bateria > 0.6 ? "" : root.bateria > 0.35 ? "" : root.bateria > 0.12 ? "" : "")
@@ -526,12 +540,108 @@ ShellRoot {
     property string wifiMensaje: ""
     property string redClave: ""                     // red que está pidiendo contraseña
     property string wifiClave: ""                    // lo que se lleva escrito (no se pierde al refrescar)
-    property bool ocultaAbierta: false               // formulario para conectar a una red oculta
-    property string ocultaNombre: ""
     property string _redesJson: ""
     property var btLista: []
-    property var btPendiente: null
+    readonly property string btBin: Quickshell.env("HOME") + "/.local/bin/miarch-bluetooth"
+    property string btEmparejandoMac: ""
+    property var btEmparejandoDev: null
+    property string btMsgMac: ""
+    property string btMsg: ""
+    property string btMensaje: ""
     readonly property string wifiBin: Quickshell.env("HOME") + "/.local/bin/miarch-wifi"
+
+    // ---- Pantallas (vía miarch-pantallas) ----
+    readonly property string pantallasBin: Quickshell.env("HOME") + "/.local/bin/miarch-pantallas"
+    property var pantallasLista: []
+    property string pantallaSeleccionada: ""
+    property string pantallasMensaje: ""
+    property bool pantallasOcupado: false
+    property string _pantallasJson: ""
+
+    Process {
+        id: pPantallasLista
+        command: [root.pantallasBin, "list"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const d = JSON.parse(text)
+                    if (d.ok && d.monitores) {
+                        const j = JSON.stringify(d.monitores)
+                        if (j !== root._pantallasJson) {
+                            root._pantallasJson = j
+                            root.pantallasLista = d.monitores
+                            let princ = d.monitores.find(m => m.es_principal)
+                            if (root.pantallaSeleccionada === "" || !d.monitores.some(m => m.nombre === root.pantallaSeleccionada)) {
+                                root.pantallaSeleccionada = princ ? princ.nombre : (d.monitores.length > 0 ? d.monitores[0].nombre : "")
+                            }
+                        }
+                    }
+                } catch (e) {}
+            }
+        }
+    }
+
+    Process {
+        id: pPantallasAccion
+        property string accion: ""
+        stdout: StdioCollector {
+            onStreamFinished: {
+                root.pantallasOcupado = false
+                try {
+                    const d = JSON.parse(text)
+                    if (d.aplicado_en_caliente === false) {
+                        root.pantallasMensaje = d.msg || "Cambio guardado; se aplicará al recargar o al volver a iniciar sesión"
+                    } else if (d.aplicado_en_caliente === true) {
+                        root.pantallasMensaje = ""
+                    } else if (!d.ok) {
+                        root.pantallasMensaje = d.msg || "Error al aplicar cambio"
+                    } else {
+                        root.pantallasMensaje = ""
+                    }
+                } catch (e) {
+                    root.pantallasMensaje = "Error al ejecutar la acción"
+                }
+                pPantallasLista.running = true
+            }
+        }
+    }
+
+    function pantallasAccion(accion, arg1, arg2) {
+        if (pPantallasAccion.running) return
+        root.pantallasOcupado = true
+        root.pantallasMensaje = ""
+        pPantallasAccion.accion = accion
+        let cmd = [root.pantallasBin, accion]
+        if (arg1 !== undefined && arg1 !== "") cmd.push(arg1)
+        if (arg2 !== undefined && arg2 !== "") cmd.push(arg2)
+        pPantallasAccion.command = cmd
+        pPantallasAccion.running = true
+    }
+
+    Timer {
+        id: tPantallasRefresco
+        interval: 3500; repeat: true; triggeredOnStart: true
+        running: root.ajustesAbierto && root.ajustesPagina === "pantallas"
+        onTriggered: {
+            if (!pPantallasLista.running && !pPantallasAccion.running) pPantallasLista.running = true
+        }
+    }
+
+    // Identificar pantallas
+    property bool pantallasIdentificando: false
+    Timer {
+        id: tIdentificarPantallas
+        interval: 3000
+        repeat: false
+        onTriggered: root.pantallasIdentificando = false
+    }
+    IpcHandler {
+        target: "pantallas"
+        function identificar(): void {
+            root.pantallasIdentificando = true
+            tIdentificarPantallas.restart()
+        }
+    }
 
     function abrirConexiones(modo) {
         if (root.conexionesAbierto && root.conexionesModo === modo) { root.conexionesAbierto = false; return }
@@ -565,9 +675,9 @@ ShellRoot {
                 root.wifiOcupado = false
                 try {
                     const d = JSON.parse(text)
-                    if (pAccion.accion === "connect" || pAccion.accion === "connect-hidden") {
+                    if (pAccion.accion === "connect") {
                         root.wifiMensaje = d.ok ? "" : (d.msg || "No se pudo conectar")
-                        if (d.ok) { root.redClave = ""; root.ocultaAbierta = false; root.wifiClave = "" }
+                        if (d.ok) { root.redClave = ""; root.wifiClave = "" }
                         // red guardada con la contraseña cambiada: se abre el campo para escribir la nueva
                         else if (d.pedir_clave) { root.wifiClave = ""; root.redClave = pAccion.arg }
                     } else if (pAccion.accion === "forget") {
@@ -590,7 +700,7 @@ ShellRoot {
         pAccion.arg = arg
         pAccion.environment = { "MIARCH_PASS": clave || "" }
         pAccion.command = arg !== "" ? [root.wifiBin, accion, arg] : [root.wifiBin, accion]
-        if (accion === "connect" || accion === "connect-hidden") { root.wifiOcupado = true; root.wifiMensaje = "" }
+        if (accion === "connect") { root.wifiOcupado = true; root.wifiMensaje = "" }
         else if (accion === "disconnect") root.wifiMensaje = "Desconectando…"
         else if (accion === "forget") root.wifiMensaje = "Olvidando la red…"
         pAccion.running = true
@@ -615,9 +725,6 @@ ShellRoot {
 
     // ---- Bluetooth (BlueZ nativo de Quickshell) ----
     property bool btMostrarSinNombre: false
-    property bool btMostrarGuardados: false          // mostrar también los emparejados que no se detectan cerca
-    property var btCerca: []                          // direcciones de los emparejados que BlueZ oye ahora mismo (tienen RSSI)
-    property int btGuardadosLejos: 0
     property int btSinNombre: 0
     property string _btClave: ""
     // BlueZ usa la dirección MAC como "nombre" cuando el dispositivo no dice cómo se llama
@@ -632,17 +739,12 @@ ShellRoot {
         if (!a) { root.btLista = []; root._btClave = ""; return }
         const todos = a.devices.values.slice()
         root.btSinNombre = todos.filter(d => root.btNombre(d) === "" && !d.paired && !d.connected).length
-        // solo lo que se puede usar ahora: conectados, emparejados que se oyen cerca, y los encontrados con nombre.
-        // Los emparejados que no se detectan se esconden (botón al pie para verlos).
-        root.btGuardadosLejos = todos.filter(d => d.paired && !d.connected && root.btCerca.indexOf(d.address) < 0).length
-        const visibles = todos.filter(d => d.connected
-            || (d.paired ? (root.btCerca.indexOf(d.address) >= 0 || root.btMostrarGuardados)
-                         : (root.btNombre(d) !== "" || root.btMostrarSinNombre)))
+        const visibles = todos.filter(d => d.connected || d.paired || root.btNombre(d) !== "" || root.btMostrarSinNombre)
         visibles.sort((x, y) =>
             (y.connected - x.connected) || (y.paired - x.paired) ||
             String(root.btNombre(x) || "~" + x.address).localeCompare(String(root.btNombre(y) || "~" + y.address)))
         // solo se reemplaza la lista si de verdad cambió algo (así las filas no parpadean cada segundo)
-        const clave = root.btMostrarGuardados + "#" + visibles.map(d => d.address + "|" + root.btNombre(d) + "|" + d.connected + "|" + d.paired).join(";")
+        const clave = visibles.map(d => d.address + "|" + root.btNombre(d) + "|" + d.connected + "|" + d.paired).join(";")
         if (clave !== root._btClave) { root._btClave = clave; root.btLista = visibles }
     }
     Timer {
@@ -650,30 +752,107 @@ ShellRoot {
         running: root.conexionesAbierto && root.conexionesModo === "bt"
         onTriggered: root.ordenarBt()
     }
-    // qué emparejados se oyen ahora: BlueZ les pone RSSI solo mientras los detecta
-    Process {
-        id: pBtCerca
-        command: ["sh", "-c", "bluetoothctl devices Paired 2>/dev/null | awk '{print $2}' | while read m; do bluetoothctl info \"$m\" 2>/dev/null | grep -q RSSI && echo \"$m\"; done"]
-        stdout: StdioCollector { onStreamFinished: { root.btCerca = text.trim() === "" ? [] : text.trim().split("\n"); root._btClave = ""; root.ordenarBt() } }
-    }
     Timer {
-        interval: 4000; repeat: true; triggeredOnStart: true
-        running: root.conexionesAbierto && root.conexionesModo === "bt"
-        onTriggered: { if (!pBtCerca.running) pBtCerca.running = true }
+        id: tBtTimeout
+        interval: 30000
+        repeat: false
+        onTriggered: {
+            if (pBtAccion.running) pBtAccion.running = false
+            if (root.btEmparejandoDev) {
+                try { root.btEmparejandoDev.cancelPair() } catch (e) {}
+            }
+            const aviso = "No se pudo emparejar. Pon el dispositivo en modo de emparejamiento y vuelve a intentarlo."
+            root.btMsgMac = root.btEmparejandoMac
+            root.btMsg = aviso
+            root.btMensaje = aviso
+            root.btEmparejandoMac = ""
+            root.btEmparejandoDev = null
+            root._btClave = ""
+            root.ordenarBt()
+        }
     }
-    Timer { id: tPendiente; interval: 3500; onTriggered: { if (root.btPendiente && root.btPendiente.paired) root.btPendiente.connect(); root.btPendiente = null } }
+    Process {
+        id: pBtAccion
+        property string targetMac: ""
+        stdout: StdioCollector {
+            onStreamFinished: {
+                tBtTimeout.stop()
+                const mac = pBtAccion.targetMac
+                let ok = false
+                let msg = ""
+                try {
+                    const res = JSON.parse(text)
+                    ok = !!res.ok
+                    msg = res.msg || ""
+                } catch (e) {
+                    ok = false
+                    msg = "No se pudo emparejar. Pon el dispositivo en modo de emparejamiento y vuelve a intentarlo."
+                }
+                if (!ok) {
+                    if (root.btEmparejandoDev) {
+                        try { root.btEmparejandoDev.cancelPair() } catch (err) {}
+                    }
+                    const aviso = msg || "No se pudo emparejar. Pon el dispositivo en modo de emparejamiento y vuelve a intentarlo."
+                    root.btMsgMac = mac
+                    root.btMsg = aviso
+                    root.btMensaje = aviso
+                } else {
+                    root.btMsgMac = ""
+                    root.btMsg = ""
+                    root.btMensaje = msg
+                }
+                root.btEmparejandoMac = ""
+                root.btEmparejandoDev = null
+                root._btClave = ""
+                root.ordenarBt()
+            }
+        }
+    }
     function btClic(d) {
-        if (d.connected) d.disconnect()
-        else if (d.paired) d.connect()
-        else { d.trusted = true; d.pair(); root.btPendiente = d; tPendiente.restart() }
+        if (!d) return
+        if (d.connected) {
+            d.disconnect()
+            return
+        }
+        if (d.paired) {
+            d.connect()
+            return
+        }
+        if (d.pairing || root.btEmparejandoMac !== "" || pBtAccion.running) return
+        const mac = (d.address || "").toUpperCase()
+        if (!mac) return
+        root.btEmparejandoMac = mac
+        root.btEmparejandoDev = d
+        root.btMsgMac = ""
+        root.btMsg = ""
+        root.btMensaje = ""
+        pBtAccion.targetMac = mac
+        pBtAccion.command = [root.btBin, "pair", mac]
+        tBtTimeout.restart()
+        pBtAccion.running = true
+        root.ordenarBt()
+    }
+    function asegurarBtPairable() {
+        if (root.adaptadorBt && !root.adaptadorBt.pairable) {
+            root.adaptadorBt.pairable = true
+            root.adaptadorBt.pairableTimeout = 0
+        }
     }
     onConexionesAbiertoChanged: {
         if (root.adaptadorBt) root.adaptadorBt.discovering = root.conexionesAbierto && root.conexionesModo === "bt"
-        if (!root.conexionesAbierto) { root.redClave = ""; root.wifiClave = ""; root.wifiMensaje = "" }
+        if (!root.conexionesAbierto) {
+            root.redClave = ""; root.wifiClave = ""; root.wifiMensaje = ""
+            root.btMensaje = ""; root.btMsgMac = ""; root.btMsg = ""
+        } else if (root.conexionesModo === "bt") {
+            root.asegurarBtPairable()
+        }
     }
     onConexionesModoChanged: {
         if (root.adaptadorBt) root.adaptadorBt.discovering = root.conexionesAbierto && root.conexionesModo === "bt"
         root.redClave = ""
+        if (root.conexionesAbierto && root.conexionesModo === "bt") {
+            root.asegurarBtPairable()
+        }
     }
 
     IpcHandler {
@@ -960,55 +1139,11 @@ ShellRoot {
                                 topPadding: 6
                             }
                             Text {
-                                visible: !root.wifiOcupado && root.redClave === "" && root.wifiMensaje !== "" && root.wifiEncendido && !root.ocultaAbierta
+                                visible: !root.wifiOcupado && root.redClave === "" && root.wifiMensaje !== "" && root.wifiEncendido
                                 text: root.wifiMensaje
                                 color: root.terracota
                                 font { family: root.fuente; pixelSize: 12 * root.esc; weight: Font.Medium; letterSpacing: 2 }
                                 topPadding: 6
-                            }
-                            // Red oculta: no sale en la lista; se conecta escribiendo su nombre (y la contraseña si lleva)
-                            Opcion {
-                                visible: root.wifiEncendido && !root.ocultaAbierta
-                                texto: "Red oculta…"
-                                onClic: { root.ocultaNombre = ""; root.wifiClave = ""; root.redClave = ""; root.wifiMensaje = ""; root.ocultaAbierta = true }
-                            }
-                            Column {
-                                visible: root.wifiEncendido && root.ocultaAbierta
-                                width: parent.width; spacing: 6; topPadding: 6
-                                Rectangle {
-                                    x: 8; width: parent.width - 16; height: 40; radius: 12
-                                    color: Qt.alpha(root.arena, 0.07); border.width: 1; border.color: Qt.alpha(root.arena, 0.25)
-                                    Text { visible: ocNombre.text.length === 0; x: 14; anchors.verticalCenter: parent.verticalCenter; text: "Nombre de la red"
-                                           color: Qt.alpha(root.arena, 0.35); font { family: root.fuente; pixelSize: 14 * root.esc; weight: Font.Light } }
-                                    TextInput { id: ocNombre; x: 14; width: parent.width - 28; anchors.verticalCenter: parent.verticalCenter; clip: true
-                                                color: root.arena; selectionColor: root.terracota; font { family: root.fuente; pixelSize: 15 * root.esc }
-                                                enabled: !root.wifiOcupado; onTextChanged: root.ocultaNombre = text
-                                                Component.onCompleted: forceActiveFocus()
-                                                Keys.onEscapePressed: root.ocultaAbierta = false }
-                                }
-                                Rectangle {
-                                    x: 8; width: parent.width - 16; height: 40; radius: 12
-                                    color: Qt.alpha(root.arena, 0.07); border.width: 1; border.color: Qt.alpha(root.arena, 0.25)
-                                    Text { visible: ocClave.text.length === 0; x: 14; anchors.verticalCenter: parent.verticalCenter; text: "Contraseña (vacía si es abierta)"
-                                           color: Qt.alpha(root.arena, 0.35); font { family: root.fuente; pixelSize: 14 * root.esc; weight: Font.Light } }
-                                    TextInput { id: ocClave; x: 14; width: parent.width - 28; anchors.verticalCenter: parent.verticalCenter; clip: true
-                                                echoMode: TextInput.Password; passwordCharacter: "•"
-                                                color: root.arena; selectionColor: root.terracota; font { family: root.fuente; pixelSize: 15 * root.esc }
-                                                enabled: !root.wifiOcupado; Keys.onEscapePressed: root.ocultaAbierta = false
-                                                onAccepted: if (ocNombre.text.length > 0) root.wifiAccion("connect-hidden", ocNombre.text, ocClave.text) }
-                                }
-                                Row {
-                                    x: 8; spacing: 8
-                                    Opcion { activo: ocNombre.text.length > 0; texto: root.wifiOcupado ? "…" : "Conectar"
-                                             onClic: if (ocNombre.text.length > 0) root.wifiAccion("connect-hidden", ocNombre.text, ocClave.text) }
-                                    Opcion { texto: "Cancelar"; onClic: root.ocultaAbierta = false }
-                                }
-                                Text {
-                                    visible: root.wifiOcupado || root.wifiMensaje !== ""
-                                    x: 12; text: root.wifiOcupado ? "Conectando…" : root.wifiMensaje
-                                    color: root.wifiOcupado ? Qt.alpha(root.arena, 0.6) : root.terracota
-                                    font { family: root.fuente; pixelSize: 12 * root.esc; weight: Font.Medium; letterSpacing: 2 }
-                                }
                             }
                         }
 
@@ -1078,9 +1213,26 @@ ShellRoot {
                                                     font { family: root.fuente; pixelSize: 15 * root.esc; weight: modelData.connected ? Font.Medium : Font.Light }
                                                 }
                                                 Text {
-                                                    text: modelData.connected ? "Conectado" : (modelData.paired ? "Emparejado" : "Toca para emparejar")
-                                                    color: modelData.connected ? root.terracota : Qt.alpha(root.arena, 0.4)
-                                                    font { family: root.fuente; pixelSize: 11 * root.esc; weight: Font.Medium; letterSpacing: 2 }
+                                                    width: parent.width; elide: Text.ElideRight
+                                                    text: {
+                                                        const m = (modelData.address || "").toUpperCase()
+                                                        if (modelData.pairing || (root.btEmparejandoMac !== "" && m === root.btEmparejandoMac)) return "Emparejando…"
+                                                        if (root.btMsgMac !== "" && m === root.btMsgMac && root.btMsg !== "") return root.btMsg
+                                                        return modelData.connected ? "Conectado" : (modelData.paired ? "Emparejado" : "Toca para emparejar")
+                                                    }
+                                                    color: {
+                                                        const m = (modelData.address || "").toUpperCase()
+                                                        if (modelData.pairing || (root.btEmparejandoMac !== "" && m === root.btEmparejandoMac)) return Qt.alpha(root.arena, 0.6)
+                                                        if (root.btMsgMac !== "" && m === root.btMsgMac && root.btMsg !== "") return root.terracota
+                                                        return modelData.connected ? root.terracota : Qt.alpha(root.arena, 0.4)
+                                                    }
+                                                    font {
+                                                        family: root.fuente; pixelSize: 11 * root.esc; weight: Font.Medium
+                                                        letterSpacing: {
+                                                            const m = (modelData.address || "").toUpperCase()
+                                                            return (root.btMsgMac !== "" && m === root.btMsgMac && root.btMsg !== "") ? 1 : 2
+                                                        }
+                                                    }
                                                 }
                                             }
                                             Text {
@@ -1101,19 +1253,20 @@ ShellRoot {
                                 }
                             }
                             Text {
+                                visible: root.adaptadorBt && root.adaptadorBt.enabled && root.btMensaje !== ""
+                                text: root.btMensaje
+                                color: root.terracota
+                                font { family: root.fuente; pixelSize: 12 * root.esc; weight: Font.Medium; letterSpacing: 1 }
+                                wrapMode: Text.WordWrap
+                                width: parent.width
+                                topPadding: 4
+                            }
+                            Text {
                                 visible: root.adaptadorBt && root.adaptadorBt.enabled
                                 text: root.adaptadorBt && root.adaptadorBt.discovering ? "Buscando dispositivos…" : ""
                                 color: Qt.alpha(root.arena, 0.45)
                                 font { family: root.fuente; pixelSize: 12 * root.esc; weight: Font.Medium; letterSpacing: 2 }
                                 topPadding: 8
-                            }
-                            Text {
-                                visible: root.adaptadorBt && root.adaptadorBt.enabled && (root.btGuardadosLejos > 0 || root.btMostrarGuardados)
-                                text: root.btMostrarGuardados ? "Ocultar los guardados que no están cerca" : ("Mostrar " + root.btGuardadosLejos + " guardado(s) que no se detectan")
-                                color: Qt.alpha(root.arena, 0.5)
-                                font { family: root.fuente; pixelSize: 12 * root.esc; weight: Font.Medium; letterSpacing: 1 }
-                                topPadding: 4
-                                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.btMostrarGuardados = !root.btMostrarGuardados; root._btClave = ""; root.ordenarBt() } }
                             }
                             Text {
                                 visible: root.adaptadorBt && root.adaptadorBt.enabled && (root.btSinNombre > 0 || root.btMostrarSinNombre)
@@ -1209,11 +1362,48 @@ ShellRoot {
         command: ["sh", "-c", "find \"$(xdg-user-dir PICTURES 2>/dev/null || echo \"$HOME/Pictures\")/Wallpapers\" -maxdepth 1 -type f \\( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' -o -iname '*.gif' \\) | sort"]
         stdout: StdioCollector { onStreamFinished: root.fondos = text.trim().split("\n").filter(x => x.length > 0) }
     }
+    property bool tapaSinSuspender: false
+    Process {
+        id: pTapaCheck
+        command: ["sh", "-c", "[ -f \"$HOME/.config/miarch/tapa-sin-suspender\" ] && echo 1 || echo 0"]
+        stdout: StdioCollector { onStreamFinished: root.tapaSinSuspender = text.trim() === "1" }
+    }
+    Process {
+        id: pTapaAccion
+        onExited: pTapaCheck.running = true
+    }
+    function alternarTapaSinSuspender() {
+        if (root.tapaSinSuspender) {
+            root.tapaSinSuspender = false
+            pTapaAccion.command = ["rm", "-f", Quickshell.env("HOME") + "/.config/miarch/tapa-sin-suspender"]
+        } else {
+            root.tapaSinSuspender = true
+            pTapaAccion.command = ["sh", "-c", "mkdir -p \"$HOME/.config/miarch\" && touch \"$HOME/.config/miarch/tapa-sin-suspender\""]
+        }
+        pTapaAccion.running = true
+    }
+    property bool siempreEncendido: false
+    Process {
+        id: pEncendidoCheck
+        command: [Quickshell.env("HOME") + "/.local/bin/miarch-encendido", "estado"]
+        stdout: StdioCollector { onStreamFinished: root.siempreEncendido = text.trim() === "1" }
+    }
+    Process {
+        id: pEncendidoAccion
+        onExited: pEncendidoCheck.running = true
+    }
+    function alternarSiempreEncendido() {
+        pEncendidoAccion.command = [Quickshell.env("HOME") + "/.local/bin/miarch-encendido", root.siempreEncendido ? "desactivar" : "activar"]
+        pEncendidoAccion.running = true
+    }
     function refrescarAjustes() {
         fHypr.reload(); fAjustes.reload(); fBrillo.reload(); fBrilloMax.reload()
         if (!pInfo.running) pInfo.running = true
         if (!pMonitores.running) pMonitores.running = true
         if (!pFondos.running) pFondos.running = true
+        if (!pPantallasLista.running && !pPantallasAccion.running) pPantallasLista.running = true
+        if (!pTapaCheck.running) pTapaCheck.running = true
+        if (!pEncendidoCheck.running) pEncendidoCheck.running = true
     }
 
     // Audio: hay que "seguir" los nodos para poder leer su volumen
@@ -1312,6 +1502,7 @@ ShellRoot {
                                 model: [
                                     { id: "red",           t: "Red",              i: "" },
                                     { id: "sonido",        t: "Sonido",           i: "" },
+                                    { id: "pantallas",     t: "Pantallas",        i: "󰍹" },
                                     { id: "pantalla",      t: "Pantalla",         i: "" },
                                     { id: "apariencia",    t: "Apariencia",       i: "" },
                                     { id: "entrada",       t: "Teclado y ratón",  i: "" },
@@ -1437,6 +1628,182 @@ ShellRoot {
                                     encendido: Pipewire.defaultAudioSource && Pipewire.defaultAudioSource.audio ? !Pipewire.defaultAudioSource.audio.muted : true
                                     onAlternar: if (Pipewire.defaultAudioSource && Pipewire.defaultAudioSource.audio) Pipewire.defaultAudioSource.audio.muted = !Pipewire.defaultAudioSource.audio.muted
                                 }
+                            }
+                        }
+
+                        // ═══ PANTALLAS ═══
+                        Pagina {
+                            visible: root.ajustesPagina === "pantallas"
+                            Titulo { texto: "Pantallas" }
+
+                            Rectangle {
+                                id: areaDibujo
+                                width: parent.width
+                                height: 210
+                                radius: 16
+                                color: Qt.alpha(root.arena, 0.04)
+                                border.width: 1
+                                border.color: Qt.alpha(root.arena, 0.1)
+
+                                readonly property var mons: root.pantallasLista
+                                readonly property real totalAnchoLog: {
+                                    let s = 0
+                                    for (let i = 0; i < mons.length; i++) s += (mons[i].ancho_logico || 1920)
+                                    return Math.max(1, s)
+                                }
+                                readonly property real maxAltoLog: {
+                                    let m = 0
+                                    for (let i = 0; i < mons.length; i++) m = Math.max(m, (mons[i].alto_logico || 1080))
+                                    return Math.max(1, m)
+                                }
+                                readonly property real factorEscala: {
+                                    let dispW = areaDibujo.width - 48 - Math.max(0, mons.length - 1) * 16
+                                    let dispH = areaDibujo.height - 48
+                                    return Math.min(dispW / totalAnchoLog, dispH / maxAltoLog)
+                                }
+
+                                Row {
+                                    anchors.centerIn: parent
+                                    spacing: 16
+
+                                    Repeater {
+                                        model: areaDibujo.mons
+                                        Rectangle {
+                                            required property var modelData
+                                            readonly property bool seleccionado: root.pantallaSeleccionada === modelData.nombre
+                                            readonly property real wLog: modelData.ancho_logico || 1920
+                                            readonly property real hLog: modelData.alto_logico || 1080
+
+                                            width: Math.max(150, Math.round(wLog * areaDibujo.factorEscala))
+                                            height: Math.max(90, Math.round(hLog * areaDibujo.factorEscala))
+                                            radius: 12
+                                            color: seleccionado ? Qt.alpha(root.terracota, 0.16) : (mza.containsMouse ? Qt.alpha(root.arena, 0.1) : Qt.alpha(root.arena, 0.05))
+                                            border.width: seleccionado ? 2 : 1
+                                            border.color: seleccionado ? root.terracota : Qt.alpha(root.arena, 0.25)
+
+                                            Behavior on color { ColorAnimation { duration: 150 } }
+
+                                            Column {
+                                                anchors.centerIn: parent
+                                                spacing: 4
+                                                width: parent.width - 16
+
+                                                Row {
+                                                    anchors.horizontalCenter: parent.horizontalCenter
+                                                    spacing: 6
+
+                                                    Text {
+                                                        text: modelData.nombre || ""
+                                                        color: root.arena
+                                                        font { family: root.fuente; pixelSize: 14 * root.esc; weight: Font.Bold }
+                                                    }
+
+                                                    Rectangle {
+                                                        visible: !!modelData.es_principal
+                                                        anchors.verticalCenter: parent.verticalCenter
+                                                        width: txtPrinc.implicitWidth + 10
+                                                        height: 18
+                                                        radius: 9
+                                                        color: root.terracota
+                                                        Text {
+                                                            id: txtPrinc
+                                                            anchors.centerIn: parent
+                                                            text: "Principal"
+                                                            color: root.fondo
+                                                            font { family: root.fuente; pixelSize: 10 * root.esc; weight: Font.Bold }
+                                                        }
+                                                    }
+                                                }
+
+                                                Text {
+                                                    anchors.horizontalCenter: parent.horizontalCenter
+                                                    width: parent.width
+                                                    horizontalAlignment: Text.AlignHCenter
+                                                    elide: Text.ElideRight
+                                                    text: modelData.marca_modelo || ""
+                                                    color: Qt.alpha(root.arena, 0.75)
+                                                    font { family: root.fuente; pixelSize: 11 * root.esc }
+                                                }
+
+                                                Text {
+                                                    anchors.horizontalCenter: parent.horizontalCenter
+                                                    text: (modelData.resolucion || "") + (modelData.escala && modelData.escala !== 1 ? (" (" + Math.round(wLog) + "×" + Math.round(hLog) + ")") : "")
+                                                    color: Qt.alpha(root.arena, 0.5)
+                                                    font { family: root.fuente; pixelSize: 11 * root.esc }
+                                                }
+                                            }
+
+                                            MouseArea {
+                                                id: mza
+                                                anchors.fill: parent
+                                                hoverEnabled: true
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: root.pantallaSeleccionada = modelData.nombre
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Text {
+                                    visible: areaDibujo.mons.length === 0
+                                    anchors.centerIn: parent
+                                    text: "Cargando pantallas…"
+                                    color: Qt.alpha(root.arena, 0.4)
+                                    font { family: root.fuente; pixelSize: 13 * root.esc }
+                                }
+                            }
+
+                            Row {
+                                spacing: 12
+                                readonly property var monSel: {
+                                    for (let i = 0; i < root.pantallasLista.length; i++) {
+                                        if (root.pantallasLista[i].nombre === root.pantallaSeleccionada) return root.pantallasLista[i]
+                                    }
+                                    return null
+                                }
+
+                                Opcion {
+                                    texto: "Intercambiar de lado"
+                                    opacity: root.pantallasLista.length >= 2 && !root.pantallasOcupado ? 1.0 : 0.4
+                                    onClic: {
+                                        if (root.pantallasLista.length >= 2 && !root.pantallasOcupado) {
+                                            root.pantallasAccion("swap")
+                                        }
+                                    }
+                                }
+
+                                Opcion {
+                                    texto: "Hacer principal"
+                                    opacity: root.pantallaSeleccionada !== "" && monSel && !monSel.es_principal && !root.pantallasOcupado ? 1.0 : 0.4
+                                    onClic: {
+                                        if (root.pantallaSeleccionada !== "" && !root.pantallasOcupado) {
+                                            root.pantallasAccion("principal", root.pantallaSeleccionada)
+                                        }
+                                    }
+                                }
+
+                                Opcion {
+                                    texto: "Identificar pantallas"
+                                    opacity: !root.pantallasOcupado ? 1.0 : 0.4
+                                    onClic: {
+                                        if (!root.pantallasOcupado) {
+                                            root.pantallasAccion("identificar")
+                                        }
+                                    }
+                                }
+                            }
+
+                            Text {
+                                text: "Si tus pantallas están al revés, pulsa Intercambiar de lado."
+                                color: Qt.alpha(root.arena, 0.6)
+                                font { family: root.fuente; pixelSize: 12 * root.esc }
+                            }
+
+                            Text {
+                                visible: root.pantallasMensaje !== ""
+                                text: root.pantallasMensaje
+                                color: root.terracota
+                                font { family: root.fuente; pixelSize: 12 * root.esc; weight: Font.Medium }
                             }
                         }
 
@@ -1599,6 +1966,23 @@ ShellRoot {
                                 titulo: "MODO DE ENERGÍA"; clave: "perfil"; actual: root.perfilActual
                                 opciones: [ { v: "power-saver", t: "Ahorro" }, { v: "balanced", t: "Equilibrado" }, { v: "performance", t: "Rendimiento" } ]
                             }
+                            Etiqueta { texto: "TAPA DEL PORTÁTIL" }
+                            Fila {
+                                etiqueta: "No suspender al cerrar la tapa"
+                                detalle: "Se aplica al pulsar la nube (actualizador)"
+                                Interruptor {
+                                    encendido: root.tapaSinSuspender
+                                    onAlternar: root.alternarTapaSinSuspender()
+                                }
+                            }
+                            Fila {
+                                etiqueta: "Mantener encendido con el cargador"
+                                detalle: "No se suspende ni se apaga por inactividad mientras esté enchufado (el botón de encendido sigue funcionando)"
+                                Interruptor {
+                                    encendido: root.siempreEncendido
+                                    onAlternar: root.alternarSiempreEncendido()
+                                }
+                            }
                             Etiqueta { texto: "SESIÓN" }
                             Flow {
                                 width: parent.width
@@ -1716,11 +2100,17 @@ ShellRoot {
     property string osdTexto: ""
     property bool osdSilencio: false
     Timer { id: tOsd; interval: 1200; onTriggered: root.osdVisible = false }
+    function mostrarOsd(valor: int, texto: string, silencio: int): void {
+        root.osdValor = Math.max(0, Math.min(100, valor))
+        root.osdTexto = texto
+        root.osdSilencio = silencio === 1
+        root.osdVisible = true
+        tOsd.restart()
+    }
     IpcHandler {
         target: "osd"
         function mostrar(valor: int, texto: string, silencio: int): void {
-            root.osdValor = Math.max(0, Math.min(100, valor)); root.osdTexto = texto; root.osdSilencio = silencio === 1
-            root.osdVisible = true; tOsd.restart()
+            root.mostrarOsd(valor, texto, silencio)
         }
     }
     Variants {
@@ -1961,6 +2351,54 @@ ShellRoot {
                                 color: Qt.alpha(root.terracota, hovN.hovered ? 0.8 : 0.45)
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    // ── Ventana para identificar pantallas ──
+    Variants {
+        model: Quickshell.screens
+
+        PanelWindow {
+            required property var modelData
+            screen: modelData
+            visible: root.pantallasIdentificando
+            anchors { top: true; bottom: true; left: true; right: true }
+            color: "transparent"
+            mask: Region {}
+            exclusionMode: ExclusionMode.Ignore
+            WlrLayershell.layer: WlrLayer.Overlay
+            WlrLayershell.namespace: "miarch-identificar-pantallas"
+            WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+
+            Rectangle {
+                anchors.centerIn: parent
+                width: Math.max(340, colId.implicitWidth + 80)
+                height: 140
+                radius: 20
+                color: Qt.alpha(root.fondo, 0.92)
+                border.width: 2
+                border.color: root.terracota
+
+                Column {
+                    id: colId
+                    anchors.centerIn: parent
+                    spacing: 8
+
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: modelData.name || ""
+                        color: root.arena
+                        font { family: root.fuente; pixelSize: 36 * root.esc; weight: Font.Bold }
+                    }
+
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: (modelData.width && modelData.height) ? (modelData.width + "×" + modelData.height) : ""
+                        color: Qt.alpha(root.arena, 0.7)
+                        font { family: root.fuente; pixelSize: 18 * root.esc }
                     }
                 }
             }
@@ -2566,12 +3004,13 @@ ShellRoot {
     }
     function arrancarApertura() {
         if (!root.accesoOk) return                     // se volvió a bloquear mientras tanto: no se desbloquea nada
-        Quickshell.execDetached(["pw-play", "--volume=0.6", Quickshell.env("HOME") + "/.config/quickshell/miarch/sonidos/desbloqueo.wav"])
-        animApertura.restart()                         // el sonido y la animación empiezan a la vez: el golpe cae con el destello
+        Quickshell.execDetached(["sh", "-c", "paplay --volume=39322 \"$1\" 2>/dev/null || pw-play --volume=0.6 \"$1\"", "sh", Quickshell.env("HOME") + "/.config/quickshell/miarch/sonidos/desbloqueo.wav"])   // paplay: el grabador de pantalla sí lo captura; pw-play de respaldo
+        animApertura.restart()                         // el sonido y la animación empiezan a la vez
     }
     Process {
         id: pLog
-        command: ["sh", "-c", "journalctl -b -n 26 --no-pager -o short-monotonic 2>/dev/null || journalctl --user -b -n 26 --no-pager -o short-monotonic 2>/dev/null"]
+        // Modo demo (para grabar vídeos): el registro real no enseña el nombre de tu equipo, que sale en cada línea
+        command: ["sh", "-c", "{ journalctl -b -n 26 --no-pager -o short-monotonic 2>/dev/null || journalctl --user -b -n 26 --no-pager -o short-monotonic 2>/dev/null; }" + (root.demo ? " | { H=$(cat /etc/hostname 2>/dev/null); if [ -n \"$H\" ]; then sed \"s/$H/miarch/g\"; else cat; fi; }" : "")]
         stdout: StdioCollector {
             onStreamFinished: {
                 const l = text.split("\n").map(x => x.trim()).filter(x => x.length > 0)
@@ -2595,6 +3034,7 @@ ShellRoot {
 
     IpcHandler {
         target: "lock"
+        function estado(): string { return sesion.locked ? "bloqueado" : "libre" }
         function lock(): void { animApertura.stop(); tPorSiNoHayLog.stop(); root.clave = ""; root.errorClave = false; root.accesoOk = false; root.apertura = 0; sesion.locked = true }   // un bloqueo nuevo cancela cualquier desbloqueo a medias
     }
 
@@ -2615,7 +3055,7 @@ ShellRoot {
                 Behavior on entrada { NumberAnimation { duration: 1500; easing.type: Easing.OutQuint } }
 
                 // 0 durante el log y 0→1 cuando la pantalla se despeja (último 38 % de la secuencia)
-                // Secuencia de cine (5,6 s): p = progreso 0..1. El golpe del sonido cae en p = 0.76.
+                // Secuencia de cine (5,6 s): p = progreso 0..1.
                 readonly property real p: root.apertura
                 function suave(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x) }
                 readonly property real abre: suave((p - 0.80) / 0.20)             // llega el fondo nítido
@@ -2680,56 +3120,44 @@ ShellRoot {
                     spacing: candado.height * 0.012
                     opacity: candado.suave((candado.p - 0.46) / 0.14) * (1 - candado.suave((candado.p - 0.84) / 0.08))
                     Text {
+                        id: txtTituloLock
                         anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.horizontalCenterOffset: txtTituloLock.espacio / 2
+                        width: Math.min(implicitWidth, candado.width * 0.8)
+                        elide: Text.ElideRight
                         text: "MIARCH"
                         color: root.arena
-                        font { family: root.fuente; pixelSize: candado.height * 0.085; weight: Font.Normal
-                               letterSpacing: candado.height * (0.012 + 0.03 * candado.suave((candado.p - 0.46) / 0.4)) }
+                        readonly property real tam: Math.min(candado.height * 0.085, candado.width * 0.11)
+                        readonly property real deseado: candado.height * (0.012 + 0.03 * candado.suave((candado.p - 0.46) / 0.4))
+                        readonly property real topeSpacing: Math.max(0, (candado.width * 0.8 - 6 * tam * 0.62) / 6)
+                        readonly property real espacio: Math.min(deseado, topeSpacing)
+                        font { family: root.fuente; pixelSize: txtTituloLock.tam; weight: Font.Normal; letterSpacing: txtTituloLock.espacio }
                     }
                     Text {
+                        id: txtEstadoLock
                         anchors.horizontalCenter: parent.horizontalCenter
+                        width: Math.min(implicitWidth, candado.width * 0.8)
+                        elide: Text.ElideRight
                         text: "ACCESO CONCEDIDO"
                         color: root.terracota
                         opacity: 0.85
-                        font { family: root.fuente; pixelSize: candado.height * 0.016; weight: Font.Medium; letterSpacing: 9 }
+                        readonly property real tam: Math.min(candado.height * 0.016, candado.width * 0.022)
+                        readonly property real topeSpacing: Math.max(0, (candado.width * 0.8 - text.length * tam * 0.62) / text.length)
+                        font { family: root.fuente; pixelSize: txtEstadoLock.tam; weight: Font.Medium; letterSpacing: Math.min(9, txtEstadoLock.topeSpacing) }
                     }
                     Text {   // firma: aparece un poco después del título
+                        id: txtFirmaLock
                         anchors.horizontalCenter: parent.horizontalCenter
                         topPadding: candado.height * 0.03
+                        width: Math.min(implicitWidth, candado.width * 0.8)
+                        elide: Text.ElideRight
                         text: "by alejandro-xoxo"
                         color: root.arena
                         opacity: 0.7 * candado.suave((candado.p - 0.56) / 0.12)
-                        font { family: root.fuente; pixelSize: candado.height * 0.02; weight: Font.Normal; letterSpacing: 5 }
+                        readonly property real tam: Math.min(candado.height * 0.02, candado.width * 0.028)
+                        readonly property real topeSpacing: Math.max(0, (candado.width * 0.8 - text.length * tam * 0.62) / text.length)
+                        font { family: root.fuente; pixelSize: txtFirmaLock.tam; weight: Font.Normal; letterSpacing: Math.min(5, txtFirmaLock.topeSpacing) }
                     }
-                }
-                // Destello anamórfico: una línea de luz horizontal que cruza la pantalla en el golpe del sonido
-                Item {
-                    visible: candado.p > 0.66 && candado.p < 0.9
-                    anchors.fill: parent
-                    opacity: Math.sin(Math.PI * Math.max(0, Math.min(1, (candado.p - 0.66) / 0.22)))
-                    Rectangle {   // resplandor suave
-                        width: parent.width * candado.suave((candado.p - 0.66) / 0.16); height: candado.height * 0.07
-                        x: (parent.width - width) / 2; y: parent.height / 2 - height / 2
-                        gradient: Gradient { orientation: Gradient.Vertical
-                            GradientStop { position: 0; color: "transparent" }
-                            GradientStop { position: 0.5; color: Qt.alpha("#ffe9c8", 0.10) }
-                            GradientStop { position: 1; color: "transparent" } }
-                    }
-                    Rectangle {   // el filo brillante
-                        width: parent.width * candado.suave((candado.p - 0.66) / 0.16); height: 3
-                        x: (parent.width - width) / 2; y: parent.height / 2 - 1.5
-                        gradient: Gradient { orientation: Gradient.Horizontal
-                            GradientStop { position: 0; color: "transparent" }
-                            GradientStop { position: 0.5; color: "#fff3e0" }
-                            GradientStop { position: 1; color: "transparent" } }
-                    }
-                }
-                // Luz: todo se aclara tras el golpe y se disuelve en el escritorio
-                Rectangle {
-                    anchors.fill: parent
-                    color: "#fff3e0"
-                    visible: opacity > 0
-                    opacity: 0.22 * candado.suave((candado.p - 0.76) / 0.12) * (1 - candado.suave((candado.p - 0.90) / 0.10))
                 }
                 // Barras de cine arriba y abajo
                 Repeater {
@@ -2749,14 +3177,16 @@ ShellRoot {
                     readonly property var p: root.jugador
                     readonly property real avance: (p && p.length > 0) ? Math.min(1, p.position / p.length) : 0
                     readonly property real lado: Math.min(candado.height * 0.30, candado.width * 0.2)
-                    x: candado.width * 0.46
+                    readonly property real salida: root.accesoOk ? candado.suave(root.apertura / 0.18) : 0
+                    x: candado.width * 0.46 + 40 * salida
+                    scale: 1 - 0.04 * salida
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.verticalCenterOffset: -candado.height * 0.09 + (1 - candado.entrada) * 60
                     width: lado + candado.height * 0.04 + Math.min(candado.width * 0.24, 460)
                     height: lado
-                    opacity: p ? Math.min(1, candado.entrada) : 0
-                    visible: opacity > 0
-                    Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
+                    opacity: (p ? Math.min(1, candado.entrada) : 0) * (1 - salida)
+                    visible: opacity > 0 && (!root.accesoOk || root.apertura < 0.18)
+                    Behavior on opacity { enabled: !root.accesoOk; NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
 
                     Timer {
                         running: musicaBloqueo.visible && musicaBloqueo.p !== null && musicaBloqueo.p.isPlaying
@@ -2891,6 +3321,7 @@ ShellRoot {
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.verticalCenterOffset: (1 - candado.entrada) * 60
                     opacity: Math.min(1, candado.entrada) * (1 - Math.min(1, root.apertura * 6))
+                    visible: opacity > 0
                     spacing: 6
 
                     Text {

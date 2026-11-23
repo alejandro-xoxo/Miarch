@@ -25,6 +25,7 @@ PAQUETES=(
     rofi                      # lanzador de respaldo (Super+Shift+Espacio)
     grim slurp wl-clipboard   # capturas y portapapeles
     brightnessctl playerctl xdg-user-dirs
+    mpv                       # reproductor de vídeo (mp4, mkv…), ligero y con aceleración por hardware
 
     # Gráficos y audio
     mesa intel-media-driver pipewire pipewire-pulse wireplumber sound-theme-freedesktop   # el pitido del volumen
@@ -52,6 +53,7 @@ PAQUETES=(
     # Aplicaciones
     dolphin qt6ct breeze-icons   # gestor de archivos + tema de Qt (qt6ct) e íconos
     spotify-launcher
+    blender                      # modelado, animación y render 3D (con gráficas Intel antiguas renderiza con la CPU)
 )
 # AUR (paquetes de la comunidad: no están firmados por Arch)
 AUR_PAQUETES=(
@@ -170,6 +172,10 @@ ui_total "$ETAPAS"
 [ -n "${MIARCH_UI_SUB:-}" ] || ui_banner "paquetes"   # solo si no lo lanza setup.sh
 ui_sudo
 ui_etapa "Actualizando el sistema e instalando los paquetes oficiales"
+if ! esperar_pacman; then
+    ui_aviso "No se pueden instalar ni actualizar paquetes: pacman está bloqueado. Se reintentará la próxima vez."
+    exit 1
+fi
 if [ "$SIN_JUEGOS" = 0 ]; then
     JUEGOS_OK=1; habilitar_multilib || JUEGOS_OK=0     # antes del -Syu, para que se sincronice multilib
 fi
@@ -284,18 +290,28 @@ fi
 ui_etapa "Quitando paquetes que Miarch ya no usa"
 mapfile -t SOBRAN < <(for p in "${OBSOLETOS[@]}"; do pacman -Q "$p" >/dev/null 2>&1 && echo "$p"; done)
 if [ "${#SOBRAN[@]}" -gt 0 ]; then
-    ui_ejecutar "Quitando ${SOBRAN[*]}" sudo pacman -Rns --noconfirm "${SOBRAN[@]}" || ui_aviso "No se pudo quitar: ${SOBRAN[*]}"
+    if esperar_pacman; then
+        ui_ejecutar "Quitando ${SOBRAN[*]}" sudo pacman -Rns --noconfirm "${SOBRAN[@]}" || ui_aviso "No se pudo quitar: ${SOBRAN[*]}"
+    else
+        ui_aviso "No se pudieron quitar paquetes obsoletos por bloqueo de pacman. Se reintentará la próxima vez."
+    fi
 else
     ui_ok "No hay paquetes obsoletos"
 fi
 AUR_FALLIDOS=()
-for paquete in "${AUR_PAQUETES[@]}"; do
-    ui_etapa "Instalando $paquete (AUR)"
-    ui_ejecutar "$paquete" yay -S --noconfirm --needed "$paquete" || AUR_FALLIDOS+=("$paquete")
-done
-if [ "${#AUR_FALLIDOS[@]}" -gt 0 ]; then
-    ui_aviso "No se pudieron instalar estos paquetes de AUR: ${AUR_FALLIDOS[*]}"
-    ui_info "Reintenta uno con:  yay -S ${AUR_FALLIDOS[0]}   (te mostrará el error completo)"
+if [ "${#AUR_PAQUETES[@]}" -gt 0 ]; then
+    if ! esperar_pacman; then
+        ui_aviso "Instalación de paquetes de AUR omitida por bloqueo de pacman. Se reintentará la próxima vez."
+    else
+        for paquete in "${AUR_PAQUETES[@]}"; do
+            ui_etapa "Instalando $paquete (AUR)"
+            ui_ejecutar "$paquete" yay -S --noconfirm --needed "$paquete" || AUR_FALLIDOS+=("$paquete")
+        done
+        if [ "${#AUR_FALLIDOS[@]}" -gt 0 ]; then
+            ui_aviso "No se pudieron instalar estos paquetes de AUR: ${AUR_FALLIDOS[*]}"
+            ui_info "Reintenta uno con:  yay -S ${AUR_FALLIDOS[0]}   (te mostrará el error completo)"
+        fi
+    fi
 fi
 
 # =========================

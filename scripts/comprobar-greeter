@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Miarch · comprobación de seguridad para la pantalla de inicio de sesión (greetd + Quickshell).
+# Verifica:
+#   (a) Que los comandos de Greetd.launch en shell.qml tienen sintaxis válida al unirse con espacios.
+#   (b) Que sesion.sh y start.sh son scripts válidos (sh -n).
+#   (c) Que shell.qml carga en vacío (offscreen) sin errores salvo el backend de PanelWindow.
+#   (d) Que config.toml configura vt = 1 y el comando correcto.
+# Sale con código 0 si todo es seguro, o distinto de cero con un mensaje descriptivo si falla.
+set -euo pipefail
+
+REPO="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+GREETER_DIR="$REPO/config/greeter"
+
+if [ ! -d "$GREETER_DIR" ]; then
+    echo "[ERROR] No se encontró el directorio de greeter: $GREETER_DIR" >&2
+    exit 1
+fi
+
+SHELL_QML="$GREETER_DIR/shell.qml"
+SESION_SH="$GREETER_DIR/sesion.sh"
+START_SH="$GREETER_DIR/start.sh"
+CONFIG_TOML="$GREETER_DIR/config.toml"
+
+for f in "$SHELL_QML" "$SESION_SH" "$START_SH" "$CONFIG_TOML"; do
+    if [ ! -f "$f" ]; then
+        echo "[ERROR] Falta archivo requerido: $f" >&2
+        exit 1
+    fi
+done
+
+# (a) Sintaxis de Greetd.launch: extrae los arrays de comando, los une con espacios y comprueba con bash -n
+echo "==> [1/4] Comprobando comandos de Greetd.launch..."
+python3 - <<'EOF' "$SHELL_QML"
+import sys, re, json, subprocess
+
+with open(sys.argv[1], 'r', encoding='utf-8') as f:
+    text = f.read()
+
+m = re.search(r'Greetd\.launch\s*\((.*?)\)', text, re.DOTALL)
+if not m:
+    print("[ERROR] No se encontró llamada a Greetd.launch en " + sys.argv[1], file=sys.stderr)
+    sys.exit(1)
+
+launch_content = m.group(1).strip()
+array_matches = re.findall(r'\[([^\]]+)\]', launch_content)
+if not array_matches:
+    print("[ERROR] No se encontraron arrays de comando en Greetd.launch", file=sys.stderr)
+    sys.exit(1)
+
+for raw_arr in array_matches:
+    try:
+        items = json.loads("[" + raw_arr + "]")
+    except Exception:
+        items = []
+        for part in raw_arr.split(','):
+            part = part.strip()
+            if (part.startswith('"') and part.endswith('"')) or (part.startswith("'") and part.endswith("'")):
+                items.append(part[1:-1])
+            else:
+                items.append(part)
+    joined = " ".join(items)
+    cmd = f"exec {joined}"
+    res = subprocess.run(["bash", "-n", "-c", cmd], capture_output=True, text=True)
+    if res.returncode != 0:
+        print(f"[ERROR] Sintaxis inválida para '{cmd}': {res.stderr.strip()}", file=sys.stderr)
+        sys.exit(1)
+EOF
+
+# (b) Comprobación de sintaxis de scripts de inicio
+echo "==> [2/4] Comprobando sintaxis de sesion.sh y start.sh..."
+if ! sh -n "$SESION_SH"; then
+    echo "[ERROR] Error de sintaxis en $SESION_SH" >&2
+    exit 1
+fi
+if ! sh -n "$START_SH"; then
+    echo "[ERROR] Error de sintaxis en $START_SH" >&2
+    exit 1
+fi
+
+# (c) Carga en vacío del QML del greeter
+echo "==> [3/4] Carga en vacío del QML del greeter (offscreen)..."
+if ! command -v qs >/dev/null 2>&1; then
+    echo "[ERROR] Quickshell (qs) no está instalado en el sistema." >&2
+    exit 1
+fi
+
+QS_OUT="$(cd "$GREETER_DIR" && QT_QPA_PLATFORM=offscreen MIARCH_GREETER_TEST=1 MIARCH_GREETER_DATA=/tmp timeout 6 qs -p . 2>&1 || true)"
+if ! echo "$QS_OUT" | grep -q "No PanelWindow backend loaded"; then
+    echo "[ERROR] Falló la carga en vacío del greeter: no se inicializó correctamente." >&2
+    echo "$QS_OUT" >&2
+    exit 1
+fi
+UNEXPECTED="$(echo "$QS_OUT" | grep "ERROR:" | grep -v "Failed to load configuration" | grep -v "No PanelWindow backend loaded" || true)"
+if [ -n "$UNEXPECTED" ]; then
+    echo "[ERROR] Errores inesperados al cargar el greeter en vacío:" >&2
+    echo "$UNEXPECTED" >&2
+    exit 1
+fi
+
+# (d) Comprobación de config.toml
+echo "==> [4/4] Comprobando configuración de config.toml..."
+if ! grep -qE '^\s*vt\s*=\s*1\s*$' "$CONFIG_TOML"; then
+    echo "[ERROR] $CONFIG_TOML no define 'vt = 1'." >&2
+    exit 1
+fi
+if ! grep -qE '^\s*command\s*=\s*"/usr/share/miarch/greeter/start.sh"\s*$' "$CONFIG_TOML"; then
+    echo "[ERROR] $CONFIG_TOML no define command = \"/usr/share/miarch/greeter/start.sh\"." >&2
+    exit 1
+fi
+
+echo "[OK] Todas las comprobaciones de seguridad del greeter pasaron con éxito."

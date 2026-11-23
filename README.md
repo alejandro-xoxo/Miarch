@@ -120,7 +120,7 @@ Un panel con clics para todo: red, sonido, pantalla, apariencia (fondos, animaci
 ### Bloqueo (`Super + L`) e inicio de sesión
 Mismo estilo en las dos pantallas: wallpaper desenfocado, reloj grande y la contraseña con puntos. Con música sonando, el bloqueo muestra la portada y los controles junto al reloj.
 
-**Entrar es una pequeña película** (unos 5,6 s): barras de cine arriba y abajo, el fondo avanza despacio, aparece el título MIARCH con la firma *by alejandro-xoxo*, un destello horizontal cruza la pantalla y todo se aclara hasta quedar igual que tu escritorio. Al desbloquear suena una pieza de tráiler generada por código (sin muestras de terceros) y se teclea el **log real del sistema** (`journalctl`). La contraseña se verifica con PAM; un bloqueo nuevo cancela cualquier desbloqueo a medias.
+**Entrar es una pequeña película** (unos 5,6 s): barras de cine arriba y abajo, el fondo avanza despacio, aparece el título MIARCH con la firma *by alejandro-xoxo* y todo se aclara hasta quedar igual que tu escritorio. Al desbloquear suena un sonido de teclado mecánico con switches rojos (Cherry MX Red) generado por síntesis de código, sin muestras de terceros y se teclea el **log real del sistema** (`journalctl`). La contraseña se verifica con PAM; un bloqueo nuevo cancela cualquier desbloqueo a medias.
 
 | Pantalla de bloqueo | Inicio de sesión |
 |---|---|
@@ -151,7 +151,7 @@ Si usas Claude Code, Codex o Antigravity, la instalación les deja una skill (`i
 Steam listo para jugar: controladores Vulkan de tu tarjeta, GameMode (sube el rendimiento mientras juegas y lo devuelve después), MangoHud, Gamescope con FSR para gráficas integradas y ProtonUp-Qt. Guía y opciones de lanzamiento en [docs/juegos.md](docs/juegos.md).
 
 ### Wi‑Fi y Bluetooth con clics
-En la barra, un clic en el Wi‑Fi o el Bluetooth abre un panel para ver las redes y dispositivos, y conectarte escribiendo la contraseña ahí mismo. En el Wi‑Fi puedes **conectar, desconectar, olvidar** una red, entrar a una **red oculta** y escribir la clave nueva si una red guardada la cambió; solo se listan las redes que están a tu alcance. En Bluetooth, los emparejados que no se detectan cerca quedan escondidos tras un botón. *(No hay capturas de estos paneles porque muestran las redes y los dispositivos de quien las toma.)*
+En la barra, un clic en el Wi‑Fi o el Bluetooth abre un panel para ver las redes y dispositivos, y conectarte escribiendo la contraseña ahí mismo. En el Wi‑Fi puedes **conectar, desconectar, olvidar** una red y escribir la clave nueva si una red guardada la cambió; solo se muestran las redes que hay cerca y las que el equipo ya conoce. En Bluetooth se listan los dispositivos cercanos y los que el equipo ya conoce. *(No hay capturas de estos paneles porque muestran las redes y los dispositivos de quien las toma.)*
 
 ---
 

@@ -20,9 +20,11 @@ ShellRoot {
     // ── Paleta: la misma del escritorio (copiada a /var/lib/miarch-greeter por wallpaper.sh) ──
     property color arena: "#cfc6b4"
     property color terracota: "#b97b62"
+    property color salvia: "#8c9c88"
     property color fondo: "#12141a"
     Behavior on arena { ColorAnimation { duration: 800 } }
     Behavior on terracota { ColorAnimation { duration: 800 } }
+    Behavior on salvia { ColorAnimation { duration: 800 } }
     Behavior on fondo { ColorAnimation { duration: 800 } }
     FileView {
         path: root.datos + "/colors.json"
@@ -30,6 +32,7 @@ ShellRoot {
             try {
                 const c = JSON.parse(text())
                 root.arena = c.arena; root.terracota = c.terracota; root.fondo = c.fondo
+                if (c.salvia) root.salvia = c.salvia
             } catch (e) {}
         }
     }
@@ -58,6 +61,45 @@ ShellRoot {
     property string mensaje: ""
     property bool listoParaClave: root.prueba     // en real, true cuando greetd pide la contraseña
     signal sacudir()
+    property bool sesionOk: false                    // el script de arranque de sesión existe y es ejecutable
+    Process {
+        running: !root.prueba
+        command: ["test", "-x", "/usr/share/miarch/greeter/sesion.sh"]
+        onExited: code => root.sesionOk = (code === 0)
+    }
+    property bool sonidoOk: false                    // sonido de teclas al iniciar sesión
+    Process {
+        running: !root.prueba
+        command: ["test", "-f", "/usr/share/miarch/greeter/desbloqueo.wav"]
+        onExited: code => root.sonidoOk = (code === 0)
+    }
+    property var lineasLog: []
+    Process {
+        id: pLog
+        command: ["systemctl", "list-units", "--type=service", "--state=running", "--no-legend", "--no-pager", "--plain"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const l = []
+                for (const raw of text.split("\n")) {
+                    const trimmed = raw.trim()
+                    if (!trimmed) continue
+                    const m = trimmed.match(/^(\S+)\s+\S+\s+\S+\s+\S+(?:\s+(.*))?$/)
+                    if (m) {
+                        const u = m[1]
+                        const d = (m[2] || "").trim()
+                        l.push(d.length > 0 ? ("[  OK  ] " + u + " — " + d) : ("[  OK  ] " + u))
+                    }
+                    if (l.length >= 26) break
+                }
+                root.lineasLog = l.length > 0 ? l : ["[  OK  ] sesión iniciada"]
+            }
+        }
+        onExited: code => {
+            if (code !== 0 && root.lineasLog.length === 0) {
+                root.lineasLog = ["[  OK  ] sesión iniciada"]
+            }
+        }
+    }
     property bool accesoOk: false                    // contraseña correcta: el fondo se acerca y se enfoca, y luego arranca la sesión
     property real apertura: 0
     property bool lanzar: false                      // greetd ya está listo para lanzar la sesión
@@ -76,6 +118,7 @@ ShellRoot {
     }
     function fallar(texto) {
         animApertura.stop(); root.accesoOk = false; root.apertura = 0      // si falla tras acertar, el login no se queda bloqueado sin teclado
+        pLog.running = false
         root.verificando = false; root.clave = ""; root.hayError = true
         root.mensaje = texto
         root.sacudir()
@@ -100,6 +143,11 @@ ShellRoot {
     function entrar() {
         if (root.accesoOk) return
         root.accesoOk = true; root.apertura = 0
+        root.lineasLog = ["[  OK  ] sesión iniciada"]
+        pLog.running = true
+        if (!root.prueba && root.sonidoOk) {
+            Quickshell.execDetached(["pw-play", "--volume=0.6", "/usr/share/miarch/greeter/desbloqueo.wav"])
+        }
         animApertura.restart()
     }
     NumberAnimation {
@@ -108,9 +156,11 @@ ShellRoot {
         onFinished: {
             if (root.prueba) { Qt.quit(); return }
             // shell de login: así se carga tu entorno (~/.zprofile, PATH) como en un inicio normal
-            // La consola de texto entre el login y el escritorio sale limpia: se borra, se oculta el cursor y la salida de
-            // start-hyprland va a un registro en vez de pintarse en pantalla.
-            Greetd.launch(["sh", "-c", "{ printf '\\033[2J\\033[H\\033[?25l' > /dev/tty; } 2>/dev/null; mkdir -p \"$HOME/.cache/miarch\"; exec zsh -lc 'exec start-hyprland' >> \"$HOME/.cache/miarch/sesion.log\" 2>&1"], [], true)
+            // greetd une los argumentos con espacios SIN comillas y los pasa a un shell (`... exec <args>`): cualquier cosa con
+            // espacios, `;`, llaves o redirecciones rompe la sesión y vuelves al login en bucle. Por eso la orden es SOLO este
+            // script, que ya se encarga de la consola limpia y de arrancar Hyprland (ver sesion.sh).
+            // red de seguridad: si el script no está instalado (instalación a medias), se usa la orden antigua, que sí funciona
+            Greetd.launch(root.sesionOk ? ["/usr/share/miarch/greeter/sesion.sh"] : ["zsh", "-lc", "'exec start-hyprland'"], [], true)
         }
     }
     Timer { id: reintento; interval: 1300; onTriggered: { if (!root.prueba) Greetd.cancelSession(); root.iniciarSesion() } }
@@ -207,59 +257,49 @@ ShellRoot {
                     }
                 }
                 Column {   // título
-                    visible: root.accesoOk && pantalla.p > 0.3
+                    visible: root.accesoOk && pantalla.p > 0.45
                     anchors.centerIn: parent
                     spacing: pantalla.height * 0.012
-                    opacity: pantalla.suave((pantalla.p - 0.32) / 0.14) * (1 - pantalla.suave((pantalla.p - 0.84) / 0.08))
+                    opacity: pantalla.suave((pantalla.p - 0.46) / 0.14) * (1 - pantalla.suave((pantalla.p - 0.84) / 0.08))
                     Text {
+                        id: txtTituloGreeter
                         anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.horizontalCenterOffset: txtTituloGreeter.espacio / 2
+                        width: Math.min(implicitWidth, pantalla.width * 0.8)
+                        elide: Text.ElideRight
                         text: "MIARCH"
                         color: root.arena
-                        font { family: root.fuente; pixelSize: pantalla.height * 0.085; weight: Font.Normal
-                               letterSpacing: pantalla.height * (0.012 + 0.03 * pantalla.suave((pantalla.p - 0.32) / 0.5)) }
+                        readonly property real tam: Math.min(pantalla.height * 0.085, pantalla.width * 0.11)
+                        readonly property real deseado: pantalla.height * (0.012 + 0.03 * pantalla.suave((pantalla.p - 0.46) / 0.4))
+                        readonly property real topeSpacing: Math.max(0, (pantalla.width * 0.8 - 6 * tam * 0.62) / 6)
+                        readonly property real espacio: Math.min(deseado, topeSpacing)
+                        font { family: root.fuente; pixelSize: txtTituloGreeter.tam; weight: Font.Normal; letterSpacing: txtTituloGreeter.espacio }
                     }
                     Text {
+                        id: txtEstadoGreeter
                         anchors.horizontalCenter: parent.horizontalCenter
+                        width: Math.min(implicitWidth, pantalla.width * 0.8)
+                        elide: Text.ElideRight
                         text: "BIENVENIDO, " + root.usuario.toUpperCase()
                         color: root.terracota
                         opacity: 0.85
-                        font { family: root.fuente; pixelSize: pantalla.height * 0.016; weight: Font.Medium; letterSpacing: 9 }
+                        readonly property real tam: Math.min(pantalla.height * 0.016, pantalla.width * 0.022)
+                        readonly property real topeSpacing: Math.max(0, (pantalla.width * 0.8 - text.length * tam * 0.62) / Math.max(1, text.length))
+                        font { family: root.fuente; pixelSize: txtEstadoGreeter.tam; weight: Font.Medium; letterSpacing: Math.min(9, txtEstadoGreeter.topeSpacing) }
                     }
                     Text {   // firma: aparece un poco después del título
+                        id: txtFirmaGreeter
                         anchors.horizontalCenter: parent.horizontalCenter
                         topPadding: pantalla.height * 0.03
+                        width: Math.min(implicitWidth, pantalla.width * 0.8)
+                        elide: Text.ElideRight
                         text: "by alejandro-xoxo"
                         color: root.arena
-                        opacity: 0.7 * pantalla.suave((pantalla.p - 0.46) / 0.12)
-                        font { family: root.fuente; pixelSize: pantalla.height * 0.02; weight: Font.Normal; letterSpacing: 5 }
+                        opacity: 0.7 * pantalla.suave((pantalla.p - 0.56) / 0.12)
+                        readonly property real tam: Math.min(pantalla.height * 0.02, pantalla.width * 0.028)
+                        readonly property real topeSpacing: Math.max(0, (pantalla.width * 0.8 - text.length * tam * 0.62) / text.length)
+                        font { family: root.fuente; pixelSize: txtFirmaGreeter.tam; weight: Font.Normal; letterSpacing: Math.min(5, txtFirmaGreeter.topeSpacing) }
                     }
-                }
-                Item {   // destello anamórfico
-                    visible: pantalla.p > 0.66 && pantalla.p < 0.9
-                    anchors.fill: parent
-                    opacity: Math.sin(Math.PI * Math.max(0, Math.min(1, (pantalla.p - 0.66) / 0.22)))
-                    Rectangle {
-                        width: parent.width * pantalla.suave((pantalla.p - 0.66) / 0.16); height: pantalla.height * 0.07
-                        x: (parent.width - width) / 2; y: parent.height / 2 - height / 2
-                        gradient: Gradient { orientation: Gradient.Vertical
-                            GradientStop { position: 0; color: "transparent" }
-                            GradientStop { position: 0.5; color: Qt.alpha("#ffe9c8", 0.10) }
-                            GradientStop { position: 1; color: "transparent" } }
-                    }
-                    Rectangle {
-                        width: parent.width * pantalla.suave((pantalla.p - 0.66) / 0.16); height: 3
-                        x: (parent.width - width) / 2; y: parent.height / 2 - 1.5
-                        gradient: Gradient { orientation: Gradient.Horizontal
-                            GradientStop { position: 0; color: "transparent" }
-                            GradientStop { position: 0.5; color: "#fff3e0" }
-                            GradientStop { position: 1; color: "transparent" } }
-                    }
-                }
-                Rectangle {   // luz
-                    anchors.fill: parent
-                    color: "#fff3e0"
-                    visible: opacity > 0
-                    opacity: 0.22 * pantalla.suave((pantalla.p - 0.76) / 0.12) * (1 - pantalla.suave((pantalla.p - 0.90) / 0.10))
                 }
                 Repeater {   // barras de cine
                     model: [ true, false ]
@@ -272,11 +312,49 @@ ShellRoot {
                     }
                 }
 
+                // Log del sistema tecleándose al iniciar sesión, y luego se despeja todo
+                Item {
+                    id: capaLog
+                    visible: root.accesoOk
+                    x: pantalla.width * 0.05; width: pantalla.width * 0.9
+                    anchors.verticalCenter: parent.verticalCenter
+                    height: colLog.implicitHeight
+                    opacity: Math.min(1, root.apertura * 10) * (1 - pantalla.suave((pantalla.p - 0.42) / 0.10))
+                    readonly property int n: root.lineasLog.length
+                    readonly property int visibles: Math.floor(Math.min(1, root.apertura / 0.38) * (n + 1))
+                    Column {
+                        id: colLog
+                        width: parent.width
+                        spacing: pantalla.height * 0.004
+                        Text {
+                            text: "MIARCH  ::  ACCESO CONCEDIDO  ::  CARGANDO SESIÓN"
+                            color: root.salvia
+                            font { family: root.fuente; pixelSize: pantalla.height * 0.02; weight: Font.Medium; letterSpacing: 6 }
+                            bottomPadding: pantalla.height * 0.014
+                        }
+                        Repeater {
+                            model: root.lineasLog
+                            Text {
+                                required property string modelData
+                                required property int index
+                                width: parent.width; elide: Text.ElideRight
+                                visible: index < capaLog.visibles
+                                text: modelData
+                                // la línea más reciente en el acento; las anteriores se apagan hacia arriba
+                                color: index === capaLog.visibles - 1 ? root.terracota : root.arena
+                                opacity: index === capaLog.visibles - 1 ? 1 : 0.35 + 0.4 * (index / Math.max(1, capaLog.n))
+                                font { family: root.fuente; pixelSize: pantalla.height * 0.0165; weight: Font.Light }
+                            }
+                        }
+                    }
+                }
+
                 Column {
                     x: parent.width * 0.05
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.verticalCenterOffset: (1 - pantalla.entrada) * 40
-                    opacity: pantalla.entrada * (1 - Math.min(1, root.apertura * 4))
+                    opacity: pantalla.entrada * (1 - Math.min(1, root.apertura * 6))
+                    visible: opacity > 0
                     spacing: 6
 
                     Text {
@@ -371,7 +449,8 @@ ShellRoot {
                 Row {
                     x: parent.width * 0.05; y: parent.height - height - parent.height * 0.05
                     spacing: 28
-                    opacity: pantalla.entrada * (1 - Math.min(1, root.apertura * 4))
+                    opacity: pantalla.entrada * (1 - Math.min(1, root.apertura * 6))
+                    visible: opacity > 0
                     Repeater {
                         model: [ { t: "REINICIAR", c: "reboot" }, { t: "APAGAR", c: "poweroff" } ]
                         Text {

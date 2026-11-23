@@ -14,5 +14,6 @@ Instalados por `packages.sh`. Hyprland es la ventana y el escritorio; la barra, 
 | `wl-clipboard` | pacman | Portapapeles desde la terminal |
 | `brightnessctl` | pacman | Brillo de la pantalla |
 | `playerctl` | pacman | Teclas multimedia (play, siguiente, anterior) |
+| `mpv` | pacman | Reproductor de vídeo (mp4, mkv…) |
 | `xdg-user-dirs` | pacman | Carpetas del usuario (Imágenes, Descargas…) |
 | `quickshell-git` | AUR | El motor del escritorio propio (barra, paneles, bloqueo) |

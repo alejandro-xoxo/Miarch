@@ -3,6 +3,71 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-21.113 · El modo demo oculta el nombre de tu equipo en el desbloqueo
+Al grabar un vídeo con el modo demo, el registro que se teclea al desbloquear ya no enseña el nombre de tu equipo: lo sustituye por `miarch`. Fuera del modo demo no cambia nada.
+
+## 2026-11-21.112 · Blender instalado con Miarch
+Miarch instala Blender (modelado, animación y render 3D) desde el repositorio oficial. Son unos 200 MB de descarga y bastante más instalado; se añade solo al actualizar. Si tu gráfica es Intel antigua, el visor 3D va con la GPU pero el render usa el procesador.
+
+## 2026-11-21.111 · Equipo encendido con el cargador conectado
+Con el cargador conectado, Miarch bloquea suspensión, hibernación, inactividad y apagado automático por tapa. Se activa desde Ajustes → Energía; el botón de encendido sigue funcionando.
+
+## 2026-11-20.110 · Nuevo comando mimusic
+Escribe `mimusic` en una terminal y se abre una página de música en el monitor con foco: `cava` grande, la letra de la canción, `peaclock`, `cbonsai` y `pipes.sh`. Se adapta al tamaño y a la orientación de tu pantalla y deja libre la barra. Los programas son opcionales: instala los que quieras (`cava`, `sptlrx-bin`, `peaclock`, `cbonsai`, `pipes.sh`) y el resto se salta. Al terminar cierra la terminal desde la que lo escribiste (`--quedarme` para que no lo haga; `mimusic --cerrar` cierra las ventanas).
+
+## 2026-11-20.109 · Las teclas del desbloqueo vuelven a oírse en las grabaciones
+El sonido de teclas al desbloquear se reproducía de una forma que los grabadores de pantalla no captaban. Ahora se reproduce con `paplay` (con `pw-play` de respaldo), como el resto del audio del sistema, así que se oye al grabar un vídeo.
+
+## 2026-11-20.108 · La tapa cerrada se respeta al arrancar
+Si arrancas el escritorio con la tapa del portátil ya cerrada y un monitor externo conectado, la pantalla interna se apaga sola, sin tener que abrir y cerrar la tapa.
+
+## 2026-11-20.107 · Portátil: no suspender al cerrar la tapa (opcional)
+Ahora puedes configurar el portátil para que siga funcionando al cerrar la tapa sin suspenderse. La opción se activa con un interruptor en Ajustes → Energía (o creando `~/.config/miarch/tapa-sin-suspender`) y el actualizador la aplica de forma nativa en `/etc/systemd/logind.conf.d/50-miarch-tapa.conf` recargando logind con SIGHUP sin cerrar tu sesión. Además, al cerrar la tapa con un monitor externo conectado, la pantalla interna del portátil se apaga automáticamente para ahorrar batería y no dejar ventanas ocultas, y vuelve a encenderse al abrirla; si no hay ninguna pantalla externa conectada, la pantalla no se apaga para que no te quedes a oscuras.
+
+## 2026-11-20.106 · El actualizador repara Bluetooth
+El actualizador detecta si Bluetooth no responde o está desactivado y si iwd está inactivo para repararlos con la confirmación única, y avisa si hace falta reiniciar apps de IA para verlas nítidas.
+
+## 2026-11-20.105 · Reproductor de vídeo
+
+## 2026-11-20.103 · El actualizador explica los bloqueos de pacman
+Si otra terminal tiene abierta una instalación (pacman, yay, paru o pamac), el actualizador ya no falla con un error crudo ni se detiene sin explicación: te muestra qué comando está corriendo, cuánto tiempo lleva abierto y en qué terminal está para que puedas responderle o cerrarlo con Ctrl+C. Si la instalación previa termina mientras espera (hasta 90 segundos), continúa automáticamente; y si quedó un bloqueo huérfano tras un cierre forzado, lo detecta y lo limpia sin preguntas. Además, el instalador de la pantalla de inicio de sesión no vuelve a llamar a pacman si greetd ya está en el sistema.
+
+## 2026-11-20.102 · La rueda del volumen va fluida
+Girar la rueda del ratón sobre el módulo de volumen en la barra superior ahora ajusta el nivel de audio al instante de forma nativa a través de PipeWire, sin lanzar procesos en segundo plano. Los pasos son proporcionales a la velocidad de giro, acumulan el destino para evitar retrasos y muestran la barra visual OSD en pantalla.
+
+## 2026-11-20.101 · El login también teclea el log y suena
+Al iniciar sesión, la pantalla de login ahora teclea el registro de servicios del sistema en tiempo real y suena con el perfil de switches mecánicos, exactamente igual que la pantalla de bloqueo. Además, se añade la herramienta `comprobar-greeter` para verificar la seguridad y sintaxis del inicio de sesión antes de instalar o actualizar.
+
+## 2026-11-20.100 · Título y firma dentro del marco y sonido de switches rojos
+El bloque de título "MIARCH", firma "by alejandro-xoxo" y texto de estado en la secuencia de desbloqueo y en la pantalla de inicio de sesión ahora escala dinámicamente sin salirse en ninguna resolución (pantallas verticales, estrechas o panorámicas) manteniendo un centrado visual exacto. Además, el sonido que acompaña al registro del sistema adopta el perfil acústico de switches rojos mecánicos (Cherry MX Red: lineales, sin clic metálico agudo, con thock grave y tap amortiguado), generado por síntesis algorítmica sin grabaciones de terceros.
+
+## 2026-11-20.98 · Entrada limpia después del login (otra vez, bien hecho)
+Entre el login y el escritorio ya no se ve la consola de texto con el arranque de Hyprland: se borra la pantalla, se oculta el cursor y el texto va al registro `~/.cache/miarch/sesion.log`. Esta vez el arranque está en un script propio y el login tiene una red de seguridad: si el script faltara, usa el comando de siempre.
+
+## 2026-11-20.99 · Arreglo: bucle al iniciar sesión
+Un cambio reciente del inicio de sesión hacía que, tras escribir la contraseña, volviera a aparecer el login una y otra vez. Ya está corregido: el comando que arranca tu sesión vuelve a ser el de siempre. El texto que a veces se ve un instante en la consola entre el login y el escritorio se queda como estaba.
+
+## 2026-11-20.30 · Pantallas: el cambio de lado se aplica al momento
+Intercambiar las pantallas desde Ajustes ahora recarga Hyprland en caliente y comprueba la nueva disposición sin necesidad de reiniciar la sesión.
+
+## 2026-11-20.29 · La entrada suena a teclado
+La secuencia de entrada elimina la línea blanca y despide la tarjeta de música con un desplazamiento suave. Mientras se teclea el log del sistema suenan pulsaciones de teclado mecánico.
+
+## 2026-11-20.28 · Ajustes: pantallas
+Nueva página en Ajustes para ver las pantallas conectadas con dibujo a escala, intercambiarlas de lado con un solo clic, elegir el monitor principal e identificarlas visualmente.
+
+## 2026-11-20.27 · Crunchyroll en el lanzador
+Crunchyroll ya está disponible en el lanzador de aplicaciones (`Super + Espacio`) en una ventana propia de Chrome con aceleración y Widevine. Inicia sesión con tu cuenta la primera vez.
+
+## 2026-11-20.26 · Wi-Fi y Bluetooth más simples
+Los paneles de Wi-Fi y Bluetooth ahora muestran de forma directa lo que hay cerca y lo que el equipo ya conoce, sin esconder dispositivos emparejados tras botones ni requerir formularios de red oculta.
+
+## 2026-11-20.25 · Entrada sin luz blanca y sin la tarjeta de música encima
+Al desbloquear o iniciar sesión se elimina el resplandor blanco que cubría la pantalla, y la tarjeta de música ahora se desvanece de inmediato para no tapar la animación de entrada.
+
+## 2026-11-20.24 · Emparejamiento Bluetooth robusto
+El panel de Bluetooth ya no deja colgado al servicio ni falla al emparejar dispositivos nuevos: ahora utiliza el script mediador `miarch-bluetooth` con un agente de BlueZ propio (`NoInputNoOutput`), asegurando y conectando el periférico en un solo flujo. Solo se permite un emparejamiento simultáneo, muestra "Emparejando…" mientras dura el proceso, cancela limpiamente si pasan 30 segundos sin respuesta y activa el modo emparejable del adaptador al abrir el panel.
+
 ## 2026-11-20.23 · Licencia GPL 3.0
 El proyecto pasa a distribuirse bajo la licencia GPL-3.0-or-later. El código sigue siendo completamente abierto para usar y modificar, y las versiones derivadas que se distribuyan deberán mantenerse abiertas bajo esta misma licencia, con el código fuente disponible y conservando el aviso de autoría original.
 

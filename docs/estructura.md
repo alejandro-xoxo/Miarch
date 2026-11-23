@@ -19,12 +19,15 @@ Miarch/
 ├── lib/
 │   └── ui.sh
 ├── scripts/
+│   ├── miarch-bluetooth
+│   ├── miarch-encendido
 │   ├── miarch-chrome-tema
 │   ├── miarch-colors
 │   ├── miarch-fetch
 │   ├── miarch-greeter-install
 │   ├── miarch-info
 │   ├── miarch-modo-juego
+│   ├── miarch-pantallas
 │   ├── miarch-set
 │   ├── miarch-steam
 │   ├── miarch-update
@@ -33,6 +36,8 @@ Miarch/
 │   ├── tomar-capturas
 │   └── wallpaper.sh
 ├── config/
+│   ├── systemd/
+│   │   └── user/miarch-encendido.service
 │   ├── chrome/
 │   ├── greeter/
 │   ├── hypr/
@@ -76,7 +81,7 @@ flowchart TD
     ApplyPhase --> GreeterInstall
 
     Hyprland["config/hypr/hyprland.lua"] --> Quickshell["config/quickshell/miarch/shell.qml"]
-    Quickshell --> HelperScripts["scripts/ (miarch-set, miarch-wifi, miarch-volumen, miarch-info)"]
+    Quickshell --> HelperScripts["scripts/ (miarch-set, miarch-pantallas, miarch-wifi, miarch-bluetooth, miarch-volumen, miarch-info, miarch-encendido)"]
     
     Wallpaper["scripts/wallpaper.sh"] --> Colors["scripts/miarch-colors"]
     Colors --> CacheColors["~/.cache/miarch/colors.json"]
@@ -105,7 +110,7 @@ flowchart TD
 | :--- | :--- |
 | `config/quickshell/miarch/shell.qml` | Definición íntegra del shell de escritorio en Qt6/QML. Implementa la barra superior, el escritorio (reloj, fecha, anillos de CPU/RAM/batería, tarjeta de música), lanzador `Super+Espacio`, servidor de notificaciones, pantalla de bloqueo bajo protocolo `WlSessionLock` con integración PAM, panel de control `Super+Esc`, menú de energía `Super+Shift+Esc` y selector de aplicaciones IA `Super+C`. |
 | `config/quickshell/miarch/icons/` | Logos del menú de IA (LobeHub Icons, licencia MIT). |
-| `config/quickshell/miarch/sonidos/` | Almacena utilidades sonoras del escritorio, incluyendo el generador algorítmico `generar-desbloqueo.py` implementado con `numpy`. |
+| `config/quickshell/miarch/sonidos/` | Almacena utilidades sonoras del escritorio, incluyendo el generador algorítmico `generar-desbloqueo.py` implementado con `numpy` (síntesis de sonido de teclado mecánico con perfil de switches rojos lineales Cherry MX Red, sin muestras de terceros). |
 | `config/hypr/` | Contiene `hyprland.lua`, base de configuración de Hyprland 0.57. Enlaza los atajos de teclado del compositor con las utilidades de `scripts/` y gestiona las reglas de ventanas y arranque. |
 | `config/greeter/` | Entorno del gestor de inicio gráfico operado por `greetd`. Ejecuta una sesión aislada de Hyprland con una versión dedicada de Quickshell para autenticación. |
 | `config/{chrome,kitty,nvim,vscode,waybar}` | Perfiles de configuración para aplicaciones auxiliares, emulador de terminal, editor y configuraciones heredadas. |
@@ -120,7 +125,9 @@ flowchart TD
 | `scripts/wallpaper.sh` | Aplica un fondo de pantalla aleatorio con `awww` y lanza `miarch-colors`. |
 | `scripts/miarch-set` | Interfaz programática para alterar variables del panel y del compositor en tiempo de ejecución. |
 | `scripts/miarch-wifi` | Puente de comunicación en formato JSON entre la interfaz gráfica y el demonio `iwd` (`iwctl`). Administra credenciales seguras mediante `MIARCH_PASS` y pseudo-terminales (`pty`). |
+| `scripts/miarch-bluetooth` | Mediador para emparejamiento Bluetooth seguro mediante `bluetoothctl` con agente `NoInputNoOutput`, registro de confianza y conexión automática. Genera salida JSON y registra operaciones en `~/.cache/miarch/bluetooth.log`. |
 | `scripts/miarch-volumen` | Ajusta y conmuta el volumen de audio con `wpctl`, reproduce retroalimentación sonora con tasa limitada (110 ms) y activa el indicador visual en Quickshell vía IPC. |
+| `scripts/mimusic` | Abre la página de música (cava, letra, peaclock, cbonsai y pipes.sh) adaptada al monitor con foco. |
 | `scripts/miarch-info` | Exporta datos estructurados en JSON sobre hardware y sistema operativo para la sección de Sistema del panel de ajustes. |
 | `scripts/miarch-fetch` | Presentación de métricas de fastfetch ajustadas proporcionalmente al ancho de la terminal. |
 | `scripts/miarch-steam` | Iniciador de Steam con factores de escala adaptados a la resolución y factor de escala de la pantalla. |

@@ -41,6 +41,49 @@ hl.monitor({
     scale    = (ESCALA == "auto") and "auto" or tonumber(ESCALA),
 })
 
+-- Miarch: posiciones de monitores guardadas (~/.config/miarch/pantallas.lua)
+do
+    local ppath = os.getenv("HOME") .. "/.config/miarch/pantallas.lua"
+    local f = io.open(ppath, "r")
+    if f then
+        f:close()
+        local ok, pantallas = pcall(dofile, ppath)
+        if ok and type(pantallas) == "table" then
+            local conectados = {}
+            if hl.get_monitors then
+                local ok_m, mons = pcall(hl.get_monitors)
+                if ok_m and type(mons) == "table" then
+                    for _, m in ipairs(mons) do
+                        if m and m.name then conectados[m.name] = m end
+                    end
+                end
+            end
+            for name, pos in pairs(pantallas) do
+                if type(name) == "string" and type(pos) == "table" then
+                    local m = conectados[name]
+                    if (not hl.get_monitors or not next(conectados)) or m then
+                        local scale_val = (pos.scale)
+                            or (m and m.scale)
+                            or ((ESCALA == "auto") and "auto" or tonumber(ESCALA))
+                        local mode_val = pos.mode
+                            or (m and m.width and m.height and m.refresh_rate and string.format("%dx%d@%.2f", m.width, m.height, m.refresh_rate))
+                            or "preferred"
+                        local pos_val = (pos.x ~= nil and pos.y ~= nil)
+                            and string.format("%dx%d", pos.x, pos.y)
+                            or (pos.position or "auto")
+                        hl.monitor({
+                            output   = name,
+                            mode     = mode_val,
+                            position = pos_val,
+                            scale    = scale_val,
+                        })
+                    end
+                end
+            end
+        end
+    end
+end
+
 
 ---------------------
 ---- MY PROGRAMS ----
@@ -72,6 +115,39 @@ hl.on("hyprland.start", function ()
     hl.exec_cmd("awww-daemon --format xrgb")
     hl.exec_cmd("sleep 1.5 && ~/.local/bin/wallpaper.sh")
     hl.exec_cmd("qs -c miarch")   -- escritorio + pantalla de bloqueo (Quickshell)
+
+    -- Miarch: foco inicial y espacio 1 en el monitor principal (si está configurado)
+    local apath = os.getenv("HOME") .. "/.config/miarch/ajustes.json"
+    local fa = io.open(apath, "r")
+    if fa then
+        local txt = fa:read("*a")
+        fa:close()
+        local princ = txt and txt:match('"principal"%s*:%s*"([^"]+)"')
+        if princ and princ:match("^[A-Za-z0-9._-]+$") then
+            local existe = false
+            if hl.get_monitors then
+                local ok_m, mons = pcall(hl.get_monitors)
+                if ok_m and type(mons) == "table" then
+                    for _, m in ipairs(mons) do
+                        if m and m.name == princ then
+                            existe = true
+                            break
+                        end
+                    end
+                end
+            else
+                existe = true
+            end
+            if existe then
+                hl.workspace_rule({
+                    workspace = "1",
+                    monitor = princ,
+                    default = true,
+                })
+                hl.exec_cmd("hyprctl dispatch focusmonitor " .. princ)
+            end
+        end
+    end
 end)
 
 
@@ -431,6 +507,26 @@ hl.bind("XF86AudioNext",  hl.dsp.exec_cmd("playerctl next"),       { locked = tr
 hl.bind("XF86AudioPause", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
 hl.bind("XF86AudioPlay",  hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
 hl.bind("XF86AudioPrev",  hl.dsp.exec_cmd("playerctl previous"),   { locked = true })
+
+-- Tapa del portátil: apagar pantalla interna al cerrar la tapa con monitor externo conectado (opcional)
+do
+    local marca = (os.getenv("HOME") or "") .. "/.config/miarch/tapa-sin-suspender"
+    local f = io.open(marca, "r")
+    if f then
+        f:close()
+        hl.bind("switch:on:Lid Switch", hl.dsp.exec_cmd("~/.local/bin/miarch-tapa --pantalla cerrar"), { locked = true })
+        hl.bind("switch:off:Lid Switch", hl.dsp.exec_cmd("~/.local/bin/miarch-tapa --pantalla abrir"), { locked = true })
+        -- Los atajos solo saltan al mover la tapa: si ya está cerrada al arrancar, se aplica el estado actual
+        hl.on("hyprland.start", function()
+            local e = io.popen("cat /proc/acpi/button/lid/*/state 2>/dev/null")
+            local estado = e and e:read("*a") or ""
+            if e then e:close() end
+            if estado:find("closed") then
+                hl.exec_cmd("sleep 2 && ~/.local/bin/miarch-tapa --pantalla cerrar")
+            end
+        end)
+    end
+end
 
 
 --------------------------------

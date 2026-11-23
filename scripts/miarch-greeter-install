@@ -13,11 +13,13 @@ set -euo pipefail
 if [ "${1:-}" = "--pendiente" ]; then
     [ -e "$HOME/.config/miarch/sin-greeter" ] && exit 1
     [ "$(systemctl is-enabled greetd 2>/dev/null)" = "enabled" ] || exit 0
-    R="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/config/greeter"
+    REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+    R="$REPO/config/greeter"
     # hyprland.lua lleva el teclado sustituido: se compara ya con el valor de este equipo
     KBP="$(grep -oP '^local KB *= *"\K[^"]+' "$HOME/.config/hypr/hyprland.lua" 2>/dev/null || echo latam)"
     sed "s|__KB__|${KBP//|/_}|" "$R/hyprland.lua" | cmp -s - /usr/share/miarch/greeter/hyprland.lua || exit 0
-    for f in shell.qml start.sh config.toml; do
+    cmp -s "$REPO/config/quickshell/miarch/sonidos/desbloqueo.wav" /usr/share/miarch/greeter/desbloqueo.wav || exit 0
+    for f in shell.qml start.sh sesion.sh config.toml; do
         cmp -s "$R/$f" "/usr/share/miarch/greeter/$f" || { [ "$f" = config.toml ] && cmp -s "$R/$f" /etc/greetd/config.toml && continue; exit 0; }
     done
     exit 1
@@ -26,20 +28,38 @@ fi
 [ "$EUID" -ne 0 ] || { echo "[ERROR] Ejecútalo con tu usuario normal, no como root."; exit 1; }
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SRC="$REPO/config/greeter"
+SONIDO="$REPO/config/quickshell/miarch/sonidos/desbloqueo.wav"
 DEST=/usr/share/miarch/greeter
 DATOS=/var/lib/miarch-greeter
 
-for f in shell.qml hyprland.lua start.sh config.toml; do
+for f in shell.qml hyprland.lua start.sh sesion.sh config.toml; do
     [ -f "$SRC/$f" ] || { echo "[ERROR] Falta $SRC/$f"; exit 1; }
 done
+[ -f "$SONIDO" ] || { echo "[ERROR] Falta $SONIDO"; exit 1; }
 command -v qs >/dev/null || { echo "[ERROR] Falta quickshell (ejecuta ./packages.sh primero)"; exit 1; }
 
-echo "==> Instalando greetd..."
-sudo pacman -S --needed --noconfirm greetd
+echo "==> Comprobando seguridad de la pantalla de inicio de sesión..."
+"$REPO/scripts/comprobar-greeter" "$REPO" || { echo "[ERROR] La comprobación de seguridad del greeter falló."; exit 1; }
+
+if pacman -Q greetd >/dev/null 2>&1; then
+    echo "==> greetd ya está instalado (no se ejecuta pacman)"
+else
+    echo "==> Instalando greetd..."
+    [ -f "$REPO/lib/pacman.sh" ] && source "$REPO/lib/pacman.sh"
+    if declare -F esperar_pacman >/dev/null; then
+        if ! esperar_pacman; then
+            echo "[!] Hay un bloqueo de pacman: no se pudo instalar greetd. Se reintentará la próxima vez."
+            exit 1
+        fi
+    fi
+    sudo pacman -S --needed --noconfirm greetd
+fi
 
 echo "==> Copiando la pantalla de inicio de sesión a $DEST ..."
 KB="$(grep -oP '^local KB *= *"\K[^"]+' "$HOME/.config/hypr/hyprland.lua" 2>/dev/null || echo latam)"
 sudo install -d -m 755 "$DEST"
+sudo install -m 755 "$SRC/sesion.sh" "$DEST/sesion.sh"      # primero: el login nuevo lo necesita y el viejo no lo usa
+sudo install -m 644 "$SONIDO" "$DEST/desbloqueo.wav"
 sudo install -m 644 "$SRC/shell.qml" "$DEST/shell.qml"
 sed "s|__KB__|${KB//|/_}|" "$SRC/hyprland.lua" | sudo tee "$DEST/hyprland.lua" >/dev/null
 sudo chmod 644 "$DEST/hyprland.lua"

@@ -17,7 +17,11 @@ Al inicio del archivo se exponen las variables principales de configuración que
 - `ANIM`: Presets de animación (`slide`, `zoom`, `suave`, `elastico`, `original`).
 - `BLUR`: Nivel de desenfoque (`ninguno` hasta `extremo`).
 
-El archivo define también las reglas de ventana y los atajos de teclado globales (ver [atajos](atajos.md)). Debido a que la variable de entorno `PATH` inicial de Hyprland no incluye `~/.local/bin`, las invocaciones a utilidades locales (como `miarch-volumen`) se enlazan mediante su ruta absoluta.
+El archivo define también las reglas de ventana y los atajos de teclado globales (ver [atajos](atajos.md)). Debido a que la variable de entorno `PATH` inicial de Hyprland no incluye `~/.local/bin`, las invocaciones a utilidades locales (como `miarch-volumen` o `miarch-tapa`) se enlazan mediante su ruta absoluta.
+
+Cuando existe la marca opcional `~/.config/miarch/tapa-sin-suspender`, Hyprland enlaza los interruptores de la tapa (`switch:on:Lid Switch` y `switch:off:Lid Switch`) con flags `{ locked = true }` ejecutando `~/.local/bin/miarch-tapa --pantalla cerrar` y `--pantalla abrir`. Al cerrar la tapa, la pantalla interna del portátil (`eDP`) se apaga únicamente si existe otro monitor activo conectado (evitando quedar a oscuras si no hay pantalla externa); al abrir la tapa se reactiva en modo preferido.
+
+En Ajustes → Energía, el interruptor **Mantener encendido con el cargador** activa `miarch-encendido.service`. Mientras detecta alimentación de red, el servicio bloquea suspensión, hibernación, inactividad y la acción automática de la tapa. El botón de encendido sigue funcionando; al desconectar el cargador deja de aplicar el bloqueo. La opción queda guardada en `~/.config/miarch/siempre-encendido`.
 
 En mediciones de consumo sobre un procesador Intel Core i5-8365U con cargas concurrentes (Chrome, VS Code, Spotify y Claude abiertos), Hyprland mantiene una utilización aproximada del 10% de un hilo de CPU y 230 MB de memoria RAM.
 
@@ -33,7 +37,7 @@ La interfaz de usuario del sistema está implementada en un único archivo modul
 | Barra | Borde superior | Panel persistente que aloja selector de espacios de trabajo, control de música, indicador de actualizaciones del sistema (icono de nube), estados de Bluetooth, Wi-Fi, volumen, batería, acceso a ajustes y bloqueo. |
 | Lanzador | `Super + Espacio` | Buscador de aplicaciones con soporte para coincidencias por abreviaturas y ordenación dinámica según frecuencia de uso. |
 | Conexiones | Clic en la barra | Paneles emergentes para la administración de interfaces Wi-Fi y dispositivos Bluetooth. |
-| Ajustes | `Super + Esc` | Centro de configuración del sistema dividido en red, sonido, pantalla, apariencia, teclado y ratón, accesibilidad, energía y sistema. Aplica cambios escribiendo las variables mediante `miarch-set`. |
+| Ajustes | `Super + Esc` | Centro de configuración del sistema dividido en red, sonido, pantallas, pantalla, apariencia, teclado y ratón, accesibilidad, energía y sistema. Permite ver la disposición lógica de pantallas, intercambiarlas de lado, elegir la principal e identificarlas visualmente (`miarch-pantallas`), configurar el modo de energía o activar el comportamiento de no suspender al cerrar la tapa del portátil (`tapa-sin-suspender`), y aplica variables de entorno mediante `miarch-set`. La nueva disposición de pantallas se aplica recargando la configuración de Hyprland (`hyprctl reload`). |
 | Menú de Energía | `Super + Shift + Esc` | Interfaz de sesión estructurada en dos pestañas: Energía (bloqueo, suspensión, cierre de sesión, reinicio, apagado) y Atajos. |
 | Menú IA | `Super + C` | Menú de lanzadores de herramientas de inteligencia artificial con iconos de LobeHub Icons (licencia MIT): Claude Desktop (`claude-desktop`), Codex App (`openai-chatgpt`), Antigravity (`antigravity`) y Hermes Desktop (`~/.hermes`). Las aplicaciones no instaladas se renderizan atenuadas. |
 | Bloqueo | `Super + L` | Bloqueo de sesión (`WlSessionLock` + PAM) con secuencia de entrada cinematográfica. Ver más abajo. |
@@ -74,11 +78,11 @@ Tras la validación correcta de credenciales, se dispara una secuencia de transi
 2. Acercamiento progresivo de la imagen de fondo (*push-in* de +12%).
 3. Aplicación de viñeteado óptico y tipografía gradual del registro real del sistema (`journalctl`) al inicio del proceso.
 4. Aparición del título "MIARCH" con incremento progresivo de interletraje y la firma "by alejandro-xoxo".
-5. Destello anamórfico horizontal (*flare*) sincronizado exactamente al 76% de la línea de tiempo.
-6. Resplandor de luz (*bloom*) y desvanecimiento hacia el fondo nítido a escala 1:1 coincidente con la geometría del escritorio.
+5. Desvanecimiento suave con desplazamiento de la tarjeta multimedia.
+6. Transición hacia el fondo nítido a escala 1:1 coincidente con la geometría del escritorio.
 
 ### Síntesis de Audio
-El diseño sonoro se genera sintéticamente sin muestras externas mediante el script `config/quickshell/miarch/sonidos/generar-desbloqueo.py` utilizando `numpy`. Produce una señal de 8.2 segundos consistente en una entrada de metales (*brass swell*), silencio transitorio, impacto profundo en el segundo 4.26, resonancia metálica, sección de cuerdas y reverberación de catedral.
+El diseño sonoro se genera sintéticamente sin muestras externas mediante el script `config/quickshell/miarch/sonidos/generar-desbloqueo.py` utilizando `numpy`. Es un sonido de teclado mecánico con perfil de switches rojos (Cherry MX Red: lineales, sin clic metálico agudo, golpe de fondo grave tipo thock de 90-190 Hz con segundo modo armónico de carcasa y placa, tap amortiguado de 700-1600 Hz y retorno suave al soltar) sintetizado íntegramente mediante código sin grabaciones de terceros, que acompaña la salida mecanografiada del registro del sistema.
 
 ### Parámetros de Seguridad
 - Una orden de bloqueo posterior interrumpe y anula cualquier animación de desbloqueo en progreso.
@@ -90,9 +94,9 @@ El diseño sonoro se genera sintéticamente sin muestras externas mediante el sc
 
 El gestor de acceso gráfico se basa en el demonio `greetd` ejecutando una sesión dedicada de Hyprland bajo el usuario de sistema `greeter` con la interfaz en Quickshell (`config/greeter`).
 
-- **Estética y comportamiento**: Replica la presentación de la pantalla de bloqueo y reproduce la animación de bienvenida ("BIENVENIDO, <usuario>").
+- **Estética y comportamiento**: Replica la presentación de la pantalla de bloqueo y reproduce la animación de bienvenida ("BIENVENIDO, <usuario>"). Al conceder el acceso, teclea el registro del sistema en vivo (`systemctl list-units`, formateado como `[  OK  ] <unidad> — <descripción>`) acompañado del sonido de switches mecánicos (`/usr/share/miarch/greeter/desbloqueo.wav`), alineando los tiempos de barras de cine, título y fondo con el desbloqueo.
 - **Tolerancia a fallos**: Dispone de un temporizador de seguridad de 8 segundos; si la sesión gráfica no completa su inicialización en dicho periodo, conmuta automáticamente al inicio en modo texto mediante `agreety`.
-- **Instalación y configuración**: Desplegado mediante `scripts/miarch-greeter-install`, el cual instala `greetd`, transfiere los archivos a `/usr/share/miarch/greeter`, copia el fondo y paleta a `/var/lib/miarch-greeter`, respalda la configuración existente como `/etc/greetd/config.toml.miarch-bak` y activa el servicio `systemd`.
+- **Instalación y configuración**: Desplegado mediante `scripts/miarch-greeter-install`, el cual comprueba la seguridad con `scripts/comprobar-greeter`, instala `greetd`, transfiere los archivos y el sonido a `/usr/share/miarch/greeter`, copia el fondo y paleta a `/var/lib/miarch-greeter`, respalda la configuración existente como `/etc/greetd/config.toml.miarch-bak` y activa el servicio `systemd`.
 - **Inhabilitación y recuperación**: Se puede omitir su instalación creando el archivo testigo `~/.config/miarch/sin-greeter`. Si se requiere restaurar el acceso manual desde la consola de emergencia (`Ctrl+Alt+F2`), se ejecuta:
   ```bash
   sudo systemctl disable greetd && sudo systemctl enable getty@tty1
@@ -119,17 +123,22 @@ La gestión de audio está implementada en `scripts/miarch-volumen` interactuand
   ```bash
   qs -c miarch ipc call osd mostrar <0-100> <texto> <1 si está en silencio>
   ```
+- **Rueda del ratón en la barra**: En el módulo de volumen de la barra superior, la rueda del ratón interactúa directamente con PipeWire sin lanzar procesos externos, aplicando pasos proporcionales con destino acumulado y activando el indicador visual OSD.
 
 ## Paneles de Conectividad
 
 ### Panel Wi-Fi
 La interacción inalámbrica se ejecuta a través del script mediador `scripts/miarch-wifi`, que traduce las operaciones entre la interfaz QML e `iwd` (`iwctl`), respondiendo con estructuras de datos en formato JSON:
-- **Operaciones soportadas**: `list`, `scan`, `connect`, `connect-hidden`, `disconnect`, `forget` y `power`.
+- **Operaciones soportadas**: `list`, `scan`, `connect`, `disconnect`, `forget` y `power`.
 - **Seguridad de credenciales**: La clave de red se transmite al script exclusivamente mediante la variable de entorno `MIARCH_PASS` y se introduce al proceso secundario mediante un pseudoterminal (*pty*), evitando la exposición de contraseñas en los argumentos de la tabla de procesos del sistema.
-- **Control de estado**: Si una red guardada rechaza la conexión por cambio de clave, el panel solicita la nueva credencial. Solo se listan redes verificadas dentro del radio de alcance. Las solicitudes de apagado y olvido comprueban el estado efectivo tras su ejecución. Las acciones se registran en `~/.cache/miarch/wifi.log`, que se recorta al pasar de 100 KB.
+- **Control de estado**: Si una red guardada rechaza la conexión por cambio de clave, el panel solicita la nueva credencial. Se muestran únicamente las redes que hay cerca y las que el equipo ya conoce. Las solicitudes de apagado y olvido comprueban el estado efectivo tras su ejecución. Las acciones se registran en `~/.cache/miarch/wifi.log`, que se recorta al pasar de 100 KB.
 
 ### Panel Bluetooth
-Presenta la lista de dispositivos periféricos vinculados y gestiona la conexión. Con el fin de evitar saturación visual, los dispositivos emparejados que no emitan señal detectable en las inmediaciones permanecen ocultos tras un botón expandible.
+Presenta la lista de dispositivos que hay cerca y los que el equipo ya conoce (conectados y emparejados), y gestiona el emparejamiento y la conexión. Para los dispositivos ya emparejados, la conexión o desconexión se gestiona de forma inmediata con las funciones nativas del objeto Bluetooth de Quickshell. Para vincular dispositivos nuevos no emparejados, el panel delega en el script mediador `scripts/miarch-bluetooth`:
+- **Emparejamiento seguro y secuencial**: Admite solo un emparejamiento concurrente, ignorando pulsaciones adicionales mientras haya una vinculación en curso. Si el adaptador tiene el modo emparejable desactivado al abrir el panel, se activa (`pairable = true`, `pairableTimeout = 0`) una sola vez sin repetirlo en cada refresco.
+- **Agente dedicado**: `miarch-bluetooth pair <MAC>` registra un agente efímero con capacidad `NoInputNoOutput` para la duración del comando (`timeout 45 bluetoothctl --agent NoInputNoOutput pair MAC`), evitando que `bluetoothd` quede colgado esperando respuestas interactivas. Al completarse, registra confianza (`trust`) y conecta el dispositivo (`connect`).
+- **Validación y tolerancia a fallos**: Comprueba previamente la capacidad de respuesta del servicio (`timeout 6 bluetoothctl show`), validando la dirección MAC (`^([0-9A-F]{2}:){5}[0-9A-F]{2}$`). Si el demonio no responde, sugiere el comando para reiniciar el servicio.
+- **Temporización y retroalimentación en la interfaz**: Muestra el estado "Emparejando…" bajo el dispositivo. Si transcurren 30 segundos sin completarse, cancela la operación (`cancelPair()`) y muestra un mensaje indicando que se ponga el dispositivo en modo de emparejamiento. Cada intento se registra en `~/.cache/miarch/bluetooth.log` (rotado a 100 KB).
 
 ## Terminal Kitty (`config/kitty/kitty.conf`)
 

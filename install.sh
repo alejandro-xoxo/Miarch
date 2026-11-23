@@ -58,9 +58,16 @@ mkdir -p "$HOME/.config" "$HOME/.local/bin" "$WALL_DIR"
 # SCRIPTS (van a ~/.local/bin)
 # =========================
 ui_etapa "Instalando los scripts de Miarch"
-for f in wallpaper.sh miarch-colors miarch-set miarch-wifi miarch-info miarch-fetch miarch-update miarch-chrome-tema miarch-modo-juego miarch-steam miarch-volumen; do
+for f in wallpaper.sh miarch-colors miarch-pantallas miarch-set miarch-wifi miarch-bluetooth miarch-info miarch-fetch miarch-update miarch-chrome-tema miarch-modo-juego miarch-steam miarch-volumen mimusic miarch-tapa miarch-encendido; do
     [ -f "$DOTFILES_DIR/scripts/$f" ] && install -Dm755 "$DOTFILES_DIR/scripts/$f" "$HOME/.local/bin/$f"
 done
+
+# Servicio opcional: solo se habilita si el usuario ya activó la marca desde Ajustes.
+install -Dm644 "$CONFIG_DIR/systemd/user/miarch-encendido.service" "$HOME/.config/systemd/user/miarch-encendido.service"
+systemctl --user daemon-reload 2>/dev/null || true
+if [ -e "$HOME/.config/miarch/siempre-encendido" ]; then
+    systemctl --user enable --now miarch-encendido.service 2>/dev/null || true
+fi
 
 # =========================
 # CONFIGURACIONES
@@ -187,7 +194,7 @@ copy_flags "$CONFIG_DIR/vscode/code-flags.conf"                   "$HOME/.config
 copy_flags "$CONFIG_DIR/claude-desktop/claude-desktop-flags.conf" "$HOME/.config/claude-desktop-flags.conf"
 copy_flags "$CONFIG_DIR/electron/electron-flags.conf"             "$HOME/.config/electron-flags.conf"
 
-# Lanzadores (.desktop) con Wayland nativo para apps Electron (ChatGPT, Antigravity, Claude Desktop)
+# Lanzadores (.desktop) con Wayland nativo para apps Electron (ChatGPT, Antigravity, Claude Desktop) y Crunchyroll
 if [ -d "$CONFIG_DIR/applications" ]; then
     mkdir -p "$HOME/.local/share/applications"
     for app in "$CONFIG_DIR/applications"/*.desktop; do
@@ -202,6 +209,152 @@ if [ -d "$CONFIG_DIR/applications" ]; then
             install -Dm644 "$app" "$dest"
         fi
     done
+
+    # Icono de Crunchyroll (personal -> web oficial -> genérico si falla)
+    mkdir -p "$HOME/.local/share/icons/hicolor/256x256/apps"
+    python3 -I - "$PERSONAL" "$HOME/.local/share/icons/hicolor/256x256/apps" "$HOME/.local/share/applications/crunchyroll.desktop" <<'PY' 2>/dev/null || true
+import io, json, os, re, shutil, subprocess, sys
+
+try:
+    from PIL import Image
+except Exception:
+    Image = None
+
+personal_dir = sys.argv[1]
+icon_dir = sys.argv[2]
+desktop_path = sys.argv[3]
+
+os.makedirs(icon_dir, exist_ok=True)
+icon_png = os.path.join(icon_dir, "crunchyroll.png")
+icon_svg = os.path.join(icon_dir, "crunchyroll.svg")
+
+def resolve_icon():
+    # (a) Icono propio en personal/
+    for name in ["crunchyroll.png", "crunchyroll.svg", "crunchyroll.jpg", "crunchyroll.jpeg", "crunchyroll.webp"]:
+        src = os.path.join(personal_dir, name)
+        if os.path.isfile(src):
+            try:
+                ext = os.path.splitext(name)[1].lower()
+                if ext == ".svg":
+                    shutil.copy2(src, icon_svg)
+                    if os.path.exists(icon_png):
+                        os.remove(icon_png)
+                    return True
+                elif ext == ".png":
+                    shutil.copy2(src, icon_png)
+                    if os.path.exists(icon_svg):
+                        os.remove(icon_svg)
+                    return True
+                elif Image is not None:
+                    im = Image.open(src)
+                    im.convert("RGBA").save(icon_png, "PNG")
+                    if os.path.exists(icon_svg):
+                        os.remove(icon_svg)
+                    return True
+            except Exception:
+                pass
+
+    # (b) Descargar icono oficial de crunchyroll.com
+    ua = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+    def fetch(url):
+        cmd = ["curl", "-fsSL", "--max-time", "15", "-A", ua, url]
+        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        return res.stdout if res.returncode == 0 else None
+
+    def join_url(base, u):
+        if u.startswith("http://") or u.startswith("https://"):
+            return u
+        if u.startswith("/"):
+            return "https://www.crunchyroll.com" + u
+        return base + u
+
+    try:
+        html_bytes = fetch("https://www.crunchyroll.com/")
+        candidates = []
+        if html_bytes:
+            html = html_bytes.decode("utf-8", errors="ignore")
+            m = re.search(r'<link[^>]+rel=["\']manifest["\'][^>]*href=["\']([^"\']+)["\']', html, re.I)
+            if not m:
+                m = re.search(r'<link[^>]+href=["\']([^"\']+)["\'][^>]*rel=["\']manifest["\']', html, re.I)
+            if m:
+                manifest_url = join_url("https://www.crunchyroll.com/", m.group(1))
+                mbytes = fetch(manifest_url)
+                if mbytes:
+                    try:
+                        mjson = json.loads(mbytes.decode("utf-8", errors="ignore"))
+                        for ic in mjson.get("icons", []):
+                            src = ic.get("src")
+                            if src:
+                                candidates.append((512 if "512" in src else 192, join_url("https://www.crunchyroll.com/", src)))
+                    except Exception:
+                        pass
+            for tag in re.findall(r'<link[^>]+>', html, re.I):
+                if re.search(r'rel=["\']?(?:apple-touch-icon|icon)["\']?', tag, re.I):
+                    href_m = re.search(r'href=["\']([^"\']+)["\']', tag, re.I)
+                    if href_m:
+                        sz_m = re.search(r'sizes=["\'](\d+)x\d+["\']', tag, re.I)
+                        sz = int(sz_m.group(1)) if sz_m else 0
+                        candidates.append((sz, join_url("https://www.crunchyroll.com/", href_m.group(1))))
+
+        candidates.append((100, "https://www.crunchyroll.com/build/assets/img/pwa/v2/512.png"))
+        candidates.append((50, "https://www.crunchyroll.com/apple-touch-icon.png"))
+        candidates.append((16, "https://www.crunchyroll.com/favicon.ico"))
+        candidates.sort(key=lambda x: x[0], reverse=True)
+
+        for _, target_url in candidates:
+            img_data = fetch(target_url)
+            if img_data:
+                try:
+                    if Image is not None:
+                        img = Image.open(io.BytesIO(img_data))
+                        img = img.convert("RGBA")
+                        if img.size != (256, 256):
+                            img = img.resize((256, 256), Image.Resampling.LANCZOS)
+                        img.save(icon_png, "PNG")
+                    else:
+                        with open(icon_png, "wb") as f:
+                            f.write(img_data)
+                    if os.path.exists(icon_svg):
+                        os.remove(icon_svg)
+                    return True
+                except Exception:
+                    continue
+    except Exception:
+        pass
+
+    return False
+
+if resolve_icon():
+    if os.path.isfile(desktop_path):
+        try:
+            with open(desktop_path, "r", encoding="utf-8") as f:
+                c = f.read()
+            c = re.sub(r"^Icon=.*$", "Icon=crunchyroll", c, flags=re.MULTILINE)
+            with open(desktop_path, "w", encoding="utf-8") as f:
+                f.write(c)
+        except Exception:
+            pass
+else:
+    # (c) Fallback sin red ni icono propio: icono generico
+    for old in [icon_png, icon_svg]:
+        if os.path.exists(old):
+            try:
+                os.remove(old)
+            except Exception:
+                pass
+    if os.path.isfile(desktop_path):
+        try:
+            with open(desktop_path, "r", encoding="utf-8") as f:
+                c = f.read()
+            c = re.sub(r"^Icon=.*$", "Icon=video-television", c, flags=re.MULTILINE)
+            with open(desktop_path, "w", encoding="utf-8") as f:
+                f.write(c)
+        except Exception:
+            pass
+PY
+    if command -v gtk-update-icon-cache &>/dev/null; then
+        gtk-update-icon-cache -q "$HOME/.local/share/icons/hicolor" 2>/dev/null || true
+    fi
     if command -v update-desktop-database &>/dev/null; then
         update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
     fi
