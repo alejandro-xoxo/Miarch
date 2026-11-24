@@ -1,8 +1,8 @@
 <div align="center">
 
-[![▶ Ver la demostración de Miarch (2 min 13 s)](docs/media/miarch-demo-portada.jpg)](docs/media/miarch-demo.mp4)
+[![▶ Ver la demostración de Miarch (2 min 13 s)](docs/media/miarch-demo-portada.jpg)](https://alejandro-xoxo.github.io/Miarch/)
 
-**▶ [Ver la demostración en vídeo (2 min 13 s)](docs/media/miarch-demo.mp4)**
+**▶ [Ver la demostración en vídeo (2 min 13 s)](https://alejandro-xoxo.github.io/Miarch/)**
 
 </div>
 
