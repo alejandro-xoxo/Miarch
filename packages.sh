@@ -45,7 +45,7 @@ PAQUETES=(
 
     # Desarrollo
     git github-cli curl base-devel
-    dbeaver jdk21-openjdk nodejs-lts-jod npm
+    dbeaver jdk21-openjdk npm
     docker docker-compose docker-buildx   # contenedores
     ollama                                # modelos de IA locales (CPU; ollama-vulkan es la variante para GPU)
     openai-codex
@@ -61,6 +61,10 @@ PAQUETES=(
     spotify-launcher
     blender                      # modelado, animación y render 3D (con gráficas Intel antiguas renderiza con la CPU)
 )
+# Node.js: solo se pide una versión si el equipo no tiene ninguna. Otra versión LTS (por ejemplo nodejs-lts-krypton)
+# entra en conflicto con nodejs-lts-jod y con --noconfirm la instalación fallaba.
+[ -z "$(pacman -T nodejs)" ] || PAQUETES+=(nodejs-lts-jod)
+
 # AUR (paquetes de la comunidad: no están firmados por Arch)
 AUR_PAQUETES=(
     quickshell-git
