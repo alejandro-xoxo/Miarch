@@ -5,7 +5,7 @@
 | `git` · `github-cli` | pacman | Git y `gh` |
 | `curl` · `base-devel` | pacman | Descargas y compiladores (necesarios para AUR) |
 | `jdk21-openjdk` | pacman | Java 21, fijado como versión por defecto |
-| `nodejs-lts-jod` · `npm` | pacman | Node.js (LTS) |
+| `nodejs-lts-jod` · `npm` | pacman | Node.js (LTS). Si ya tienes otra versión de Node.js (por ejemplo `nodejs-lts-krypton`) se respeta y no se instala `jod` |
 | `dbeaver` | pacman | Cliente de bases de datos |
 | `docker` · `docker-compose` · `docker-buildx` | pacman | Contenedores |
 | `ollama` | pacman | Modelos de IA locales (CPU; `ollama-vulkan` es la variante para GPU) |

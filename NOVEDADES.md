@@ -3,6 +3,9 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-23.116 · Arreglo: la instalación ya no falla si ya tienes otra versión de Node.js
+Si tu equipo tenía `nodejs-lts-krypton` (u otra versión de Node.js), Miarch intentaba instalar `nodejs-lts-jod`, los dos chocaban y los paquetes no se instalaban. Ahora, si ya hay un Node.js, se respeta el tuyo.
+
 ## 2026-11-23.115 · Slack instalado con Miarch
 Miarch instala la app de escritorio oficial de Slack para Linux (desde AUR, reempaquetando su .deb). Se añade sola al actualizar.
 
