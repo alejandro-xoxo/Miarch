@@ -52,6 +52,12 @@ PAQUETES=(
 
     # Aplicaciones
     dolphin qt6ct breeze-icons   # gestor de archivos + tema de Qt (qt6ct) e íconos
+    # Abrir cualquier tipo de archivo (el vídeo y el audio los abre mpv, ya instalado arriba)
+    okular                    # PDF, EPUB, cómics y documentos
+    gwenview                  # imágenes (png, jpg, webp, gif…)
+    ark unrar 7zip unzip      # zip, rar, 7z, tar…: abrir y extraer desde Dolphin
+    kate                      # texto y código desde el gestor de archivos
+    kio-extras ffmpegthumbnailer kdegraphics-thumbnailers   # miniaturas de vídeo, PDF y más en Dolphin, y acceso a otros discos
     spotify-launcher
     blender                      # modelado, animación y render 3D (con gráficas Intel antiguas renderiza con la CPU)
 )
@@ -65,6 +71,7 @@ AUR_PAQUETES=(
     antigravity-cli
     antigravity                  # app de escritorio de Antigravity 2.0 (Google; se descarga de sus servidores)
     openai-chatgpt               # app de escritorio de ChatGPT con Codex (vista previa oficial de OpenAI; reempaqueta su .deb, ~350 MB)
+    slack-desktop                # app de escritorio oficial de Slack (reempaqueta su .deb)
     protonup-qt                  # instala y actualiza Proton-GE con clics (mejor compatibilidad de juegos de Windows)
 )
 
