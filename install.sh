@@ -12,7 +12,7 @@ fi
 
 # barra de progreso total y animación mientras trabaja cada comando
 source "$(dirname "${BASH_SOURCE[0]}")/lib/ui.sh"
-ETAPAS=7   # setup.sh pregunta cuántas etapas tiene este script para dibujar la barra del total
+ETAPAS=8   # setup.sh pregunta cuántas etapas tiene este script para dibujar la barra del total
 [ "${1:-}" = "--etapas" ] && { echo "$ETAPAS"; exit 0; }
 ui_total "$ETAPAS"
 [ -n "${MIARCH_UI_SUB:-}" ] || ui_banner "configuraciones"   # solo si no lo lanza setup.sh
@@ -417,6 +417,31 @@ if [[ -z "$WAYLAND_DISPLAY" && "$(tty)" == "/dev/tty1" ]]; then
     exec start-hyprland
 fi
 EOF
+fi
+
+# =========================
+# APLICACIONES POR DEFECTO (PDF, imágenes, vídeo, audio, comprimidos, texto)
+# Solo se fija el tipo que aún no tiene aplicación elegida: no pisa tus cambios.
+# =========================
+ui_etapa "Eligiendo con qué se abre cada tipo de archivo"
+fijar_defecto() {   # fijar_defecto app.desktop tipo1 tipo2 ...
+    local app="$1"; shift
+    [ -e "/usr/share/applications/$app" ] || return 0   # la app no está instalada
+    local t
+    for t in "$@"; do
+        [ -n "$(xdg-mime query default "$t" 2>/dev/null)" ] || xdg-mime default "$app" "$t"
+    done
+}
+if command -v xdg-mime &>/dev/null; then
+    fijar_defecto org.kde.okular.desktop application/pdf application/epub+zip image/vnd.djvu application/x-cbz
+    fijar_defecto org.kde.gwenview.desktop image/png image/jpeg image/webp image/gif image/bmp image/svg+xml image/avif
+    fijar_defecto mpv.desktop video/mp4 video/x-matroska video/webm video/quicktime video/x-msvideo audio/mpeg audio/flac audio/ogg audio/x-wav audio/mp4 audio/aac audio/opus
+    fijar_defecto org.kde.ark.desktop application/zip application/vnd.rar application/x-7z-compressed application/x-tar application/gzip application/x-xz application/zstd
+    fijar_defecto org.kde.kate.desktop text/plain text/markdown application/json text/x-python text/x-shellscript
+    fijar_defecto org.kde.dolphin.desktop inode/directory
+    ui_ok "Aplicaciones por defecto listas"
+else
+    ui_aviso "No se encontró xdg-mime: se omiten las aplicaciones por defecto"
 fi
 
 # =========================
