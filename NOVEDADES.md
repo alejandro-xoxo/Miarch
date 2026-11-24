@@ -3,6 +3,9 @@
 Una entrada por cosa importante, la más nueva arriba. La ventana de actualización (la nube de la barra) muestra las que aún no has visto.
 Formato de cada título: `## AAAA-MM-DD.NN · Título` (el número NN sube dentro del mismo día).
 
+## 2026-11-23.115 · Slack instalado con Miarch
+Miarch instala la app de escritorio oficial de Slack para Linux (desde AUR, reempaquetando su .deb). Se añade sola al actualizar.
+
 ## 2026-11-23.114 · Abre cualquier tipo de archivo
 Miarch instala Okular (PDF y EPUB), Gwenview (imágenes), Ark (zip, rar, 7z, tar), Kate (texto y código) y los complementos de Dolphin para ver miniaturas de vídeo y PDF. El vídeo y el audio (mp4, mkv, mp3, flac…) siguen abriéndose con mpv. Al actualizar se instalan solos y cada tipo de archivo queda asociado a su programa, salvo los que ya tengas elegidos tú. Ocupa unos 150 MB.
 
