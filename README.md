@@ -1,5 +1,13 @@
 <div align="center">
 
+[![▶ Ver la demostración de Miarch (2 min 13 s)](docs/media/miarch-demo-portada.jpg)](docs/media/miarch-demo.mp4)
+
+**▶ [Ver la demostración en vídeo (2 min 13 s)](docs/media/miarch-demo.mp4)**
+
+</div>
+
+<div align="center">
+
 ```text
 ███╗   ███╗██╗ █████╗ ██████╗  ██████╗██╗  ██╗
 ████╗ ████║██║██╔══██╗██╔══██╗██╔════╝██║  ██║
@@ -27,8 +35,6 @@
 Un escritorio personal sobre **Hyprland**, con un entorno propio hecho en **Quickshell**: reloj y anillos de datos sobre el fondo, barra, lanzador de apps, paneles de Wi‑Fi y Bluetooth, ajustes del equipo, pantalla de bloqueo y pantalla de inicio de sesión. Los colores son mate y salen del wallpaper.
 
 ![Escritorio](docs/screenshots/escritorio-oscuro.jpg)
-
-▶ **[Ver el vídeo de demostración (2 min 13 s)](docs/media/miarch-demo.mp4)**
 
 ---
 
