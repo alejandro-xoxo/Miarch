@@ -28,6 +28,8 @@ Un escritorio personal sobre **Hyprland**, con un entorno propio hecho en **Quic
 
 ![Escritorio](docs/screenshots/escritorio-oscuro.jpg)
 
+▶ **[Ver el vídeo de demostración (2 min 13 s)](docs/media/miarch-demo.mp4)**
+
 ---
 
 ## ✨ Lo más destacado
